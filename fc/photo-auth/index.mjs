@@ -68,12 +68,22 @@ function buildTypeAAuthKey(encodedPath, timestamp, rand, uid, privateKey) {
   return crypto.createHash('md5').update(source).digest('hex')
 }
 
+function getWindowedTimestamp(validSeconds) {
+  const now = Math.floor(Date.now() / 1000)
+  const windowSize = Math.max(1, validSeconds)
+  return Math.floor(now / windowSize) * windowSize
+}
+
+function buildStableRand(objectKey, timestamp) {
+  return crypto.createHash('md5').update(`${objectKey}:${timestamp}:${cdnAuthKey}`).digest('hex').slice(0, 16)
+}
+
 function createSignedCdnUrl(objectKey) {
   const resourcePath = `/${objectKey.replace(/^\/+/, '')}`
   const encodedPath = encodeURI(resourcePath)
 
-  const timestamp = Math.floor(Date.now() / 1000)
-  const rand = crypto.randomBytes(8).toString('hex')
+  const timestamp = getWindowedTimestamp(authValidSeconds)
+  const rand = buildStableRand(objectKey, timestamp)
   const uid = '0'
   const hash = buildTypeAAuthKey(encodedPath, timestamp, rand, uid, cdnAuthKey)
 
