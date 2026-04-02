@@ -5,7 +5,6 @@ import { getGlobalLoggers } from './logger-adapter.js'
 
 export interface LivePhotoResult {
   isLivePhoto: boolean
-  livePhotoVideoUrl?: string
   livePhotoVideoS3Key?: string
 }
 
@@ -19,7 +18,7 @@ export interface LivePhotoResult {
 export async function processLivePhoto(
   photoKey: string,
   livePhotoMap: Map<string, S3ObjectLike | StorageObject>,
-  storageManager: StorageManager,
+  _storageManager: StorageManager,
 ): Promise<LivePhotoResult> {
   const loggers = getGlobalLoggers()
   const livePhotoVideo = livePhotoMap.get(photoKey)
@@ -41,13 +40,10 @@ export async function processLivePhoto(
     return { isLivePhoto: false }
   }
 
-  const livePhotoVideoUrl = await storageManager.generatePublicUrl(videoKey)
-
   loggers.image.info(`📱 检测到 Live Photo：${photoKey} -> ${videoKey}`)
 
   return {
     isLivePhoto: true,
-    livePhotoVideoUrl,
     livePhotoVideoS3Key: videoKey,
   }
 }

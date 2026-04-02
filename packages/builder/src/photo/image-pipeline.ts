@@ -5,6 +5,7 @@ import type { PhotoManifestItem, ProcessPhotoResult } from '@afilmory/typing'
 import { compressUint8Array } from '@afilmory/utils'
 import sharp from 'sharp'
 
+import { env } from '../../../../env.js'
 import type { BuilderOptions } from '../builder/builder.js'
 import {
   convertBmpToJpegSharpInstance,
@@ -24,6 +25,7 @@ import { processLivePhoto } from './live-photo-handler.js'
 import { getGlobalLoggers } from './logger-adapter.js'
 import { detectMotionPhoto } from './motion-photo-detector.js'
 import type { PhotoProcessorOptions } from './processor.js'
+import { buildProtectedMediaUrl } from './protected-media-url.js'
 
 export interface ProcessedImageData {
   sharpInstance: sharp.Sharp
@@ -212,6 +214,15 @@ export async function executePhotoProcessingPipeline(
     // 10. 构建照片清单项
     const aspectRatio = metadata.width / metadata.height
     const extension = path.extname(photoKey).slice(1).toUpperCase()
+    const originalUrl = env.PHOTO_PROXY_BASE_URL
+      ? buildProtectedMediaUrl(env.PHOTO_PROXY_BASE_URL, 'original', photoId)
+      : await storageManager.generatePublicUrl(photoKey)
+    const livePhotoVideoUrl = livePhotoResult.livePhotoVideoS3Key
+      ? env.PHOTO_PROXY_BASE_URL
+        ? buildProtectedMediaUrl(env.PHOTO_PROXY_BASE_URL, 'live', photoId)
+        : await storageManager.generatePublicUrl(livePhotoResult.livePhotoVideoS3Key)
+      : undefined
+
     const photoItem: PhotoManifestItem = {
       id: photoId,
       format: extension || 'UNKNOWN',
@@ -219,7 +230,7 @@ export async function executePhotoProcessingPipeline(
       description: photoInfo.description,
       dateTaken: photoInfo.dateTaken,
       tags: photoInfo.tags,
-      originalUrl: await storageManager.generatePublicUrl(photoKey),
+      originalUrl,
       thumbnailUrl: thumbnailResult.thumbnailUrl,
       thumbHash: thumbnailResult.thumbHash ? compressUint8Array(thumbnailResult.thumbHash) : null,
       width: metadata.width,
@@ -244,7 +255,7 @@ export async function executePhotoProcessingPipeline(
           : livePhotoResult.isLivePhoto
             ? {
                 type: 'live-photo',
-                videoUrl: livePhotoResult.livePhotoVideoUrl!,
+                videoUrl: livePhotoVideoUrl ?? '',
                 s3Key: livePhotoResult.livePhotoVideoS3Key!,
               }
             : undefined,
