@@ -6,6 +6,7 @@ const allowOrigin = process.env.ALLOW_ORIGIN || 'https://afilm.site'
 const cdnBaseUrl = process.env.CDN_MEDIA_BASE_URL
 const cdnAuthKey = process.env.CDN_AUTH_KEY
 const authValidSeconds = Number(process.env.CDN_AUTH_VALID_SECONDS || '1800')
+const authOverlapSeconds = Number(process.env.CDN_AUTH_OVERLAP_SECONDS || '900')
 
 if (!cdnBaseUrl || !cdnAuthKey) {
   throw new Error('CDN_MEDIA_BASE_URL and CDN_AUTH_KEY are required')
@@ -33,7 +34,9 @@ function jsonResponse(statusCode, body, extraHeaders = {}) {
       'Access-Control-Allow-Methods': 'GET,HEAD,OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type,Authorization',
       'Access-Control-Max-Age': '3600',
-      'Cache-Control': 'no-store',
+      'Cache-Control': 'no-store, no-cache, max-age=0, must-revalidate',
+      Pragma: 'no-cache',
+      Expires: '0',
       ...extraHeaders,
     },
     body: typeof body === 'string' ? body : JSON.stringify(body),
@@ -68,10 +71,12 @@ function buildTypeAAuthKey(encodedPath, timestamp, rand, uid, privateKey) {
   return crypto.createHash('md5').update(source).digest('hex')
 }
 
-function getWindowedTimestamp(validSeconds) {
+function getWindowedTimestamp(validSeconds, overlapSeconds) {
   const now = Math.floor(Date.now() / 1000)
   const windowSize = Math.max(1, validSeconds)
-  return Math.floor(now / windowSize) * windowSize
+  const overlap = Math.max(0, overlapSeconds)
+  const windowStart = Math.floor(now / windowSize) * windowSize
+  return windowStart + windowSize + overlap
 }
 
 function buildStableRand(objectKey, timestamp) {
@@ -82,7 +87,7 @@ function createSignedCdnUrl(objectKey) {
   const resourcePath = `/${objectKey.replace(/^\/+/, '')}`
   const encodedPath = encodeURI(resourcePath)
 
-  const timestamp = getWindowedTimestamp(authValidSeconds)
+  const timestamp = getWindowedTimestamp(authValidSeconds, authOverlapSeconds)
   const rand = buildStableRand(objectKey, timestamp)
   const uid = '0'
   const hash = buildTypeAAuthKey(encodedPath, timestamp, rand, uid, cdnAuthKey)
@@ -107,6 +112,9 @@ export const handler = async (event, context) => {
         'Access-Control-Allow-Methods': 'GET,HEAD,OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type,Authorization',
         'Access-Control-Max-Age': '3600',
+        'Cache-Control': 'no-store, no-cache, max-age=0, must-revalidate',
+        Pragma: 'no-cache',
+        Expires: '0',
       },
       body: '',
     }
@@ -154,7 +162,9 @@ export const handler = async (event, context) => {
         'Access-Control-Allow-Methods': 'GET,HEAD,OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type,Authorization',
         'Access-Control-Max-Age': '3600',
-        'Cache-Control': 'no-store',
+        'Cache-Control': 'no-store, no-cache, max-age=0, must-revalidate',
+        Pragma: 'no-cache',
+        Expires: '0',
       },
       body: '',
     }
