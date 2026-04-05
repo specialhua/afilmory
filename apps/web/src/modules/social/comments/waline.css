@@ -1,4 +1,5 @@
 .afilmory-waline {
+  --waline-avatar-size: 2.35rem;
   --waline-theme-color: var(--color-accent);
   --waline-active-color: color-mix(in srgb, var(--color-accent) 82%, white);
   --waline-color: rgb(255 255 255 / 0.9);
@@ -17,7 +18,24 @@
 }
 
 .afilmory-waline [data-waline] {
+  display: flex;
+  flex-direction: column;
   padding-top: 0.25rem;
+}
+
+.afilmory-waline .wl-meta-head,
+.afilmory-waline .wl-empty,
+.afilmory-waline .wl-cards,
+.afilmory-waline .wl-operation,
+.afilmory-waline .wl-loadmore,
+.afilmory-waline .wl-meta-foot {
+  order: 1;
+}
+
+.afilmory-waline .wl-comment {
+  order: 2;
+  margin-top: 1rem;
+  margin-bottom: 0;
 }
 
 .afilmory-waline .wl-panel,
@@ -34,7 +52,26 @@
 }
 
 .afilmory-waline .wl-header {
+  display: block;
   border-bottom-color: color-mix(in srgb, var(--color-accent) 18%, transparent);
+}
+
+.afilmory-waline .wl-header-item {
+  width: 100% !important;
+  flex: none;
+}
+
+.afilmory-waline .wl-header-item:not(:last-child) {
+  border-bottom: 1px dashed color-mix(in srgb, var(--color-accent) 16%, transparent);
+}
+
+.afilmory-waline .wl-header label {
+  min-width: 52px;
+  text-align: left;
+}
+
+.afilmory-waline .wl-header input {
+  width: 100%;
 }
 
 .afilmory-waline .wl-header input,
@@ -55,15 +92,50 @@
 
 .afilmory-waline .wl-card-item {
   padding-inline: 0;
+  padding-block: 0.4rem;
+}
+
+.afilmory-waline .wl-cards .wl-user {
+  margin-inline-end: 0.55rem;
+}
+
+.afilmory-waline .wl-cards .wl-user .wl-user-avatar {
+  box-shadow: none;
+}
+
+.afilmory-waline .wl-card-item {
+  align-items: flex-start;
 }
 
 .afilmory-waline .wl-card {
-  padding-bottom: 0.85rem;
-  border-bottom-color: rgb(255 255 255 / 0.08);
+  width: auto;
+  padding: 0.8rem 0.95rem 0.55rem;
+  border: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: 1rem;
+  background: rgba(var(--color-materialThin), 0.44);
+  box-shadow: 0 10px 24px rgb(0 0 0 / 0.08);
 }
 
 .afilmory-waline .wl-card:first-child {
-  margin-inline-start: 0.75rem;
+  margin-inline-start: 0;
+}
+
+.afilmory-waline .wl-card .wl-content {
+  margin-bottom: 0.5rem;
+  padding-top: 0.45rem;
+  line-height: 1.85;
+}
+
+.afilmory-waline .wl-card .wl-head .wl-nick {
+  font-size: 0.82rem;
+}
+
+.afilmory-waline .wl-card .wl-time {
+  font-size: 0.7rem;
+}
+
+.afilmory-waline .wl-card .wl-meta {
+  margin-bottom: 0.25rem;
 }
 
 .afilmory-waline .wl-content pre,

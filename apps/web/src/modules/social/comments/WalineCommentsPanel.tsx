@@ -28,6 +28,9 @@ export const WalineCommentsPanel = ({ photoId }: { photoId: string }) => {
       serverURL,
       path,
       lang: walineConfig?.lang || i18n.language || 'zh-CN',
+      login: 'disable',
+      meta: ['nick', 'mail', 'link'],
+      requiredMeta: ['nick', 'mail'],
       pageSize: 20,
       dark: 'html.dark',
       locale: {
