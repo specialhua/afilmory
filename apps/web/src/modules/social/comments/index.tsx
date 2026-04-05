@@ -4,6 +4,7 @@ import type { FC } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { sessionUserAtom } from '~/atoms/session'
+import { injectConfig, siteConfig } from '~/config'
 
 import { CommentItem } from './CommentCard'
 import { CommentInput } from './CommentInput'
@@ -12,8 +13,17 @@ import { EmptyState } from './EmptyState'
 import { ErrorBox } from './ErrorBox'
 import { SignInPanel } from './SignInPanel'
 import { SkeletonList } from './SkeletonList'
+import { WalineCommentsPanel } from './WalineCommentsPanel'
 
 export const CommentsPanel: FC<{ photoId: string; visible?: boolean }> = ({ photoId }) => {
+  if (siteConfig.comments?.provider === 'waline') {
+    return <WalineCommentsPanel photoId={photoId} />
+  }
+
+  if (!injectConfig.useCloud) {
+    return null
+  }
+
   return (
     <CommentsProvider photoId={photoId}>
       <CommentsContent />

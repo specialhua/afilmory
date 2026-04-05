@@ -13,6 +13,13 @@
     "github": "",
     "twitter": ""
   },
+  "comments": {
+    "provider": "waline",
+    "waline": {
+      "serverURL": "https://comment.example.com",
+      "lang": "zh-CN"
+    }
+  },
   "feed": {
     "folo": {
       "challenge": {
@@ -21,9 +28,7 @@
       }
     }
   },
-  "map": [
-    "maplibre"
-  ],
+  "map": ["maplibre"],
   "mapStyle": "builtin",
   "mapProjection": "mercator",
   "beian": {

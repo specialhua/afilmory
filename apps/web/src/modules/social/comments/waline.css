@@ -1,0 +1,76 @@
+.afilmory-waline {
+  --waline-theme-color: var(--color-accent);
+  --waline-active-color: color-mix(in srgb, var(--color-accent) 82%, white);
+  --waline-color: rgb(255 255 255 / 0.9);
+  --waline-light-grey: rgb(255 255 255 / 0.42);
+  --waline-dark-grey: rgb(255 255 255 / 0.68);
+  --waline-bg-color: rgba(var(--color-materialMedium), 0.58);
+  --waline-bg-color-light: rgba(var(--color-materialThin), 0.78);
+  --waline-bg-color-hover: rgba(var(--color-materialThick), 0.82);
+  --waline-border-color: rgb(255 255 255 / 0.14);
+  --waline-disable-bg-color: rgba(var(--color-materialThin), 0.58);
+  --waline-disable-color: rgb(255 255 255 / 0.4);
+  --waline-info-bg-color: rgba(var(--color-materialThin), 0.62);
+  --waline-info-color: rgb(255 255 255 / 0.52);
+  --waline-bq-color: color-mix(in srgb, var(--color-accent) 24%, transparent);
+  --waline-box-shadow: 0 8px 32px color-mix(in srgb, var(--color-accent) 8%, transparent), 0 4px 16px rgb(0 0 0 / 0.14);
+}
+
+.afilmory-waline [data-waline] {
+  padding-top: 0.25rem;
+}
+
+.afilmory-waline .wl-panel,
+.afilmory-waline .wl-card,
+.afilmory-waline .wl-empty,
+.afilmory-waline .wl-emoji-popup,
+.afilmory-waline .wl-gif-popup {
+  backdrop-filter: blur(24px);
+}
+
+.afilmory-waline .wl-panel {
+  margin: 0;
+  border-radius: 1rem;
+}
+
+.afilmory-waline .wl-header {
+  border-bottom-color: color-mix(in srgb, var(--color-accent) 18%, transparent);
+}
+
+.afilmory-waline .wl-header input,
+.afilmory-waline .wl-editor,
+.afilmory-waline .wl-input,
+.afilmory-waline .wl-preview .wl-content {
+  color: rgb(255 255 255 / 0.9);
+}
+
+.afilmory-waline .wl-editor:focus,
+.afilmory-waline .wl-input:focus {
+  background: rgba(var(--color-materialThin), 0.92);
+}
+
+.afilmory-waline .wl-btn {
+  border-radius: 0.85rem;
+}
+
+.afilmory-waline .wl-card-item {
+  padding-inline: 0;
+}
+
+.afilmory-waline .wl-card {
+  padding-bottom: 0.85rem;
+  border-bottom-color: rgb(255 255 255 / 0.08);
+}
+
+.afilmory-waline .wl-card:first-child {
+  margin-inline-start: 0.75rem;
+}
+
+.afilmory-waline .wl-content pre,
+.afilmory-waline .wl-content pre[class*='language-'] {
+  background: rgb(10 10 12 / 0.72);
+}
+
+.afilmory-waline .wl-power {
+  display: none;
+}

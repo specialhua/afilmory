@@ -8,7 +8,7 @@ import type { FC } from 'react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { injectConfig } from '~/config'
+import { injectConfig, siteConfig } from '~/config'
 import { useMobile } from '~/hooks/useMobile'
 import { commentsApi } from '~/lib/api/comments'
 import { ExifPanelContent } from '~/modules/metadata/ExifPanel'
@@ -27,11 +27,11 @@ export const InspectorPanel: FC<{
   const isMobile = useMobile()
   const [activeTab, setActiveTab] = useState<Tab>('info')
 
-  const showSocialFeatures = injectConfig.useCloud
+  const showSocialFeatures = injectConfig.useCloud || siteConfig.comments?.provider === 'waline'
   const { data: commentCount } = useQuery({
     queryKey: ['comment-count', currentPhoto.id],
     queryFn: () => commentsApi.count(currentPhoto.id),
-    enabled: showSocialFeatures,
+    enabled: injectConfig.useCloud,
   })
 
   const hasComments = (commentCount?.count ?? 0) > 0

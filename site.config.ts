@@ -10,6 +10,7 @@ export interface SiteConfig {
   accentColor: string
   author: Author
   social?: Social
+  comments?: CommentsConfig
   feed?: Feed
   map?: MapConfig
   mapStyle?: string
@@ -76,6 +77,16 @@ interface Author {
 interface Social {
   twitter?: string
   github?: string
+}
+
+interface WalineConfig {
+  serverURL: string
+  lang?: string
+}
+
+interface CommentsConfig {
+  provider?: 'waline'
+  waline?: WalineConfig
 }
 
 const defaultConfig: SiteConfig = {
