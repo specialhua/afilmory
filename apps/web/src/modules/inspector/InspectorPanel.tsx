@@ -8,11 +8,10 @@ import type { FC } from 'react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { injectConfig, siteConfig } from '~/config'
 import { useMobile } from '~/hooks/useMobile'
-import { commentsApi } from '~/lib/api/comments'
 import { ExifPanelContent } from '~/modules/metadata/ExifPanel'
 import { CommentsPanel } from '~/modules/social/comments'
+import { canFetchPhotoCommentCount, getPhotoCommentCount, hasCommentPanel } from '~/modules/social/comments/count'
 import type { PhotoManifest } from '~/types/photo'
 
 type Tab = 'info' | 'comments'
@@ -27,11 +26,10 @@ export const InspectorPanel: FC<{
   const isMobile = useMobile()
   const [activeTab, setActiveTab] = useState<Tab>('info')
 
-  const showSocialFeatures = injectConfig.useCloud || siteConfig.comments?.provider === 'waline'
   const { data: commentCount } = useQuery({
     queryKey: ['comment-count', currentPhoto.id],
-    queryFn: () => commentsApi.count(currentPhoto.id),
-    enabled: injectConfig.useCloud,
+    queryFn: () => getPhotoCommentCount(currentPhoto.id),
+    enabled: canFetchPhotoCommentCount,
   })
 
   const hasComments = (commentCount?.count ?? 0) > 0
@@ -88,7 +86,7 @@ export const InspectorPanel: FC<{
                   </div>
                 }
               />
-              {showSocialFeatures && (
+              {hasCommentPanel && (
                 <MobileTabItem
                   value="comments"
                   label={
@@ -131,7 +129,7 @@ export const InspectorPanel: FC<{
                   </div>
                 }
               />
-              {showSocialFeatures && (
+              {hasCommentPanel && (
                 <SegmentItem
                   value="comments"
                   activeBgClassName="bg-accent/20"

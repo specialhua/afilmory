@@ -1,8 +1,8 @@
 import type { PickedExif } from '@afilmory/builder'
 import type { FC } from 'react'
 
-import { injectConfig, siteConfig } from '~/config'
 import { ExifPanel } from '~/modules/metadata/ExifPanel'
+import { hasCommentPanel } from '~/modules/social/comments/count'
 import type { PhotoManifest } from '~/types/photo'
 
 import { InspectorPanel } from './InspectorPanel'
@@ -20,6 +20,4 @@ const LegacyInspector: FC<PhotoInspectorProps> = ({ currentPhoto, exifData, ...r
   <ExifPanel currentPhoto={currentPhoto} exifData={exifData} {...rest} />
 )
 
-const shouldUseInspectorTabs = injectConfig.useCloud || siteConfig.comments?.provider === 'waline'
-
-export const PhotoInspector: FC<PhotoInspectorProps> = shouldUseInspectorTabs ? CloudInspector : LegacyInspector
+export const PhotoInspector: FC<PhotoInspectorProps> = hasCommentPanel ? CloudInspector : LegacyInspector
