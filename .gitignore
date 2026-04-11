@@ -26,3 +26,9 @@ apps/web/public/originals
 
 # og-image-storage plugin generated files
 functions/
+
+# photo-auth function package
+fc/photo-auth.zip
+
+# 私有化存储桶部署手册
+docs/private-photo-ops-manual.md
