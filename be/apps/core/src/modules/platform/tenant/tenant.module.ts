@@ -1,9 +1,9 @@
 import './tenant.context'
 
-import { Module } from '@afilmory/framework'
-import { DatabaseModule } from 'core/database/database.module'
-import { AppStateModule } from 'core/modules/app/app-state/app-state.module'
-import { SystemSettingModule } from 'core/modules/configuration/system-setting/system-setting.module'
+import { DatabaseModule } from '@core/database/database.module'
+import { AppStateModule } from '@core/modules/app/app-state/app-state.module'
+import { SystemSettingModule } from '@core/modules/configuration/system-setting/system-setting.module'
+import { Module } from '@tsuki-hono/common'
 
 import { TenantController } from './tenant.controller'
 import { TenantRepository } from './tenant.repository'

@@ -1,7 +1,7 @@
-import { ContextParam, Controller, Get, Query } from '@afilmory/framework'
-import { getClientIp } from 'core/context/http-context.helper'
-import { BizException, ErrorCode } from 'core/errors'
-import { BypassResponseTransform } from 'core/interceptors/response-transform.decorator'
+import { getClientIp } from '@core/context/http-context.helper'
+import { BizException, ErrorCode } from '@core/errors'
+import { BypassResponseTransform } from '@core/interceptors/response-transform.decorator'
+import { ContextParam, Controller, Get, Query } from '@tsuki-hono/common'
 import type { Context } from 'hono'
 
 import { StorageSignQueryDto } from './storage-access.dto'

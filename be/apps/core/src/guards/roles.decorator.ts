@@ -1,4 +1,4 @@
-import { applyDecorators } from '@afilmory/framework'
+import { applyDecorators } from '@tsuki-hono/common'
 
 export const ROLES_METADATA = Symbol.for('core.auth.allowed_roles')
 

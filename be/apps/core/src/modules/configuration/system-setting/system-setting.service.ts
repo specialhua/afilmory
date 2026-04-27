@@ -1,13 +1,13 @@
 import { authUsers } from '@afilmory/db'
-import { DbAccessor } from 'core/database/database.provider'
-import { BizException, ErrorCode } from 'core/errors'
-import { normalizeNullableString } from 'core/helpers/normalize.helper'
-import type { SocialProvidersConfig } from 'core/modules/platform/auth/auth.config'
+import { DbAccessor } from '@core/database/database.provider'
+import { BizException, ErrorCode } from '@core/errors'
+import { normalizeNullableString } from '@core/helpers/normalize.helper'
+import type { SocialProvidersConfig } from '@core/modules/platform/auth/auth.config'
 import {
   BILLING_PLAN_OVERRIDES_SETTING_KEY,
   BILLING_PLAN_PRICING_SETTING_KEY,
   BILLING_PLAN_PRODUCTS_SETTING_KEY,
-} from 'core/modules/platform/billing/billing-plan.constants'
+} from '@core/modules/platform/billing/billing-plan.constants'
 import type {
   BillingPlanId,
   BillingPlanOverrides,
@@ -16,12 +16,12 @@ import type {
   BillingPlanPricingConfigs,
   BillingPlanProductConfigs,
   BillingPlanQuota,
-} from 'core/modules/platform/billing/billing-plan.types'
+} from '@core/modules/platform/billing/billing-plan.types'
 import type {
   StoragePlanCatalog,
   StoragePlanPricingConfigs,
   StoragePlanProductConfigs,
-} from 'core/modules/platform/billing/storage-plan.types'
+} from '@core/modules/platform/billing/storage-plan.types'
 import { sql } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 import type { ZodType } from 'zod'

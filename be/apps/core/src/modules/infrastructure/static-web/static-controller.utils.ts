@@ -1,7 +1,7 @@
 import { isTenantSlugReserved } from '@afilmory/utils'
-import { BizException, ErrorCode } from 'core/errors'
-import { ROOT_TENANT_SLUG } from 'core/modules/platform/tenant/tenant.constants'
-import { getTenantContext, isPlaceholderTenantContext } from 'core/modules/platform/tenant/tenant.context'
+import { BizException, ErrorCode } from '@core/errors'
+import { ROOT_TENANT_SLUG } from '@core/modules/platform/tenant/tenant.constants'
+import { getTenantContext, isPlaceholderTenantContext } from '@core/modules/platform/tenant/tenant.context'
 
 import type { StaticDashboardService } from './static-dashboard.service'
 import { STATIC_DASHBOARD_BASENAME } from './static-dashboard.service'

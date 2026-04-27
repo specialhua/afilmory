@@ -1,9 +1,9 @@
-import { Body, Controller, Get, Patch } from '@afilmory/framework'
-import { Roles } from 'core/guards/roles.decorator'
-import { BypassResponseTransform } from 'core/interceptors/response-transform.decorator'
-import { parseStorageProviders } from 'core/modules/configuration/setting/storage-provider.utils'
-import { SystemSettingService } from 'core/modules/configuration/system-setting/system-setting.service'
-import type { UpdateSystemSettingsInput } from 'core/modules/configuration/system-setting/system-setting.types'
+import { Roles } from '@core/guards/roles.decorator'
+import { BypassResponseTransform } from '@core/interceptors/response-transform.decorator'
+import { parseStorageProviders } from '@core/modules/configuration/setting/storage-provider.utils'
+import { SystemSettingService } from '@core/modules/configuration/system-setting/system-setting.service'
+import type { UpdateSystemSettingsInput } from '@core/modules/configuration/system-setting/system-setting.types'
+import { Body, Controller, Get, Patch } from '@tsuki-hono/common'
 
 import { UpdateSuperAdminSettingsDto } from './super-admin.dto'
 

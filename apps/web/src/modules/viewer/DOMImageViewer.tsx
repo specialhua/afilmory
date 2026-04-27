@@ -11,6 +11,8 @@ export const DOMImageViewer: FC<DOMImageViewerProps> = ({
   onZoomChange,
   minZoom,
   maxZoom,
+  enableZoom = true,
+  enablePan = true,
   src,
   alt,
   highResLoaded,
@@ -52,6 +54,7 @@ export const DOMImageViewer: FC<DOMImageViewerProps> = ({
   // 双击切换 1x/fitToScreenScale，缩放中心为指针位置
   const handleDoubleClick = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
+      if (!enableZoom) return
       const instance = activeRef.current?.instance
       if (!instance) return
       const wrapper = instance.wrapperComponent
@@ -82,7 +85,7 @@ export const DOMImageViewer: FC<DOMImageViewerProps> = ({
         activeRef.current?.setTransform(0, 0, 1, 200, 'easeInOutCubic')
       }
     },
-    [activeRef],
+    [activeRef, enableZoom],
   )
 
   return (
@@ -94,12 +97,17 @@ export const DOMImageViewer: FC<DOMImageViewerProps> = ({
         maxScale={maxZoom}
         wheel={{
           step: 0.1,
+          wheelDisabled: !enableZoom,
         }}
         pinch={{
           step: 0.5,
+          disabled: !enableZoom,
         }}
         doubleClick={{
-          disabled: true, // 禁用内置双击
+          disabled: true, // 禁用内置双击，使用自定义逻辑保证 1x/fit 切换
+        }}
+        panning={{
+          disabled: !enablePan,
         }}
         limitToBounds={true}
         centerOnInit={true}

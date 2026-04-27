@@ -10,8 +10,8 @@ import type {
   StorageProvider,
 } from '@afilmory/builder'
 import type { StorageUploadOptions } from '@afilmory/builder/storage/interfaces.js'
-import type { PhotoBuilderService } from 'core/modules/content/photo/builder/photo-builder.service'
-import type { DataSyncLogPayload } from 'core/modules/infrastructure/data-sync/data-sync.types'
+import type { PhotoBuilderService } from '@core/modules/content/photo/builder/photo-builder.service'
+import type { DataSyncLogPayload } from '@core/modules/infrastructure/data-sync/data-sync.types'
 
 type BuilderDebugResultType = 'new' | 'processed' | 'skipped' | 'failed'
 export type BuilderDebugProgressEvent =

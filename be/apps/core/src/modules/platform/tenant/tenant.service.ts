@@ -1,7 +1,7 @@
 import { isTenantSlugReserved } from '@afilmory/utils'
-import { BizException, ErrorCode } from 'core/errors'
-import { normalizeString } from 'core/helpers/normalize.helper'
-import type { BillingPlanId } from 'core/modules/platform/billing/billing-plan.types'
+import { BizException, ErrorCode } from '@core/errors'
+import { normalizeString } from '@core/helpers/normalize.helper'
+import type { BillingPlanId } from '@core/modules/platform/billing/billing-plan.types'
 import { injectable } from 'tsyringe'
 
 import { PENDING_TENANT_DEFAULT_NAME, ROOT_TENANT_NAME, ROOT_TENANT_SLUG } from './tenant.constants'

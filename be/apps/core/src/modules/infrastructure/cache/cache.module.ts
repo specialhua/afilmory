@@ -1,5 +1,5 @@
-import { Module } from '@afilmory/framework'
-import { RedisModule } from 'core/redis/redis.module'
+import { RedisModule } from '@core/redis/redis.module'
+import { Module } from '@tsuki-hono/common'
 
 import { CacheService } from './cache.service'
 

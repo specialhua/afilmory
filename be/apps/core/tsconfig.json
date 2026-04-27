@@ -10,8 +10,8 @@
     "verbatimModuleSyntax": true,
     "types": ["node"],
     "paths": {
-      "core": ["./src"],
-      "core/*": ["./src/*"]
+      "@core": ["./src"],
+      "@core/*": ["./src/*"]
     },
     "resolveJsonModule": true,
     "allowJs": true,

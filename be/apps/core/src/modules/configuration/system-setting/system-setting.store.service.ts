@@ -1,6 +1,6 @@
 import { systemSettings } from '@afilmory/db'
-import { EventEmitterService } from '@afilmory/framework'
-import { DbAccessor } from 'core/database/database.provider'
+import { DbAccessor } from '@core/database/database.provider'
+import { EventEmitterService } from '@tsuki-hono/event-emitter'
 import { eq, inArray } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 

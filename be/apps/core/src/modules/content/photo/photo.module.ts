@@ -1,8 +1,8 @@
-import { Module } from '@afilmory/framework'
-import { BuilderConfigService } from 'core/modules/configuration/builder-config/builder-config.service'
-import { SystemSettingModule } from 'core/modules/configuration/system-setting/system-setting.module'
-import { BillingModule } from 'core/modules/platform/billing/billing.module'
-import { ManagedStorageModule } from 'core/modules/platform/managed-storage/managed-storage.module'
+import { BuilderConfigService } from '@core/modules/configuration/builder-config/builder-config.service'
+import { SystemSettingModule } from '@core/modules/configuration/system-setting/system-setting.module'
+import { BillingModule } from '@core/modules/platform/billing/billing.module'
+import { ManagedStorageModule } from '@core/modules/platform/managed-storage/managed-storage.module'
+import { Module } from '@tsuki-hono/common'
 
 import { StorageAccessController } from './access/storage-access.controller'
 import { StorageAccessService } from './access/storage-access.service'

@@ -1,5 +1,5 @@
-import { ContextParam, Controller, createZodSchemaDto, Get, Query } from '@afilmory/framework'
-import { BizException, ErrorCode } from 'core/errors'
+import { BizException, ErrorCode } from '@core/errors'
+import { ContextParam, Controller, createZodSchemaDto, Get, Query } from '@tsuki-hono/common'
 import type { Context } from 'hono'
 import { z } from 'zod'
 

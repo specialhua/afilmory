@@ -1,6 +1,6 @@
 import { tenantDomains, tenants } from '@afilmory/db'
-import { DbAccessor } from 'core/database/database.provider'
-import { BizException, ErrorCode } from 'core/errors'
+import { DbAccessor } from '@core/database/database.provider'
+import { BizException, ErrorCode } from '@core/errors'
 import { and, desc, eq } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 

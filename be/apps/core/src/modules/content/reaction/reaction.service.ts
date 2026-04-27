@@ -1,8 +1,8 @@
 import { reactions } from '@afilmory/db'
 import type { AnalysisResponse } from '@afilmory/sdk'
-import { DbAccessor } from 'core/database/database.provider'
-import { BizException, ErrorCode } from 'core/errors'
-import { requireTenantContext } from 'core/modules/platform/tenant/tenant.context'
+import { DbAccessor } from '@core/database/database.provider'
+import { BizException, ErrorCode } from '@core/errors'
+import { requireTenantContext } from '@core/modules/platform/tenant/tenant.context'
 import { and, eq } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 

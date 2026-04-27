@@ -43,6 +43,9 @@ export class StaticDashboardService extends StaticAssetService {
       rootCandidates: STATIC_DASHBOARD_ROOT_CANDIDATES,
       loggerName: 'StaticDashboardService',
       staticAssetHostResolver: (requestHost) => staticAssetHostService.getStaticAssetHost(requestHost),
+      devBuildCommand: {
+        command: 'pnpm --filter @afilmory/dashboard build',
+      },
     })
   }
 

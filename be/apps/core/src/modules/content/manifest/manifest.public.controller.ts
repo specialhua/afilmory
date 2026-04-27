@@ -1,5 +1,5 @@
-import { Controller, Get } from '@afilmory/framework'
-import { BypassResponseTransform } from 'core/interceptors/response-transform.decorator'
+import { BypassResponseTransform } from '@core/interceptors/response-transform.decorator'
+import { Controller, Get } from '@tsuki-hono/common'
 
 import { ManifestService } from './manifest.service'
 

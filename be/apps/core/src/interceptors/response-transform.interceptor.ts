@@ -1,5 +1,5 @@
 import { env } from '@afilmory/env'
-import type { CallHandler, ExecutionContext, FrameworkResponse, Interceptor } from '@afilmory/framework'
+import type { CallHandler, ExecutionContext, FrameworkResponse, Interceptor } from '@tsuki-hono/common'
 import { injectable } from 'tsyringe'
 
 import { RESPONSE_TRANSFORM_BYPASS } from './response-transform.decorator'

@@ -1,5 +1,5 @@
-import { Controller, Delete, Post } from '@afilmory/framework'
-import { Roles } from 'core/guards/roles.decorator'
+import { Roles } from '@core/guards/roles.decorator'
+import { Controller, Delete, Post } from '@tsuki-hono/common'
 
 import { DataManagementService } from './data-management.service'
 

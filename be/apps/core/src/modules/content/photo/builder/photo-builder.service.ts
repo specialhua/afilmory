@@ -20,7 +20,7 @@ import {
   createStorageKeyNormalizer,
   runWithPhotoExecutionContext,
 } from '@afilmory/builder/photo/index.js'
-import { logger as coreLogger } from 'core/helpers/logger.helper'
+import { logger as coreLogger } from '@core/helpers/logger.helper'
 import { injectable } from 'tsyringe'
 
 import { createBuilderLoggerAdapter } from './photo-builder-logger.adapter'

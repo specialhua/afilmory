@@ -1,11 +1,12 @@
+import { execSync } from 'node:child_process'
 import type { Stats } from 'node:fs'
 import { createReadStream } from 'node:fs'
 import { readFile, stat } from 'node:fs/promises'
 import { extname, isAbsolute, join, normalize, relative, resolve } from 'node:path'
 import { Readable } from 'node:stream'
 
-import type { PrettyLogger } from '@afilmory/framework'
-import { createLogger, HttpContext } from '@afilmory/framework'
+import type { PrettyLogger } from '@tsuki-hono/common'
+import { createLogger, HttpContext } from '@tsuki-hono/common'
 import { DOMParser } from 'linkedom'
 import { lookup as lookupMimeType } from 'mime-types'
 
@@ -25,6 +26,11 @@ export type StaticAssetDocument = Document
 
 const DOM_PARSER = new DOMParser()
 
+export interface DevBuildCommand {
+  command: string
+  env?: Record<string, string>
+}
+
 export interface StaticAssetServiceOptions {
   routeSegment: string
   rootCandidates: string[]
@@ -32,6 +38,7 @@ export interface StaticAssetServiceOptions {
   rewriteAssetReferences?: boolean
   assetLinkRels?: Iterable<string>
   staticAssetHostResolver?: (requestHost?: string | null) => Promise<string | null>
+  devBuildCommand?: DevBuildCommand
 }
 
 export interface ResolvedStaticAsset {
@@ -196,16 +203,18 @@ export abstract class StaticAssetService {
       return this.staticRoot
     }
 
-    for (const candidate of this.options.rootCandidates) {
-      try {
-        const stats = await stat(candidate)
-        if (stats.isDirectory()) {
-          this.staticRoot = candidate
-          this.logger.info(`Using static assets root for ${this.routeSegment}: ${candidate}`)
-          return candidate
-        }
-      } catch {
-        continue
+    const found = await this.findRootCandidate()
+    if (found) {
+      this.staticRoot = found
+      this.logger.info(`Using static assets root for ${this.routeSegment}: ${found}`)
+      return found
+    }
+
+    if (process.env.NODE_ENV === 'development' && this.options.devBuildCommand) {
+      const built = await this.triggerDevBuild()
+      if (built) {
+        this.staticRoot = built
+        return built
       }
     }
 
@@ -215,6 +224,42 @@ export abstract class StaticAssetService {
       this.logger.warn(`No static asset root found for ${this.routeSegment}; static route will return 404`)
     }
 
+    return null
+  }
+
+  private async findRootCandidate(): Promise<string | null> {
+    for (const candidate of this.options.rootCandidates) {
+      try {
+        const stats = await stat(candidate)
+        if (stats.isDirectory()) {
+          return candidate
+        }
+      } catch {
+        continue
+      }
+    }
+    return null
+  }
+
+  private async triggerDevBuild(): Promise<string | null> {
+    const { command, env } = this.options.devBuildCommand!
+    this.logger.info(`Static assets not found for ${this.routeSegment}, triggering build: ${command}`)
+    try {
+      execSync(command, {
+        cwd: process.cwd(),
+        stdio: 'inherit',
+        env: { ...process.env, ...env },
+      })
+      this.logger.info(`Build completed for ${this.routeSegment}, re-checking candidates...`)
+      const found = await this.findRootCandidate()
+      if (found) {
+        this.logger.info(`Using static assets root for ${this.routeSegment}: ${found}`)
+        return found
+      }
+      this.logger.warn(`Build completed but still no static asset root found for ${this.routeSegment}`)
+    } catch (error) {
+      this.logger.error(`Build failed for ${this.routeSegment}`, error)
+    }
     return null
   }
 

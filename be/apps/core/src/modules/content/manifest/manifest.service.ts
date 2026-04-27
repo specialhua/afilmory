@@ -3,12 +3,12 @@ import { CURRENT_MANIFEST_VERSION, migrateManifest } from '@afilmory/builder'
 import type { ManifestVersion } from '@afilmory/builder/manifest/version.js'
 import type { PhotoAssetManifest } from '@afilmory/db'
 import { CURRENT_PHOTO_MANIFEST_VERSION, photoAssets } from '@afilmory/db'
-import { createLogger } from '@afilmory/framework'
-import { DbAccessor } from 'core/database/database.provider'
-import { StorageAccessService } from 'core/modules/content/photo/access/storage-access.service'
-import { createProxyUrl } from 'core/modules/content/photo/access/storage-access.utils'
-import { PhotoStorageService } from 'core/modules/content/photo/storage/photo-storage.service'
-import { requireTenantContext } from 'core/modules/platform/tenant/tenant.context'
+import { DbAccessor } from '@core/database/database.provider'
+import { StorageAccessService } from '@core/modules/content/photo/access/storage-access.service'
+import { createProxyUrl } from '@core/modules/content/photo/access/storage-access.utils'
+import { PhotoStorageService } from '@core/modules/content/photo/storage/photo-storage.service'
+import { requireTenantContext } from '@core/modules/platform/tenant/tenant.context'
+import { createLogger } from '@tsuki-hono/common'
 import { and, eq, inArray } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 
@@ -46,7 +46,19 @@ export class ManifestService {
       }
     }
 
-    const { storageConfig } = await this.photoStorageService.resolveConfigForTenant(tenant.tenant.id)
+    let storageConfig: Awaited<ReturnType<PhotoStorageService['resolveConfigForTenant']>>['storageConfig']
+    try {
+      const resolved = await this.photoStorageService.resolveConfigForTenant(tenant.tenant.id)
+      storageConfig = resolved.storageConfig
+    } catch {
+      this.logger.debug('Storage not configured for tenant, returning empty manifest')
+      return {
+        version: CURRENT_PHOTO_MANIFEST_VERSION,
+        data: [],
+        cameras: [],
+        lenses: [],
+      }
+    }
     const secureAccessEnabled = await this.storageAccessService.resolveSecureAccessPreference(
       storageConfig,
       tenant.tenant.id,

@@ -1,5 +1,5 @@
-import { createLogger } from '@afilmory/framework'
-import { RedisAccessor } from 'core/redis/redis.provider'
+import { RedisAccessor } from '@core/redis/redis.provider'
+import { createLogger } from '@tsuki-hono/common'
 import { injectable } from 'tsyringe'
 
 const log = createLogger('CacheService')

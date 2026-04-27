@@ -23,11 +23,13 @@ export interface ProgressiveImageProps {
   onProgress?: (progress: number) => void
   onZoomChange?: (isZoomed: boolean) => void
   onBlobSrcChange?: (blobSrc: string | null) => void
+  onVisualReadyChange?: (ready: boolean) => void
 
   enableZoom?: boolean
   enablePan?: boolean
   maxZoom?: number
   minZoom?: number
+  disableThumbnailTransition?: boolean
 
   isCurrentImage?: boolean
   shouldRenderHighRes?: boolean
@@ -54,6 +56,8 @@ export interface DOMImageViewerProps {
   onZoomChange?: (isZoomed: boolean, scale: number) => any
   minZoom: number
   maxZoom: number
+  enableZoom?: boolean
+  enablePan?: boolean
   src: string
   alt: string
   highResLoaded: boolean

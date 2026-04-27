@@ -1,6 +1,6 @@
-import { Body, Controller, createZodSchemaDto, Get, Post, Query } from '@afilmory/framework'
 import type { AnalysisResponse } from '@afilmory/sdk'
 import { AnalysisDtoSchema, ReactionDtoSchema } from '@afilmory/sdk'
+import { Body, Controller, createZodSchemaDto, Get, Post, Query } from '@tsuki-hono/common'
 
 import { ReactionService } from './reaction.service'
 

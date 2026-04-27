@@ -1,4 +1,4 @@
-import { SystemSettingService } from 'core/modules/configuration/system-setting/system-setting.service'
+import { SystemSettingService } from '@core/modules/configuration/system-setting/system-setting.service'
 import { injectable } from 'tsyringe'
 
 export interface SocialProviderOptions {

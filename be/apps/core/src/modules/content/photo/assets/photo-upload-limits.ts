@@ -1,4 +1,4 @@
-import { BizException, ErrorCode } from 'core/errors'
+import { BizException, ErrorCode } from '@core/errors'
 import type { Context } from 'hono'
 
 import type { UploadAssetInput } from './photo-asset.types'

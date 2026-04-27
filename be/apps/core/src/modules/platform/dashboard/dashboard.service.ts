@@ -1,5 +1,5 @@
 import { photoAssets } from '@afilmory/db'
-import { DbAccessor } from 'core/database/database.provider'
+import { DbAccessor } from '@core/database/database.provider'
 import { desc, eq, sql } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 

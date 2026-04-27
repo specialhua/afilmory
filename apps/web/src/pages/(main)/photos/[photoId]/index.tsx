@@ -1,8 +1,10 @@
 import { RootPortal, RootPortalProvider } from '@afilmory/ui'
 import clsx from 'clsx'
+import { useAtomValue } from 'jotai'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { RemoveScroll } from 'react-remove-scroll'
 
+import { setViewer, viewerAtom } from '~/atoms/viewer'
 import { NotFound } from '~/components/common/NotFound'
 import { useContextPhotos, usePhotoViewer } from '~/hooks/usePhotoViewer'
 import { useTitle } from '~/hooks/useTitle'
@@ -11,6 +13,7 @@ import { PhotoViewer } from '~/modules/viewer'
 
 export const Component = () => {
   const photoViewer = usePhotoViewer()
+  const viewerState = useAtomValue(viewerAtom)
   const photos = useContextPhotos()
 
   const [ref, setRef] = useState<HTMLElement | null>(null)
@@ -57,6 +60,25 @@ export const Component = () => {
       setIsClosing(false)
     }
   }, [])
+
+  useEffect(() => {
+    if (!photoViewer.isOpen || isClosing) return
+    if (viewerState.pendingCloseInstanceId == null) return
+    if (viewerState.pendingCloseInstanceId !== viewerState.openInstanceId) return
+
+    setViewer((prev) => {
+      if (prev.pendingCloseInstanceId !== viewerState.pendingCloseInstanceId) {
+        return prev
+      }
+
+      return {
+        ...prev,
+        pendingCloseInstanceId: null,
+      }
+    })
+
+    handleClose()
+  }, [handleClose, isClosing, photoViewer.isOpen, viewerState.openInstanceId, viewerState.pendingCloseInstanceId])
 
   useEffect(() => {
     const current = photos[photoViewer.currentIndex]

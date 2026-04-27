@@ -1,4 +1,4 @@
-import { APP_GLOBAL_PREFIX } from 'core/app.constants'
+import { APP_GLOBAL_PREFIX } from '@core/app.constants'
 
 /**
  * Utility functions for storage access operations

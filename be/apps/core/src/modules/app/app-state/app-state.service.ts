@@ -1,5 +1,5 @@
 import { systemSettings } from '@afilmory/db'
-import { DbAccessor } from 'core/database/database.provider'
+import { DbAccessor } from '@core/database/database.provider'
 import { eq } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 

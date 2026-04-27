@@ -1,5 +1,5 @@
-import { Controller, createZodSchemaDto, Get, Query } from '@afilmory/framework'
-import { Roles } from 'core/guards/roles.decorator'
+import { Roles } from '@core/guards/roles.decorator'
+import { Controller, createZodSchemaDto, Get, Query } from '@tsuki-hono/common'
 import { inject } from 'tsyringe'
 import z from 'zod'
 

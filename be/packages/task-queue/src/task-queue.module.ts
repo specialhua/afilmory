@@ -1,4 +1,4 @@
-import { Module } from '@afilmory/framework'
+import { Module } from '@tsuki-hono/common'
 
 import { TaskQueueManager } from './task-queue.manager'
 

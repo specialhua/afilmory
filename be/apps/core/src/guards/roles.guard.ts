@@ -1,8 +1,8 @@
-import type { CanActivate, ExecutionContext } from '@afilmory/framework'
-import { HttpContext } from '@afilmory/framework'
-import type { HttpContextAuth } from 'core/context/http-context.values'
-import { BizException, ErrorCode } from 'core/errors'
-import { logger } from 'core/helpers/logger.helper'
+import type { HttpContextAuth } from '@core/context/http-context.values'
+import { BizException, ErrorCode } from '@core/errors'
+import { logger } from '@core/helpers/logger.helper'
+import type { CanActivate, ExecutionContext } from '@tsuki-hono/common'
+import { HttpContext } from '@tsuki-hono/common'
 import { injectable } from 'tsyringe'
 
 import { getAllowedRoleMask, roleBitWithInheritance, roleNameToBit } from './roles.decorator'

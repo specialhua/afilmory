@@ -1,9 +1,9 @@
-import { Controller, Get } from '@afilmory/framework'
-import { PgPoolProvider } from 'core/database/database.provider'
-import { AllowPlaceholderTenant } from 'core/decorators/allow-placeholder.decorator'
-import { SkipTenantGuard } from 'core/decorators/skip-tenant.decorator'
-import { BypassResponseTransform } from 'core/interceptors/response-transform.decorator'
-import { RedisProvider } from 'core/redis/redis.provider'
+import { PgPoolProvider } from '@core/database/database.provider'
+import { AllowPlaceholderTenant } from '@core/decorators/allow-placeholder.decorator'
+import { SkipTenantGuard } from '@core/decorators/skip-tenant.decorator'
+import { BypassResponseTransform } from '@core/interceptors/response-transform.decorator'
+import { RedisProvider } from '@core/redis/redis.provider'
+import { Controller, Get } from '@tsuki-hono/common'
 
 @Controller('health')
 @SkipTenantGuard()

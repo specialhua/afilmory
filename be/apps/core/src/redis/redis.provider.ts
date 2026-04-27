@@ -1,6 +1,6 @@
-import { createLogger } from '@afilmory/framework'
 import type { RedisClient } from '@afilmory/redis'
 import { createRedisClient } from '@afilmory/redis'
+import { createLogger } from '@tsuki-hono/common'
 import { injectable } from 'tsyringe'
 
 import { RedisConfig } from './redis.config'

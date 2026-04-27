@@ -14,6 +14,7 @@ import { PhotosProvider } from '~/providers/photos-provider'
 export const Component = () => {
   useSyncGallerySettingsWithUrl()
   useSyncViewerWithUrl()
+  useSyncViewerCloseShortcut()
 
   const isMobile = useMobile()
   const photos = usePhotos()
@@ -215,25 +216,30 @@ const useSyncViewerWithUrl = () => {
       // URL says viewer should be open
       const targetIndex = photos.findIndex((p) => p.id === photoId)
 
-      if (targetIndex !== -1 && // Open viewer if closed, or update photo if different
-        (!currentViewer.isOpen || currentViewer.photoId !== photoId)) {
-          setViewer((prev) => ({
-            ...prev,
-            isOpen: true,
-            photoId,
-            // When syncing from URL, do not preserve a potentially stale triggerElement
-            triggerElement: null,
-          }))
+      if (
+        targetIndex !== -1 && // Open viewer if closed, or update photo if different
+        (!currentViewer.isOpen || currentViewer.photoId !== photoId)
+      ) {
+        setViewer((prev) => ({
+          ...prev,
+          isOpen: true,
+          openInstanceId: prev.isOpen ? prev.openInstanceId : prev.openInstanceId + 1,
+          pendingCloseInstanceId: null,
+          photoId,
+          // When syncing from URL, do not preserve a potentially stale triggerElement
+          triggerElement: null,
+        }))
 
-          // Prevent background scroll
-          document.body.style.overflow = 'hidden'
-        }
+        // Prevent background scroll
+        document.body.style.overflow = 'hidden'
+      }
     } else {
       // URL says viewer should be closed
       if (currentViewer.isOpen) {
         setViewer((prev) => ({
           ...prev,
           isOpen: false,
+          pendingCloseInstanceId: null,
           triggerElement: null,
         }))
 
@@ -248,4 +254,33 @@ const useSyncViewerWithUrl = () => {
       document.body.style.overflow = ''
     }
   }, [location.pathname, photoId, photos])
+}
+
+const useSyncViewerCloseShortcut = () => {
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+
+      const currentViewer = getViewer()
+      if (!currentViewer.isOpen || !currentViewer.openInstanceId) return
+      if (currentViewer.pendingCloseInstanceId === currentViewer.openInstanceId) return
+
+      event.preventDefault()
+
+      setViewer((prev) => {
+        if (!prev.isOpen || !prev.openInstanceId) return prev
+        if (prev.pendingCloseInstanceId === prev.openInstanceId) return prev
+
+        return {
+          ...prev,
+          pendingCloseInstanceId: prev.openInstanceId,
+        }
+      })
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [])
 }

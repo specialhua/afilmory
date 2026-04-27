@@ -1,12 +1,12 @@
-import type { HttpMiddleware } from '@afilmory/framework'
-import { Middleware } from '@afilmory/framework'
 import {
   applyTenantIsolationContext,
   getOptionalDbContext,
   PgPoolProvider,
   runWithDbContext,
-} from 'core/database/database.provider'
-import { getTenantContext } from 'core/modules/platform/tenant/tenant.context'
+} from '@core/database/database.provider'
+import { getTenantContext } from '@core/modules/platform/tenant/tenant.context'
+import type { HttpMiddleware } from '@tsuki-hono/common'
+import { Middleware } from '@tsuki-hono/common'
 import type { Context, Next } from 'hono'
 import { injectable } from 'tsyringe'
 

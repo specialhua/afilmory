@@ -1,6 +1,6 @@
-import type { UiSchemaTFunction } from 'core/modules/ui/ui-schema/ui-schema.i18n'
-import { identityUiSchemaT } from 'core/modules/ui/ui-schema/ui-schema.i18n'
-import type { UiNode } from 'core/modules/ui/ui-schema/ui-schema.type'
+import type { UiSchemaTFunction } from '@core/modules/ui/ui-schema/ui-schema.i18n'
+import { identityUiSchemaT } from '@core/modules/ui/ui-schema/ui-schema.i18n'
+import type { UiNode } from '@core/modules/ui/ui-schema/ui-schema.type'
 
 import type { SettingKeyType, SettingUiSchema } from './setting.type'
 

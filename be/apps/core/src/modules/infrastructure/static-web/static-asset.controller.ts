@@ -1,6 +1,6 @@
-import { ContextParam, Controller, Get } from '@afilmory/framework'
-import { AllowPlaceholderTenant } from 'core/decorators/allow-placeholder.decorator'
-import { SkipTenantGuard } from 'core/decorators/skip-tenant.decorator'
+import { AllowPlaceholderTenant } from '@core/decorators/allow-placeholder.decorator'
+import { SkipTenantGuard } from '@core/decorators/skip-tenant.decorator'
+import { ContextParam, Controller, Get } from '@tsuki-hono/common'
 import type { Context } from 'hono'
 
 import { StaticBaseController } from './static-base.controller'

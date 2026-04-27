@@ -1,4 +1,4 @@
-import { Module } from '@afilmory/framework'
+import { Module } from '@tsuki-hono/common'
 import { injectable } from 'tsyringe'
 
 import { RedisConfig } from './redis.config'

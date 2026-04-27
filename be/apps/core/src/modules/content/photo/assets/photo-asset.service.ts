@@ -10,10 +10,9 @@ import { StorageManager } from '@afilmory/builder/storage/index.js'
 import type { GitHubConfig, ManagedStorageConfig, S3CompatibleConfig } from '@afilmory/builder/storage/interfaces.js'
 import type { PhotoAssetManifest } from '@afilmory/db'
 import { CURRENT_PHOTO_MANIFEST_VERSION, DATABASE_ONLY_PROVIDER, photoAssets } from '@afilmory/db'
-import { EventEmitterService } from '@afilmory/framework'
-import { DbAccessor } from 'core/database/database.provider'
-import { BizException, ErrorCode } from 'core/errors'
-import { runWithBuilderLogRelay } from 'core/modules/infrastructure/data-sync/builder-log-relay'
+import { DbAccessor } from '@core/database/database.provider'
+import { BizException, ErrorCode } from '@core/errors'
+import { runWithBuilderLogRelay } from '@core/modules/infrastructure/data-sync/builder-log-relay'
 import type {
   DataSyncAction,
   DataSyncLogLevel,
@@ -21,13 +20,14 @@ import type {
   DataSyncProgressEvent,
   DataSyncResultSummary,
   DataSyncStageTotals,
-} from 'core/modules/infrastructure/data-sync/data-sync.types'
-import { BILLING_USAGE_EVENT } from 'core/modules/platform/billing/billing.constants'
-import { BillingPlanService } from 'core/modules/platform/billing/billing-plan.service'
-import { BillingUsageService } from 'core/modules/platform/billing/billing-usage.service'
-import { StoragePlanService } from 'core/modules/platform/billing/storage-plan.service'
-import { ManagedStorageService } from 'core/modules/platform/managed-storage/managed-storage.service'
-import { requireTenantContext } from 'core/modules/platform/tenant/tenant.context'
+} from '@core/modules/infrastructure/data-sync/data-sync.types'
+import { BILLING_USAGE_EVENT } from '@core/modules/platform/billing/billing.constants'
+import { BillingPlanService } from '@core/modules/platform/billing/billing-plan.service'
+import { BillingUsageService } from '@core/modules/platform/billing/billing-usage.service'
+import { StoragePlanService } from '@core/modules/platform/billing/storage-plan.service'
+import { ManagedStorageService } from '@core/modules/platform/managed-storage/managed-storage.service'
+import { requireTenantContext } from '@core/modules/platform/tenant/tenant.context'
+import { EventEmitterService } from '@tsuki-hono/event-emitter'
 import { and, eq, inArray, sql } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 
@@ -65,7 +65,7 @@ type UploadAssetsOptions = {
   abortSignal?: AbortSignal
 }
 
-declare module '@afilmory/framework' {
+declare module '@tsuki-hono/event-emitter' {
   interface Events {
     'photo.manifest.changed': { tenantId: string }
   }

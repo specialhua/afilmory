@@ -2,8 +2,8 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import type { PhotoManifestItem } from '@afilmory/builder'
-import { SiteSettingService } from 'core/modules/configuration/site-setting/site-setting.service'
-import { ManifestService } from 'core/modules/content/manifest/manifest.service'
+import { SiteSettingService } from '@core/modules/configuration/site-setting/site-setting.service'
+import { ManifestService } from '@core/modules/content/manifest/manifest.service'
 import type { Context } from 'hono'
 import { DOMParser } from 'linkedom'
 import { injectable } from 'tsyringe'
@@ -63,6 +63,10 @@ export class StaticWebService extends StaticAssetService {
       assetLinkRels: STATIC_WEB_ASSET_LINK_RELS,
       loggerName: 'StaticWebService',
       staticAssetHostResolver: (requestHost) => this.staticAssetHostService.getStaticAssetHost(requestHost),
+      devBuildCommand: {
+        command: 'pnpm --filter @afilmory/web build',
+        env: { BUILD_FOR_SERVER_SERVE: '1', AFILMORY_EMBED_MANIFEST: 'false' },
+      },
     })
   }
 

@@ -27,6 +27,7 @@
     "@afilmory/typing": "workspace:*",
     "@afilmory/ui": "workspace:*",
     "@afilmory/utils": "workspace:*",
+    "@afilmory/viewer-motion": "workspace:*",
     "@afilmory/webgl-viewer": "workspace:*",
     "@essentials/request-timeout": "1.3.0",
     "@headlessui/react": "2.2.9",

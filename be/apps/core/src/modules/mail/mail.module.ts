@@ -1,5 +1,5 @@
-import { Module } from '@afilmory/framework'
-import { SystemSettingModule } from 'core/modules/configuration/system-setting/system-setting.module'
+import { SystemSettingModule } from '@core/modules/configuration/system-setting/system-setting.module'
+import { Module } from '@tsuki-hono/common'
 
 import { CommentNotificationListener } from './listeners/comment-notification.listener'
 import { MailService } from './mail.service'

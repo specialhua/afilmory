@@ -1,6 +1,6 @@
-import { BizException, ErrorCode } from 'core/errors'
-import { StoragePlanService } from 'core/modules/platform/billing/storage-plan.service'
-import { getTenantContext } from 'core/modules/platform/tenant/tenant.context'
+import { BizException, ErrorCode } from '@core/errors'
+import { StoragePlanService } from '@core/modules/platform/billing/storage-plan.service'
+import { getTenantContext } from '@core/modules/platform/tenant/tenant.context'
 import { injectable } from 'tsyringe'
 
 import { getUiSchemaTranslator } from '../../ui/ui-schema/ui-schema.i18n'

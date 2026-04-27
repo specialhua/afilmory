@@ -1,5 +1,5 @@
-import { Body, ContextParam, Controller, Delete, Get, Param, Post, Query } from '@afilmory/framework'
-import { Roles } from 'core/guards/roles.decorator'
+import { Roles } from '@core/guards/roles.decorator'
+import { Body, ContextParam, Controller, Delete, Get, Param, Post, Query } from '@tsuki-hono/common'
 import type { Context } from 'hono'
 
 import {

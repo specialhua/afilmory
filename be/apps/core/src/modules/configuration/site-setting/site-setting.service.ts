@@ -1,8 +1,8 @@
 import { authUsers } from '@afilmory/db'
-import { DbAccessor } from 'core/database/database.provider'
-import { BizException, ErrorCode } from 'core/errors'
-import { normalizeStringToUndefined } from 'core/helpers/normalize.helper'
-import { requireTenantContext } from 'core/modules/platform/tenant/tenant.context'
+import { DbAccessor } from '@core/database/database.provider'
+import { BizException, ErrorCode } from '@core/errors'
+import { normalizeStringToUndefined } from '@core/helpers/normalize.helper'
+import { requireTenantContext } from '@core/modules/platform/tenant/tenant.context'
 import { asc, eq, sql } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 

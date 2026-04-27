@@ -1,6 +1,6 @@
-import { ContextParam, Controller, createZodSchemaDto, Get, Param, Query } from '@afilmory/framework'
-import { AllowPlaceholderTenant } from 'core/decorators/allow-placeholder.decorator'
-import { SkipTenantGuard } from 'core/decorators/skip-tenant.decorator'
+import { AllowPlaceholderTenant } from '@core/decorators/allow-placeholder.decorator'
+import { SkipTenantGuard } from '@core/decorators/skip-tenant.decorator'
+import { ContextParam, Controller, createZodSchemaDto, Get, Param, Query } from '@tsuki-hono/common'
 import type { Context } from 'hono'
 import z from 'zod'
 

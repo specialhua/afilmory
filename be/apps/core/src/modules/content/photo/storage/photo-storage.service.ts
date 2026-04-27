@@ -8,18 +8,18 @@ import type {
   RemoteStorageConfig,
   S3CompatibleConfig,
 } from '@afilmory/builder/storage/interfaces.js'
-import { BizException, ErrorCode } from 'core/errors'
+import { BizException, ErrorCode } from '@core/errors'
 import {
   normalizeStringToUndefined,
   parseBoolean,
   parseNumber,
   requireStringWithMessage,
-} from 'core/helpers/normalize.helper'
-import { BuilderConfigService } from 'core/modules/configuration/builder-config/builder-config.service'
-import { SettingService } from 'core/modules/configuration/setting/setting.service'
-import type { BuilderStorageProvider } from 'core/modules/configuration/setting/storage-provider.utils'
-import { SystemSettingService } from 'core/modules/configuration/system-setting/system-setting.service'
-import { StoragePlanService } from 'core/modules/platform/billing/storage-plan.service'
+} from '@core/helpers/normalize.helper'
+import { BuilderConfigService } from '@core/modules/configuration/builder-config/builder-config.service'
+import { SettingService } from '@core/modules/configuration/setting/setting.service'
+import type { BuilderStorageProvider } from '@core/modules/configuration/setting/storage-provider.utils'
+import { SystemSettingService } from '@core/modules/configuration/system-setting/system-setting.service'
+import { StoragePlanService } from '@core/modules/platform/billing/storage-plan.service'
 import { injectable } from 'tsyringe'
 
 import { parseRetryMode } from './storage-config-parser.utils'

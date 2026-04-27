@@ -1,8 +1,9 @@
 import { authUsers, comments } from '@afilmory/db'
-import { createLogger, OnEvent } from '@afilmory/framework'
-import { DbAccessor } from 'core/database/database.provider'
-import { SystemSettingService } from 'core/modules/configuration/system-setting/system-setting.service'
-import { CommentCreatedEvent } from 'core/modules/content/comment/events/comment-created.event'
+import { DbAccessor } from '@core/database/database.provider'
+import { SystemSettingService } from '@core/modules/configuration/system-setting/system-setting.service'
+import { CommentCreatedEvent } from '@core/modules/content/comment/events/comment-created.event'
+import { createLogger } from '@tsuki-hono/common'
+import { OnEvent } from '@tsuki-hono/event-emitter'
 import { and, eq, or } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 

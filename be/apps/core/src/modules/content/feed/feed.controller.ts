@@ -1,4 +1,4 @@
-import { ContextParam, Controller, Get } from '@afilmory/framework'
+import { ContextParam, Controller, Get } from '@tsuki-hono/common'
 import type { Context } from 'hono'
 
 import type { FeedDocument } from './feed.service'

@@ -1,6 +1,6 @@
 import { authUsers, photoAssets, settings, tenantDomains, tenants } from '@afilmory/db'
-import { DbAccessor } from 'core/database/database.provider'
-import { normalizeDate } from 'core/helpers/normalize.helper'
+import { DbAccessor } from '@core/database/database.provider'
+import { normalizeDate } from '@core/helpers/normalize.helper'
 import { and, asc, eq, inArray, sql } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 

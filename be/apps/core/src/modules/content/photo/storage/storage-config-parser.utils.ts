@@ -1,5 +1,5 @@
 import type { S3CompatibleConfig } from '@afilmory/builder/storage/interfaces.js'
-import { normalizeStringToUndefined } from 'core/helpers/normalize.helper'
+import { normalizeStringToUndefined } from '@core/helpers/normalize.helper'
 
 /**
  * Parses a string value to S3 retry mode.

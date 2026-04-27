@@ -8,14 +8,14 @@ import {
   DEFAULT_DIRECTORY as DEFAULT_THUMBNAIL_DIRECTORY,
   THUMBNAIL_PLUGIN_DATA_KEY,
 } from '@afilmory/builder/plugins/thumbnail-storage/shared.js'
-import { ContextParam, Controller, createLogger, Post } from '@afilmory/framework'
-import { BizException, ErrorCode } from 'core/errors'
-import { Roles } from 'core/guards/roles.decorator'
-import { BypassResponseTransform } from 'core/interceptors/response-transform.decorator'
-import { PhotoBuilderService } from 'core/modules/content/photo/builder/photo-builder.service'
-import { runWithBuilderLogRelay } from 'core/modules/infrastructure/data-sync/builder-log-relay'
-import type { DataSyncProgressEmitter } from 'core/modules/infrastructure/data-sync/data-sync.types'
-import { createProgressSseResponse } from 'core/modules/shared/http/sse'
+import { BizException, ErrorCode } from '@core/errors'
+import { Roles } from '@core/guards/roles.decorator'
+import { BypassResponseTransform } from '@core/interceptors/response-transform.decorator'
+import { PhotoBuilderService } from '@core/modules/content/photo/builder/photo-builder.service'
+import { runWithBuilderLogRelay } from '@core/modules/infrastructure/data-sync/builder-log-relay'
+import type { DataSyncProgressEmitter } from '@core/modules/infrastructure/data-sync/data-sync.types'
+import { createProgressSseResponse } from '@core/modules/shared/http/sse'
+import { ContextParam, Controller, createLogger, Post } from '@tsuki-hono/common'
 import type { Context } from 'hono'
 
 import { joinSegments, normalizeKeyPath } from '../../content/photo/access/storage-access.utils'

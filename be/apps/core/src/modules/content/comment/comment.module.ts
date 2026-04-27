@@ -1,5 +1,5 @@
-import { Module } from '@afilmory/framework'
-import { DatabaseModule } from 'core/database/database.module'
+import { DatabaseModule } from '@core/database/database.module'
+import { Module } from '@tsuki-hono/common'
 
 import { CommentController } from './comment.controller'
 import { AllowAllCommentModerationHook, COMMENT_MODERATION_HOOK } from './comment.moderation'

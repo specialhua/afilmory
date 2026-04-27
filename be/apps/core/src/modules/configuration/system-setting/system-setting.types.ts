@@ -2,13 +2,13 @@ import type {
   BillingPlanOverrides,
   BillingPlanPricingConfigs,
   BillingPlanProductConfigs,
-} from 'core/modules/platform/billing/billing-plan.types'
+} from '@core/modules/platform/billing/billing-plan.types'
 import type {
   StoragePlanCatalog,
   StoragePlanPricingConfigs,
   StoragePlanProductConfigs,
-} from 'core/modules/platform/billing/storage-plan.types'
-import type { UiSchema } from 'core/modules/ui/ui-schema/ui-schema.type'
+} from '@core/modules/platform/billing/storage-plan.types'
+import type { UiSchema } from '@core/modules/ui/ui-schema/ui-schema.type'
 
 import type { BuilderStorageProvider } from '../setting/storage-provider.utils'
 import type {
@@ -62,7 +62,7 @@ export type UpdateSystemSettingsInput = Partial<SystemSettings> &
 
 export { type SystemSettingField } from './system-setting.constants'
 
-declare module '@afilmory/framework' {
+declare module '@tsuki-hono/event-emitter' {
   interface Events {
     'system.setting.updated': { key: SystemSettingKey; value: unknown }
   }

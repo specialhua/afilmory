@@ -1,5 +1,5 @@
-import { Module } from '@afilmory/framework'
-import { SiteSettingModule } from 'core/modules/configuration/site-setting/site-setting.module'
+import { SiteSettingModule } from '@core/modules/configuration/site-setting/site-setting.module'
+import { Module } from '@tsuki-hono/common'
 
 import { ManifestModule } from '../manifest/manifest.module'
 import { OgController } from './og.controller'

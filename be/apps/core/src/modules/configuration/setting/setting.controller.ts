@@ -1,7 +1,7 @@
-import { Body, Controller, Delete, Get, Param, Post } from '@afilmory/framework'
-import { BizException, ErrorCode } from 'core/errors'
-import { Roles } from 'core/guards/roles.decorator'
-import { BypassResponseTransform } from 'core/interceptors/response-transform.decorator'
+import { BizException, ErrorCode } from '@core/errors'
+import { Roles } from '@core/guards/roles.decorator'
+import { BypassResponseTransform } from '@core/interceptors/response-transform.decorator'
+import { Body, Controller, Delete, Get, Param, Post } from '@tsuki-hono/common'
 
 import { SettingKeys } from './setting.constant'
 import type { GetSettingsBodyDto } from './setting.dto'

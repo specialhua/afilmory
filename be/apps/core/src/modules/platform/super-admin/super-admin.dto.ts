@@ -1,6 +1,6 @@
-import { createZodDto, createZodSchemaDto } from '@afilmory/framework'
-import { BILLING_PLAN_IDS } from 'core/modules/platform/billing/billing-plan.constants'
-import type { BillingPlanId } from 'core/modules/platform/billing/billing-plan.types'
+import { BILLING_PLAN_IDS } from '@core/modules/platform/billing/billing-plan.constants'
+import type { BillingPlanId } from '@core/modules/platform/billing/billing-plan.types'
+import { createZodDto, createZodSchemaDto } from '@tsuki-hono/common'
 import { z } from 'zod'
 
 const planQuotaFields = (() => {

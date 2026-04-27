@@ -1,4 +1,5 @@
 import { Thumbhash } from '@afilmory/ui'
+import { getViewerTransitionTriggerProps } from '@afilmory/viewer-motion'
 import clsx from 'clsx'
 import { m } from 'motion/react'
 import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -174,7 +175,7 @@ export const MasonryPhotoItem = memo(({ data, width }: { data: PhotoManifest; wi
         width,
         height: calculatedHeight,
       }}
-      data-photo-id={data.id}
+      {...getViewerTransitionTriggerProps(data.id)}
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}

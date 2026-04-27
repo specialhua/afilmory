@@ -16,7 +16,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@afilmory/framework": "workspace:*",
+    "@tsuki-hono/common": "0.0.2",
+    "@tsuki-hono/core": "0.0.2",
     "tsyringe": "^4.10.0"
   },
   "devDependencies": {

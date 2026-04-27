@@ -1,19 +1,21 @@
 import { clsxm } from '@afilmory/utils'
 import { WebGLImageViewer } from '@afilmory/webgl-viewer'
 import { AnimatePresence, m } from 'motion/react'
-import { useCallback, useMemo, useRef } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import { useMediaQuery } from 'usehooks-ts'
 
 import { useShowContextMenu } from '~/atoms/context-menu'
 import { SlidingNumber } from '~/components/ui/number/SlidingNumber'
+import { isMobileDevice } from '~/lib/device-viewport'
 import { canUseWebGL } from '~/lib/feature'
 import { HDRBadge } from '~/modules/media/HDRBadge'
 import { LivePhotoBadge } from '~/modules/media/LivePhotoBadge'
 import { LivePhotoVideo } from '~/modules/media/LivePhotoVideo'
 
 import { DOMImageViewer } from './DOMImageViewer'
+import { getProgressiveImageVisualReady, isThumbnailElementVisuallyReady } from './entry-animation-state'
 import {
   createContextMenuItems,
   useImageLoader,
@@ -23,6 +25,8 @@ import {
   useWebGLLoadingState,
 } from './hooks'
 import type { ProgressiveImageProps, WebGLImageViewerRef } from './types'
+
+const loadedThumbnailSrcSet = new Set<string>()
 
 export const ProgressiveImage = ({
   src,
@@ -35,6 +39,10 @@ export const ProgressiveImage = ({
   onProgress,
   onZoomChange,
   onBlobSrcChange,
+  onVisualReadyChange,
+  disableThumbnailTransition = false,
+  enableZoom = true,
+  enablePan = true,
   maxZoom = 20,
   minZoom = 1,
   isCurrentImage = false,
@@ -104,14 +112,77 @@ export const ProgressiveImage = ({
   const handleWebGLLoadingStateChange = useWebGLLoadingState(loadingIndicatorRef)
 
   const handleThumbnailLoad = useCallback(() => {
+    if (thumbnailSrc) {
+      loadedThumbnailSrcSet.add(thumbnailSrc)
+    }
     setState.setIsThumbnailLoaded(true)
-  }, [setState])
+  }, [setState, thumbnailSrc])
+
+  useLayoutEffect(() => {
+    if (!thumbnailSrc) {
+      setState.setIsThumbnailLoaded(false)
+      return
+    }
+
+    const thumbnailElement = thumbnailRef.current
+    const isAlreadyLoaded =
+      loadedThumbnailSrcSet.has(thumbnailSrc) ||
+      isThumbnailElementVisuallyReady({
+        currentSrc: thumbnailElement?.currentSrc,
+        naturalWidth: thumbnailElement?.naturalWidth,
+        src: thumbnailElement?.src,
+        thumbnailSrc,
+      })
+
+    if (isAlreadyLoaded) {
+      loadedThumbnailSrcSet.add(thumbnailSrc)
+      setState.setIsThumbnailLoaded(true)
+      return
+    }
+
+    setState.setIsThumbnailLoaded(false)
+  }, [setState, thumbnailSrc])
 
   const showContextMenu = useShowContextMenu()
 
   const isHDRSupported = useMediaQuery('(dynamic-range: high)')
   // Only use HDR if the browser supports it and the image is HDR
   const shouldUseHDR = isHDR && isHDRSupported
+
+  const webglPinchConfig = useMemo(
+    () => ({
+      step: 0.5,
+      disabled: !enableZoom,
+    }),
+    [enableZoom],
+  )
+
+  const webglDoubleClickConfig = useMemo(
+    () => ({
+      step: 2,
+      disabled: !enableZoom,
+      mode: 'toggle' as const,
+      animationTime: 200,
+    }),
+    [enableZoom],
+  )
+
+  const webglPanningConfig = useMemo(
+    () => ({
+      disabled: !enablePan,
+    }),
+    [enablePan],
+  )
+
+  const isVisualReady = getProgressiveImageVisualReady({
+    isHighResImageRendered,
+    isThumbnailLoaded,
+    thumbnailSrc,
+  })
+
+  useLayoutEffect(() => {
+    onVisualReadyChange?.(isVisualReady)
+  }, [isVisualReady, onVisualReadyChange])
 
   return (
     <div
@@ -131,6 +202,7 @@ export const ProgressiveImage = ({
           alt={alt}
           className={clsxm(
             'absolute inset-0 h-full w-full object-contain transition-opacity duration-300',
+            disableThumbnailTransition && 'transition-none',
             isThumbnailLoaded ? 'opacity-100' : 'opacity-0',
           )}
           onLoad={handleThumbnailLoad}
@@ -153,6 +225,8 @@ export const ProgressiveImage = ({
               onZoomChange={onDOMTransformed}
               minZoom={minZoom}
               maxZoom={maxZoom}
+              enableZoom={enableZoom}
+              enablePan={enablePan}
               src={blobSrc}
               alt={alt}
               highResLoaded={highResLoaded}
@@ -182,12 +256,15 @@ export const ProgressiveImage = ({
               initialScale={1}
               minScale={minZoom}
               maxScale={maxZoom}
+              pinch={webglPinchConfig}
+              doubleClick={webglDoubleClickConfig}
+              panning={webglPanningConfig}
               limitToBounds={true}
               centerOnInit={true}
               smooth={true}
               onZoomChange={onTransformed}
               onLoadingStateChange={handleWebGLLoadingStateChange}
-              debug={import.meta.env.DEV}
+              debug={import.meta.env.DEV && !isMobileDevice}
             />
           )}
         </div>

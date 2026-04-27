@@ -1,4 +1,4 @@
-import { BizException, ErrorCode } from 'core/errors'
+import { BizException, ErrorCode } from '@core/errors'
 
 /**
  * Normalizes a string value by trimming whitespace.

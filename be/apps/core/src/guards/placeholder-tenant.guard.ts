@@ -1,8 +1,8 @@
-import type { CanActivate, ExecutionContext } from '@afilmory/framework'
-import { isPlaceholderTenantAllowed } from 'core/decorators/allow-placeholder.decorator'
-import { BizException, ErrorCode } from 'core/errors'
-import { logger } from 'core/helpers/logger.helper'
-import { getTenantContext, isPlaceholderTenantContext } from 'core/modules/platform/tenant/tenant.context'
+import { isPlaceholderTenantAllowed } from '@core/decorators/allow-placeholder.decorator'
+import { BizException, ErrorCode } from '@core/errors'
+import { logger } from '@core/helpers/logger.helper'
+import { getTenantContext, isPlaceholderTenantContext } from '@core/modules/platform/tenant/tenant.context'
+import type { CanActivate, ExecutionContext } from '@tsuki-hono/common'
 import { injectable } from 'tsyringe'
 
 @injectable()

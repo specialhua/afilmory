@@ -1,5 +1,5 @@
 import type { BuilderConfig } from '@afilmory/builder'
-import { requireTenantContext } from 'core/modules/platform/tenant/tenant.context'
+import { requireTenantContext } from '@core/modules/platform/tenant/tenant.context'
 import { injectable } from 'tsyringe'
 
 import { getUiSchemaTranslator } from '../../ui/ui-schema/ui-schema.i18n'

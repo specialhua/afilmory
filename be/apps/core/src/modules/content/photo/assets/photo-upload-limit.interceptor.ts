@@ -1,5 +1,5 @@
-import type { CallHandler, ExecutionContext, FrameworkResponse, Interceptor } from '@afilmory/framework'
-import { BizException, ErrorCode } from 'core/errors'
+import { BizException, ErrorCode } from '@core/errors'
+import type { CallHandler, ExecutionContext, FrameworkResponse, Interceptor } from '@tsuki-hono/common'
 import { injectable } from 'tsyringe'
 
 import { PhotoAssetService } from './photo-asset.service'
