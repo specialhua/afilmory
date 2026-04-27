@@ -6,11 +6,10 @@ import { m, type MotionValue, useTransform } from 'motion/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { injectConfig } from '~/config'
 import { useViewport } from '~/hooks/useViewport'
-import { commentsApi } from '~/lib/api/comments'
 import { ExifPanelContent } from '~/modules/metadata/ExifPanel'
 import { CommentsPanel } from '~/modules/social/comments'
+import { canFetchPhotoCommentCount, getPhotoCommentCount, hasCommentPanel } from '~/modules/social/comments/count'
 import type { PhotoManifest } from '~/types/photo'
 
 type Tab = 'info' | 'comments'
@@ -40,11 +39,11 @@ export const MobilePhotoInspectorSheet = ({
   const viewportHeight = useViewport((value) => value.h) || (typeof window !== 'undefined' ? window.innerHeight : 844)
   const sheetHeight = useMemo(() => resolveHeight(viewportHeight), [resolveHeight, viewportHeight])
 
-  const showSocialFeatures = injectConfig.useCloud
+  const showSocialFeatures = hasCommentPanel
   const { data: commentCount } = useQuery({
     queryKey: ['comment-count', currentPhoto.id],
-    queryFn: () => commentsApi.count(currentPhoto.id),
-    enabled: showSocialFeatures,
+    queryFn: () => getPhotoCommentCount(currentPhoto.id),
+    enabled: canFetchPhotoCommentCount,
   })
   const hasComments = (commentCount?.count ?? 0) > 0
 
