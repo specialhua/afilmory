@@ -2,7 +2,8 @@ import type { PickedExif } from '@afilmory/builder'
 import { MobileTabGroup, MobileTabItem } from '@afilmory/ui'
 import { createInspectorSheetPresentation, resolveInspectorSheetHeight } from '@afilmory/viewer-motion'
 import { useQuery } from '@tanstack/react-query'
-import { m, type MotionValue, useTransform } from 'motion/react'
+import { useDrag } from '@use-gesture/react'
+import { animate, m, type MotionValue, useMotionValue, useTransform } from 'motion/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -13,6 +14,9 @@ import { canFetchPhotoCommentCount, getPhotoCommentCount, hasCommentPanel } from
 import type { PhotoManifest } from '~/types/photo'
 
 type Tab = 'info' | 'comments'
+
+const SHEET_HANDLE_CLOSE_DISTANCE = 72
+const SHEET_HANDLE_MAX_DRAG = 120
 
 interface MobilePhotoInspectorSheetProps {
   createPresentation?: typeof createInspectorSheetPresentation
@@ -38,6 +42,7 @@ export const MobilePhotoInspectorSheet = ({
   const sheetRef = useRef<HTMLDivElement>(null)
   const viewportHeight = useViewport((value) => value.h) || (typeof window !== 'undefined' ? window.innerHeight : 844)
   const sheetHeight = useMemo(() => resolveHeight(viewportHeight), [resolveHeight, viewportHeight])
+  const sheetDragOffset = useMotionValue(0)
 
   const showSocialFeatures = hasCommentPanel
   const { data: commentCount } = useQuery({
@@ -57,8 +62,9 @@ export const MobilePhotoInspectorSheet = ({
       if (activeElement instanceof HTMLElement && sheetRef.current?.contains(activeElement)) {
         activeElement.blur()
       }
+      sheetDragOffset.set(0)
     }
-  }, [isInteractive])
+  }, [isInteractive, sheetDragOffset])
 
   const handleClose = useCallback(() => {
     const { activeElement } = document
@@ -66,13 +72,44 @@ export const MobilePhotoInspectorSheet = ({
       activeElement.blur()
     }
 
+    sheetDragOffset.set(0)
     onClose()
-  }, [onClose])
+  }, [onClose, sheetDragOffset])
 
   const getSheetPresentation = () => createPresentation({ progress: progress.get(), sheetHeight })
-  const sheetY = useTransform(() => getSheetPresentation().y)
+  const sheetY = useTransform(() => getSheetPresentation().y + sheetDragOffset.get())
   const sheetOpacity = useTransform(() => getSheetPresentation().opacity)
   const sheetScale = useTransform(() => getSheetPresentation().scale)
+
+  const bindHandle = useDrag(
+    ({ active, down, last, movement: [, my], velocity: [, vy], direction: [, dy], tap }) => {
+      if (!isInteractive) return
+      if (tap) return
+
+      if (active && down) {
+        sheetDragOffset.set(Math.min(Math.max(my, 0), SHEET_HANDLE_MAX_DRAG))
+      }
+
+      if (last) {
+        const offset = sheetDragOffset.get()
+        const shouldClose = offset >= SHEET_HANDLE_CLOSE_DISTANCE || (dy > 0 && vy > 0.6 && offset > 24)
+
+        if (shouldClose) {
+          handleClose()
+          return
+        }
+
+        animate(sheetDragOffset, 0, { duration: 0.18, ease: 'easeOut' })
+      }
+    },
+    {
+      axis: 'y',
+      threshold: 6,
+      filterTaps: true,
+      pointer: { touch: true, capture: false },
+      rubberband: 0.08,
+    },
+  )
 
   return (
     <m.div
@@ -105,7 +142,12 @@ export const MobilePhotoInspectorSheet = ({
         />
 
         <div className="relative z-10 flex shrink-0 flex-col px-4 pt-3">
-          <div className="mb-3 flex items-center justify-center">
+          <div
+            {...bindHandle()}
+            className="mb-3 flex items-center justify-center py-1"
+            aria-label="Drag handle to close details"
+            data-viewer-interactive
+          >
             <div className="h-1.5 w-11 rounded-full bg-white/20" />
           </div>
 
