@@ -17,7 +17,7 @@ export type { GeocodingPluginOptions } from './plugins/geocoding.js'
 export { default as geocodingPlugin } from './plugins/geocoding.js'
 export type { GitHubRepoSyncPluginOptions } from './plugins/github-repo-sync.js'
 export { createGitHubRepoSyncPlugin, default as githubRepoSyncPlugin } from './plugins/github-repo-sync.js'
-export type { OgImagePluginOptions } from './plugins/og-image-storage/index.js'
+export type { OgImagePluginOptions, OgVendorConfig } from './plugins/og-image-storage/index.js'
 export { default as ogImagePlugin } from './plugins/og-image-storage/index.js'
 export type { B2StoragePluginOptions } from './plugins/storage/b2.js'
 export { default as b2StoragePlugin } from './plugins/storage/b2.js'
@@ -68,6 +68,6 @@ export type {
   ToneAnalysis,
 } from '@afilmory/typing'
 
-///// Mirgation
+/// // Mirgation
 export { migrateManifest } from './manifest/migrate.js'
 export { CURRENT_MANIFEST_VERSION } from './manifest/version.js'

@@ -1,4 +1,5 @@
 import { Spring } from '@afilmory/utils'
+import { Pencil, X } from 'lucide-react'
 import { m as motion } from 'motion/react'
 import { useTranslation } from 'react-i18next'
 
@@ -21,7 +22,7 @@ export const HeroActions = ({ onClearAll, onEditFilters }: HeroActionsProps) => 
         whileTap={{ scale: 0.98 }}
         transition={Spring.presets.snappy}
       >
-        <i className="i-lucide-pencil text-xs" aria-hidden="true" />
+        <Pencil className="size-3" aria-hidden="true" />
         <span>{t('gallery.filter.edit')}</span>
       </motion.button>
       <motion.button
@@ -33,7 +34,7 @@ export const HeroActions = ({ onClearAll, onEditFilters }: HeroActionsProps) => 
         whileTap={{ scale: 0.98 }}
         transition={Spring.presets.snappy}
       >
-        <i className="i-lucide-x text-xs" aria-hidden="true" />
+        <X className="size-3" aria-hidden="true" />
         <span>{t('gallery.filter.clearAll')}</span>
       </motion.button>
     </div>

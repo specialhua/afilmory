@@ -1,6 +1,7 @@
 import { execSync } from 'node:child_process'
 import { rmSync } from 'node:fs'
 import path, { resolve } from 'node:path'
+import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
 import tailwindcss from '@tailwindcss/vite'
@@ -175,13 +176,11 @@ const BUILD_FOR_SERVER_SERVE = process.env.BUILD_FOR_SERVER_SERVE === '1'
 export default defineConfig(() => {
   return {
     base: BUILD_FOR_SERVER_SERVE ? '/static/web/' : '/',
-    // Vite MPA configuration
     build: {
       rollupOptions: BUILD_FOR_SERVER_SERVE
         ? {
             input: {
               main: path.resolve(__dirname, 'index.html'),
-              share: path.resolve(__dirname, 'share.html'),
             },
           }
         : undefined,
@@ -233,7 +232,8 @@ export default defineConfig(() => {
 function getGitHash() {
   try {
     return execSync('git rev-parse HEAD').toString().trim()
-  } catch (e) {
+  }
+  catch (e) {
     console.error('Failed to get git hash', e)
     return ''
   }

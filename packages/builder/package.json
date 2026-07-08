@@ -1,10 +1,10 @@
 {
   "name": "@afilmory/builder",
+  "type": "module",
   "version": "0.2.2",
   "description": "Afilmory Builder",
-  "license": "MIT",
   "author": "Innei",
-  "type": "module",
+  "license": "MIT",
   "exports": {
     ".": "./src/index.ts",
     "./*": "./src/*"
@@ -13,6 +13,7 @@
     "build": "tsdown",
     "bump": "nbump",
     "cli": "tsx src/cli.ts",
+    "cluster": "tsx src/cluster/cli.ts",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
@@ -21,22 +22,22 @@
     "@resvg/resvg-js": "2.6.2",
     "@vingle/bmp-js": "^0.2.5",
     "blurhash": "2.0.5",
-    "c12": "^3.3.3",
+    "c12": "4.0.0-beta.5",
     "consola": "3.4.2",
     "dotenv-expand": "catalog:",
     "execa": "9.6.1",
-    "exiftool-vendored": "33.5.0",
-    "fast-xml-parser": "5.3.5",
+    "exiftool-vendored": "36.0.0",
+    "fast-xml-parser": "5.9.0",
     "heic-convert": "2.1.0",
-    "heic-to": "1.4.2",
+    "heic-to": "1.5.2",
     "nunjucks": "3.2.4",
     "satori": "catalog:",
-    "sharp": "0.34.5",
+    "sharp": "0.35.1",
     "thumbhash": "0.1.1"
   },
   "devDependencies": {
     "@afilmory/utils": "workspace:*",
-    "tsdown": "0.18.0"
+    "tsdown": "0.22.2"
   },
   "publishConfig": {
     "access": "public",

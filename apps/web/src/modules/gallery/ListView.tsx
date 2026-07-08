@@ -1,6 +1,18 @@
 import { useScrollViewElement } from '@afilmory/ui'
 import { getViewerTransitionTriggerProps } from '@afilmory/viewer-motion'
 import { useVirtualizer } from '@tanstack/react-virtual'
+import {
+  Aperture,
+  Calendar,
+  Camera,
+  CircleDot,
+  Gauge,
+  Image as ImageIcon,
+  MapPin,
+  Maximize2,
+  SlidersHorizontal,
+  Timer,
+} from 'lucide-react'
 import { useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -31,7 +43,9 @@ export const ListView = ({ photos }: ListViewProps) => {
     // 移动端需要动态测量，桌面端使用固定高度
     measureElement: isMobile
       ? (element) => {
-          if (!element) return estimateSize()
+          if (!element) {
+            return estimateSize()
+          }
           const { height } = element.getBoundingClientRect()
           return height + gap
         }
@@ -84,10 +98,10 @@ const PhotoCard = ({ photo }: { photo: PhotoManifest }) => {
   const imageRef = useRef<HTMLImageElement>(null)
 
   const handleClick = () => {
-    const photoIndex = photos.findIndex((p) => p.id === photo.id)
+    const photoIndex = photos.findIndex(p => p.id === photo.id)
     if (photoIndex !== -1) {
-      const triggerEl =
-        imageRef.current?.parentElement instanceof HTMLElement ? imageRef.current.parentElement : imageRef.current
+      const triggerEl
+        = imageRef.current?.parentElement instanceof HTMLElement ? imageRef.current.parentElement : imageRef.current
 
       photoViewer.openViewer(photoIndex, triggerEl ?? undefined)
     }
@@ -146,7 +160,7 @@ const PhotoCard = ({ photo }: { photo: PhotoManifest }) => {
         {/* Tags 覆盖在图片上 */}
         {photo.tags && photo.tags.length > 0 && (
           <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap gap-1 p-2">
-            {photo.tags.map((tag) => (
+            {photo.tags.map(tag => (
               <span
                 key={tag}
                 className="rounded-full bg-white/20 px-1.5 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm"
@@ -169,21 +183,21 @@ const PhotoCard = ({ photo }: { photo: PhotoManifest }) => {
             {/* 位置 */}
             {photo.location && (
               <div className="flex items-center gap-1">
-                <i className="i-lucide-map-pin text-[10px]" />
+                <MapPin className="size-2.5" />
                 <span className="truncate">{photo.location.locationName}</span>
               </div>
             )}
 
             {/* 日期 */}
             <div className="flex items-center gap-1">
-              <i className="i-lucide-calendar text-[10px]" />
+              <Calendar className="size-2.5" />
               <span>{formatDate(new Date(photo.lastModified).getTime())}</span>
             </div>
 
             {/* 相机 */}
             {exifData?.camera && (
               <div className="flex items-center gap-1">
-                <i className="i-lucide-camera text-[10px]" />
+                <Camera className="size-2.5" />
                 <span className="truncate">{exifData.camera}</span>
               </div>
             )}
@@ -191,16 +205,19 @@ const PhotoCard = ({ photo }: { photo: PhotoManifest }) => {
             {/* 镜头 */}
             {exifData?.lens && (
               <div className="flex items-center gap-1">
-                <i className="i-lucide-aperture text-[10px]" />
+                <Aperture className="size-2.5" />
                 <span className="truncate">{exifData.lens}</span>
               </div>
             )}
 
             {/* 尺寸 */}
             <div className="flex items-center gap-1">
-              <i className="i-lucide-image text-[10px]" />
+              <ImageIcon className="size-2.5" />
               <span>
-                {photo.width} x {photo.height}
+                {photo.width}
+                {' '}
+                x
+                {photo.height}
               </span>
             </div>
           </div>
@@ -211,15 +228,18 @@ const PhotoCard = ({ photo }: { photo: PhotoManifest }) => {
               {/* ISO */}
               {exifData?.iso && (
                 <div className="flex items-center gap-1 rounded-md bg-white/10 px-2 py-1 backdrop-blur-md">
-                  <i className="i-lucide-gauge text-[10px] text-white/70" />
-                  <span className="text-[11px] text-white/90">ISO {exifData.iso}</span>
+                  <Gauge className="size-2.5 text-white/70" />
+                  <span className="text-[11px] text-white/90">
+                    ISO
+                    {exifData.iso}
+                  </span>
                 </div>
               )}
 
               {/* 光圈 */}
               {exifData?.aperture && (
                 <div className="flex items-center gap-1 rounded-md bg-white/10 px-2 py-1 backdrop-blur-md">
-                  <i className="i-lucide-circle-dot text-[10px] text-white/70" />
+                  <CircleDot className="size-2.5 text-white/70" />
                   <span className="text-[11px] text-white/90">{exifData.aperture}</span>
                 </div>
               )}
@@ -227,7 +247,7 @@ const PhotoCard = ({ photo }: { photo: PhotoManifest }) => {
               {/* 快门速度 */}
               {exifData?.shutterSpeed && (
                 <div className="flex items-center gap-1 rounded-md bg-white/10 px-2 py-1 backdrop-blur-md">
-                  <i className="i-lucide-timer text-[10px] text-white/70" />
+                  <Timer className="size-2.5 text-white/70" />
                   <span className="text-[11px] text-white/90">{exifData.shutterSpeed}</span>
                 </div>
               )}
@@ -235,7 +255,7 @@ const PhotoCard = ({ photo }: { photo: PhotoManifest }) => {
               {/* 焦距 */}
               {focalLengthDisplay && (
                 <div className="flex items-center gap-1 rounded-md bg-white/10 px-2 py-1 backdrop-blur-md">
-                  <i className="i-lucide-maximize-2 text-[10px] text-white/70" />
+                  <Maximize2 className="size-2.5 text-white/70" />
                   <span className="text-[11px] text-white/90">{focalLengthDisplay}</span>
                 </div>
               )}
@@ -243,7 +263,7 @@ const PhotoCard = ({ photo }: { photo: PhotoManifest }) => {
               {/* 曝光补偿 - 次要显示 */}
               {exifData?.exposureBias && (
                 <div className="flex items-center gap-1 rounded-md bg-white/5 px-1.5 py-0.5">
-                  <i className="i-lucide-sliders-horizontal text-[10px] text-white/60" />
+                  <SlidersHorizontal className="size-2.5 text-white/60" />
                   <span className="text-[11px] text-white/70">{exifData.exposureBias}</span>
                 </div>
               )}

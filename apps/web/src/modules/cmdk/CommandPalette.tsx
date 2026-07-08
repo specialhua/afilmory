@@ -1,6 +1,8 @@
 import { photoLoader } from '@afilmory/data'
-import { clsxm } from '@afilmory/utils'
+import { Modal } from '@afilmory/ui'
+import { clsxm, Spring } from '@afilmory/utils'
 import { useAtom } from 'jotai'
+import { AnimatePresence, m } from 'motion/react'
 import * as React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -9,6 +11,8 @@ import { useNavigate } from 'react-router'
 import { gallerySettingAtom } from '~/atoms/app'
 import { usePhotoViewer } from '~/hooks/usePhotoViewer'
 import { MageLens } from '~/icons'
+import { DateRangePicker } from '~/modules/gallery/DateRangePicker'
+import { DATE_RANGE_PRESETS, isPresetActive } from '~/modules/gallery/dateRangeUtils'
 
 // Command types
 type CommandType = 'search' | 'filter' | 'action' | 'photo'
@@ -23,6 +27,9 @@ interface Command {
   keywords?: string[]
   badge?: string | number
   active?: boolean
+  // When true, hide this command from the default (un-queried) list to avoid
+  // crowding existing tag/camera/lens entries; it still surfaces on a matching query.
+  hideFromDefault?: boolean
 }
 
 interface CommandPaletteProps {
@@ -34,13 +41,22 @@ const allTags = photoLoader.getAllTags()
 const allCameras = photoLoader.getAllCameras()
 const allLenses = photoLoader.getAllLenses()
 
+const BRACKET_CORNERS = [
+  { cls: 'af-bracket-tl', tx: -22, ty: -22 },
+  { cls: 'af-bracket-tr', tx: 22, ty: -22 },
+  { cls: 'af-bracket-bl', tx: -22, ty: 22 },
+  { cls: 'af-bracket-br', tx: 22, ty: 22 },
+] as const
+
 const getLocationTokens = (
-  location?: { locationName?: string | null; city?: string | null; country?: string | null } | null,
+  location?: { locationName?: string | null, city?: string | null, country?: string | null } | null,
 ) => {
-  if (!location) return []
+  if (!location) {
+    return []
+  }
 
   const tokens = [location.locationName, location.city, location.country]
-    .map((token) => token?.trim())
+    .map(token => token?.trim())
     .filter((token): token is string => typeof token === 'string' && token.length > 0)
 
   const uniqueTokens: string[] = []
@@ -61,7 +77,9 @@ const fuzzyMatch = (text: string, query: string): boolean => {
   const lowerText = text.toLowerCase()
   const lowerQuery = query.toLowerCase()
 
-  if (lowerText.includes(lowerQuery)) return true
+  if (lowerText.includes(lowerQuery)) {
+    return true
+  }
 
   let queryIndex = 0
   for (let i = 0; i < lowerText.length && queryIndex < lowerQuery.length; i++) {
@@ -75,17 +93,19 @@ const fuzzyMatch = (text: string, query: string): boolean => {
 // Search photos utility
 const searchPhotos = (photos: ReturnType<typeof photoLoader.getPhotos>, query: string) => {
   const lowerQuery = query.trim().toLowerCase()
-  if (!lowerQuery) return []
+  if (!lowerQuery) {
+    return []
+  }
 
   return photos.filter((photo) => {
     const matchesTitle = photo.title?.toLowerCase().includes(lowerQuery)
     const matchesDescription = photo.description?.toLowerCase().includes(lowerQuery)
-    const matchesTags = photo.tags?.some((tag) => tag.toLowerCase().includes(lowerQuery))
-    const matchesCamera =
-      photo.exif?.Make?.toLowerCase().includes(lowerQuery) || photo.exif?.Model?.toLowerCase().includes(lowerQuery)
+    const matchesTags = photo.tags?.some(tag => tag.toLowerCase().includes(lowerQuery))
+    const matchesCamera
+      = photo.exif?.Make?.toLowerCase().includes(lowerQuery) || photo.exif?.Model?.toLowerCase().includes(lowerQuery)
     const matchesLens = photo.exif?.LensModel?.toLowerCase().includes(lowerQuery)
     const locationTokens = getLocationTokens(photo.location)
-    const matchesLocation = locationTokens.some((token) => token.toLowerCase().includes(lowerQuery))
+    const matchesLocation = locationTokens.some(token => token.toLowerCase().includes(lowerQuery))
 
     return matchesTitle || matchesDescription || matchesTags || matchesCamera || matchesLens || matchesLocation
   })
@@ -104,7 +124,7 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
 
   const updateTagFilterMode = useCallback(
     (mode: 'union' | 'intersection') => {
-      setGallerySetting((prev) => ({
+      setGallerySetting(prev => ({
         ...prev,
         tagFilterMode: mode,
       }))
@@ -115,17 +135,17 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
   const handleReset = useCallback(() => {
     setQuery('')
     setSelectedIndex(0)
-    setGallerySetting((prev) => ({
+    setGallerySetting(prev => ({
       ...prev,
       selectedTags: [],
       selectedCameras: [],
       selectedLenses: [],
       selectedRatings: null,
+      selectedDateRange: null,
       tagFilterMode: 'union',
     }))
   }, [setGallerySetting])
 
-  // Reset state when opened
   useEffect(() => {
     if (isOpen) {
       setQuery('')
@@ -135,7 +155,6 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
     }
   }, [isOpen])
 
-  // Handle escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
@@ -162,9 +181,9 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
           icon: 'i-mingcute-tag-line',
           active: isActive,
           action: () => {
-            setGallerySetting((prev) => ({
+            setGallerySetting(prev => ({
               ...prev,
-              selectedTags: isActive ? prev.selectedTags.filter((t) => t !== tag) : [...prev.selectedTags, tag],
+              selectedTags: isActive ? prev.selectedTags.filter(t => t !== tag) : [...prev.selectedTags, tag],
             }))
           },
           keywords: ['tag', 'filter', tag],
@@ -184,10 +203,10 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
           icon: 'i-mingcute-camera-line',
           active: isActive,
           action: () => {
-            setGallerySetting((prev) => ({
+            setGallerySetting(prev => ({
               ...prev,
               selectedCameras: isActive
-                ? prev.selectedCameras.filter((c) => c !== camera.displayName)
+                ? prev.selectedCameras.filter(c => c !== camera.displayName)
                 : [...prev.selectedCameras, camera.displayName],
             }))
           },
@@ -208,10 +227,10 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
           icon: <MageLens />,
           active: isActive,
           action: () => {
-            setGallerySetting((prev) => ({
+            setGallerySetting(prev => ({
               ...prev,
               selectedLenses: isActive
-                ? prev.selectedLenses.filter((l) => l !== lens.displayName)
+                ? prev.selectedLenses.filter(l => l !== lens.displayName)
                 : [...prev.selectedLenses, lens.displayName],
             }))
           },
@@ -246,7 +265,7 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
         icon: 'i-mingcute-star-line',
         active: isActive,
         action: () => {
-          setGallerySetting((prev) => ({
+          setGallerySetting(prev => ({
             ...prev,
             selectedRatings: isActive ? null : rating,
           }))
@@ -255,12 +274,51 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
       })
     }
 
+    // Filter commands - Date range presets (query-only; hidden from default list).
+    // Compute `today` once per command-list rebuild so endpoints stay consistent.
+    const todayForPresets = new Date()
+    DATE_RANGE_PRESETS.forEach((preset) => {
+      const presetRange = preset.compute(todayForPresets)
+      const isActive = isPresetActive(preset, gallerySetting.selectedDateRange, todayForPresets)
+      cmds.push({
+        id: `date-preset-${preset.id}`,
+        type: 'filter',
+        title: t(preset.labelKey as never),
+        subtitle: t('action.date.filter'),
+        icon: 'i-mingcute-calendar-line',
+        active: isActive,
+        hideFromDefault: true,
+        // Non-toggling: selecting an active preset re-applies the same range (no-op).
+        action: () => {
+          setGallerySetting(prev => ({
+            ...prev,
+            selectedDateRange: presetRange,
+          }))
+        },
+        keywords: preset.keywords,
+      })
+    })
+
+    cmds.push({
+      id: 'date-custom',
+      type: 'action',
+      title: t('action.date.custom'),
+      subtitle: t('action.date.filter'),
+      icon: 'i-mingcute-calendar-line',
+      action: () => {
+        Modal.present(DateRangePicker, undefined, { dismissOnOutsideClick: true })
+        onClose()
+      },
+      keywords: ['date', 'range', 'custom', 'picker', 'from', 'to'],
+    })
+
     // Clear all filters
-    const hasFilters =
-      gallerySetting.selectedTags.length > 0 ||
-      gallerySetting.selectedCameras.length > 0 ||
-      gallerySetting.selectedLenses.length > 0 ||
-      gallerySetting.selectedRatings !== null
+    const hasFilters
+      = gallerySetting.selectedTags.length > 0
+        || gallerySetting.selectedCameras.length > 0
+        || gallerySetting.selectedLenses.length > 0
+        || gallerySetting.selectedRatings !== null
+        || gallerySetting.selectedDateRange !== null
 
     if (hasFilters) {
       cmds.push({
@@ -270,12 +328,13 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
         subtitle: 'Clear all active filters',
         icon: 'i-mingcute-close-line',
         action: () => {
-          setGallerySetting((prev) => ({
+          setGallerySetting(prev => ({
             ...prev,
             selectedTags: [],
             selectedCameras: [],
             selectedLenses: [],
             selectedRatings: null,
+            selectedDateRange: null,
             tagFilterMode: 'union',
           }))
         },
@@ -294,10 +353,12 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
           type: 'photo',
           title: photo.title || photo.id,
           subtitle: photo.description || locationSubtitle || `${photo.exif?.Model || 'Photo'}`,
-          icon: <img src={photo.thumbnailUrl} alt={photo.title || 'Photo'} className="h-6 w-6 rounded object-cover" />,
+          icon: (
+            <img src={photo.thumbnailUrl} alt={photo.title || 'Photo'} className="h-7 w-7 rounded-md object-cover" />
+          ),
           action: () => {
             const allPhotos = photoLoader.getPhotos()
-            const photoIndex = allPhotos.findIndex((p) => p.id === photo.id)
+            const photoIndex = allPhotos.findIndex(p => p.id === photo.id)
             if (photoIndex !== -1) {
               openViewer(photoIndex)
               navigate(`/photos/${photo.id}`)
@@ -318,14 +379,14 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
   const filteredCommands = useMemo(() => {
     if (!query.trim()) {
       // Show all filters when no query - group by type
-      const activeFilters = commands.filter((cmd) => cmd.active)
-      const allFilters = commands.filter((cmd) => cmd.type === 'filter')
+      const activeFilters = commands.filter(cmd => cmd.active && !cmd.hideFromDefault)
+      const allFilters = commands.filter(cmd => cmd.type === 'filter' && !cmd.hideFromDefault)
 
       // Prioritize active filters, then show all available filters
       const uniqueFilters = new Map<string, Command>()
 
       // First add active filters
-      activeFilters.forEach((cmd) => uniqueFilters.set(cmd.id, cmd))
+      activeFilters.forEach(cmd => uniqueFilters.set(cmd.id, cmd))
 
       // Then add remaining filters
       allFilters.forEach((cmd) => {
@@ -351,12 +412,12 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
       switch (e.key) {
         case 'ArrowDown': {
           e.preventDefault()
-          setSelectedIndex((prev) => Math.min(prev + 1, filteredCommands.length - 1))
+          setSelectedIndex(prev => Math.min(prev + 1, filteredCommands.length - 1))
           break
         }
         case 'ArrowUp': {
           e.preventDefault()
-          setSelectedIndex((prev) => Math.max(prev - 1, 0))
+          setSelectedIndex(prev => Math.max(prev - 1, 0))
           break
         }
         case 'Enter': {
@@ -384,172 +445,183 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
     setSelectedIndex(0)
   }, [filteredCommands.length])
 
-  if (!isOpen) return null
-
   return (
-    <div className="fixed inset-0 z-9999 flex items-end justify-center lg:items-start lg:pt-[15vh]" onClick={onClose}>
-      {/* Backdrop with blur */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-xl transition-all duration-200" />
-
-      {/* Command Palette Panel */}
-      <div
-        className="animate-in fade-in slide-in-from-bottom-4 border-accent/20 lg:slide-in-from-top-4 relative w-full max-w-2xl overflow-hidden rounded-2xl rounded-b-none border backdrop-blur-2xl duration-200 lg:rounded-2xl!"
-        style={{
-          backgroundImage:
-            'linear-gradient(to bottom right, color-mix(in srgb, var(--color-background) 98%, transparent), color-mix(in srgb, var(--color-background) 95%, transparent))',
-          boxShadow:
-            '0 8px 32px color-mix(in srgb, var(--color-accent) 8%, transparent), 0 4px 16px color-mix(in srgb, var(--color-accent) 6%, transparent), 0 2px 8px rgba(0, 0, 0, 0.1)',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Inner glow layer */}
-        <div
-          className="pointer-events-none absolute inset-0 rounded-2xl"
-          style={{
-            background:
-              'linear-gradient(to bottom right, color-mix(in srgb, var(--color-accent) 5%, transparent), transparent, color-mix(in srgb, var(--color-accent) 5%, transparent))',
-          }}
-        />
-        {/* Search Input */}
-        <div className="border-accent/20 relative flex items-center gap-3 border-b px-4 py-4">
-          <i className="i-mingcute-search-line text-text-tertiary shrink-0 text-xl" />
-          <input
-            ref={inputRef}
-            type="text"
-            name="search"
-            autoComplete="off"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={t('action.search.placeholder')}
-            className="text-text placeholder-text-tertiary flex-1 bg-transparent text-base outline-none focus-visible:outline-none"
-          />
-          <button
-            type="button"
-            onClick={handleReset}
-            className="glassmorphic-btn border-accent/20 text-text-secondary inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium transition-all duration-200"
+    <AnimatePresence>
+      {isOpen && (
+        <m.div
+          key="cmdk"
+          className="fixed inset-0 z-9999 flex items-end justify-center bg-black/40 lg:items-start lg:pt-[15vh]"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18, ease: 'easeOut' }}
+          onClick={onClose}
+        >
+          <m.div
+            className="border-border bg-background relative w-full max-w-2xl border"
+            style={{
+              boxShadow: '0 12px 32px rgba(0,0,0,0.45), 0 4px 12px rgba(0,0,0,0.3)',
+            }}
+            initial={{ opacity: 0, scale: 1.04, filter: 'blur(8px)' }}
+            animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, scale: 0.98, filter: 'blur(6px)' }}
+            transition={Spring.smooth(0.32)}
+            onClick={e => e.stopPropagation()}
           >
-            <i className="i-mingcute-refresh-1-line text-sm" />
-            Reset
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="glassmorphic-btn border-accent/20 text-text-secondary inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium transition-all duration-200"
-          >
-            <i className="i-mingcute-close-line text-sm" />
-            Close
-          </button>
-        </div>
+            {BRACKET_CORNERS.map(corner => (
+              <m.span
+                key={corner.cls}
+                aria-hidden
+                className={clsxm('af-bracket hidden lg:block', corner.cls)}
+                initial={{ opacity: 0, x: corner.tx, y: corner.ty }}
+                animate={{ opacity: 1, x: 0, y: 0 }}
+                exit={{ opacity: 0, x: corner.tx, y: corner.ty }}
+                transition={{ ...Spring.snappy(0.34), delay: 0.06 }}
+              />
+            ))}
 
-        <div className="border-accent/20 bg-accent/3 text-text-secondary relative flex items-center justify-between gap-3 border-b px-4 py-2 text-xs">
-          <div className="flex items-center gap-2">
-            <i className="i-mingcute-filter-3-line text-sm" />
-            <span>{t('action.tag.match.label')}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => updateTagFilterMode('union')}
-              className={clsxm(
-                'rounded-full px-3 py-1 text-xs font-medium transition-all duration-200',
-                gallerySetting.tagFilterMode === 'union'
-                  ? 'bg-accent text-white'
-                  : 'glassmorphic-btn text-text-secondary',
-              )}
-            >
-              {t('action.tag.match.any')}
-            </button>
-            <button
-              type="button"
-              onClick={() => updateTagFilterMode('intersection')}
-              className={clsxm(
-                'rounded-full px-3 py-1 text-xs font-medium transition-all duration-200',
-                gallerySetting.tagFilterMode === 'intersection'
-                  ? 'bg-accent text-white'
-                  : 'glassmorphic-btn text-text-secondary',
-              )}
-            >
-              {t('action.tag.match.all')}
-            </button>
-          </div>
-        </div>
-
-        {/* Commands List */}
-        <div ref={listRef} className="max-h-[60vh] overflow-y-auto overscroll-contain py-2">
-          {filteredCommands.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <i className="i-mingcute-search-line text-text-quaternary mb-3 text-4xl" />
-              <p className="text-text-secondary text-sm">{t('action.search.no-results')}</p>
-            </div>
-          ) : (
-            filteredCommands.map((cmd, index) => (
-              <button
-                key={cmd.id}
-                type="button"
-                onClick={cmd.action}
-                onMouseEnter={() => setSelectedIndex(index)}
-                className={clsxm(
-                  'command-item group flex w-full items-center gap-3 px-4 py-3 text-left transition-all duration-200',
-                  selectedIndex === index && 'selected',
-                )}
-              >
-                {/* Icon */}
-                <div
-                  className={clsxm(
-                    'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-lg transition-all duration-200',
-                    cmd.active ? 'bg-accent/10 text-accent' : 'bg-background/95 text-text-secondary',
-                  )}
-                  style={
-                    cmd.active
-                      ? {
-                          boxShadow: 'inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 20%, transparent)',
-                        }
-                      : undefined
-                  }
+            <div className="overflow-hidden">
+              <div className="border-border relative flex items-center gap-2.5 border-b px-3 py-3">
+                <i className="i-mingcute-search-line text-text-tertiary shrink-0 text-lg" />
+                <input
+                  ref={inputRef}
+                  type="text"
+                  name="search"
+                  autoComplete="off"
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={t('action.search.placeholder')}
+                  className="text-text placeholder-text-tertiary flex-1 bg-transparent text-sm outline-none focus-visible:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="border-border bg-fill-quaternary text-text-secondary hover:bg-fill-secondary hover:text-text inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition-all duration-200"
                 >
-                  {typeof cmd.icon === 'string' ? <i className={cmd.icon} /> : cmd.icon}
-                </div>
+                  <i className="i-mingcute-refresh-1-line text-sm" />
+                  Reset
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="border-border bg-fill-quaternary text-text-secondary hover:bg-fill-secondary hover:text-text inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition-all duration-200"
+                >
+                  <i className="i-mingcute-close-line text-sm" />
+                  Close
+                </button>
+              </div>
 
-                {/* Content */}
-                <div className="flex-1 overflow-hidden">
-                  <div className="flex items-center gap-2">
-                    <span className="text-text truncate text-sm font-medium">{cmd.title}</span>
-                    {cmd.badge !== undefined && (
-                      <span className="bg-fill-tertiary text-text-secondary rounded-full px-2 py-0.5 text-xs">
-                        {cmd.badge}
-                      </span>
+              <div className="border-border bg-fill-quaternary text-text-secondary relative flex items-center justify-between gap-3 border-b px-3 py-1.5 text-xs">
+                <div className="flex items-center gap-2">
+                  <i className="i-mingcute-filter-3-line text-sm" />
+                  <span>{t('action.tag.match.label')}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => updateTagFilterMode('union')}
+                    className={clsxm(
+                      'rounded-full px-3 py-1 text-xs font-medium transition-all duration-200',
+                      gallerySetting.tagFilterMode === 'union'
+                        ? 'bg-accent text-white'
+                        : 'bg-fill-tertiary text-text-secondary hover:text-text',
                     )}
-                    {cmd.active && (
-                      <span className="bg-accent flex h-5 w-5 items-center justify-center rounded-full text-white">
-                        <i className="i-mingcute-check-line text-xs" />
-                      </span>
+                  >
+                    {t('action.tag.match.any')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateTagFilterMode('intersection')}
+                    className={clsxm(
+                      'rounded-full px-3 py-1 text-xs font-medium transition-all duration-200',
+                      gallerySetting.tagFilterMode === 'intersection'
+                        ? 'bg-accent text-white'
+                        : 'bg-fill-tertiary text-text-secondary hover:text-text',
                     )}
+                  >
+                    {t('action.tag.match.all')}
+                  </button>
+                </div>
+              </div>
+
+              <div ref={listRef} className="max-h-[60vh] overflow-y-auto overscroll-contain py-1">
+                {filteredCommands.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <i className="i-mingcute-search-line text-text-quaternary mb-3 text-4xl" />
+                    <p className="text-text-secondary text-sm">{t('action.search.no-results')}</p>
                   </div>
-                  {cmd.subtitle && <p className="text-text-secondary truncate text-xs">{cmd.subtitle}</p>}
-                </div>
-              </button>
-            ))
-          )}
-        </div>
+                ) : (
+                  filteredCommands.map((cmd, index) => (
+                    <button
+                      key={cmd.id}
+                      type="button"
+                      onClick={cmd.action}
+                      onMouseEnter={() => setSelectedIndex(index)}
+                      className={clsxm(
+                        'command-item group flex w-full items-center gap-2.5 px-3 py-2 text-left transition-all duration-200',
+                        selectedIndex === index && 'selected',
+                      )}
+                    >
+                      <div
+                        className={clsxm(
+                          'flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-base transition-all duration-200',
+                          cmd.active ? 'bg-accent/10 text-accent' : 'bg-fill-tertiary text-text-secondary',
+                        )}
+                      >
+                        {typeof cmd.icon === 'string' ? <i className={cmd.icon} /> : cmd.icon}
+                      </div>
 
-        {/* Footer */}
-        <div className="border-accent/20 relative border-t px-4 py-2">
-          <div className="text-text-secondary flex items-center justify-between text-xs">
-            <div className="flex items-center gap-4">
-              <span className="flex items-center gap-1">
-                <kbd className="border-accent/20 bg-accent/5 rounded border px-1.5 py-0.5 font-mono">↑↓</kbd>
-                Navigate
-              </span>
-              <span className="flex items-center gap-1">
-                <kbd className="border-accent/20 bg-accent/5 rounded border px-1.5 py-0.5 font-mono">↵</kbd>
-                Select
-              </span>
+                      <div className="flex-1 overflow-hidden">
+                        <div className="flex items-center gap-2">
+                          <span className="text-text truncate text-[13px] font-medium">{cmd.title}</span>
+                          {cmd.badge !== undefined && (
+                            <span className="bg-fill-tertiary text-text-secondary rounded-full px-2 py-0.5 text-[10px]">
+                              {cmd.badge}
+                            </span>
+                          )}
+                          {cmd.active && (
+                            <span className="bg-accent flex h-4 w-4 items-center justify-center rounded-full text-white">
+                              <i className="i-mingcute-check-line text-[10px]" />
+                            </span>
+                          )}
+                        </div>
+                        {cmd.subtitle && <p className="text-text-secondary truncate text-[11px]">{cmd.subtitle}</p>}
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+
+              <div className="border-border bg-fill-quaternary relative border-t px-3 py-1.5">
+                <div className="text-text-secondary flex items-center justify-between text-[11px]">
+                  <div className="flex items-center gap-4">
+                    <span className="flex items-center gap-1">
+                      <kbd className="border-accent/15 bg-fill-tertiary text-text-secondary rounded-sm border px-1.5 py-0.5 font-mono text-[10px]">
+                        ↑↓
+                      </kbd>
+                      Navigate
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <kbd className="border-accent/15 bg-fill-tertiary text-text-secondary rounded-sm border px-1.5 py-0.5 font-mono text-[10px]">
+                        ↵
+                      </kbd>
+                      Select
+                    </span>
+                  </div>
+                  {filteredCommands.length > 0 && (
+                    <span>
+                      {filteredCommands.length}
+                      {' '}
+                      results
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
-            {filteredCommands.length > 0 && <span>{filteredCommands.length} results</span>}
-          </div>
-        </div>
-      </div>
-    </div>
+          </m.div>
+        </m.div>
+      )}
+    </AnimatePresence>
   )
 }

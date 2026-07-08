@@ -72,13 +72,17 @@ const hyobanConfig = await defineConfig(
 
       'unicorn/no-array-callback-reference': 'off',
 
+      'ts/no-use-before-define': 'off',
+      'style/multiline-ternary': 'off',
+      'e18e/prefer-static-regex': 'off',
+
       'no-restricted-globals': [
         'error',
         {
           name: 'location',
           message:
-            "Since you don't use the same router instance in electron and browser, you can't use the global location to get the route info. \n\n" +
-            'You can use `useLocaltion` or `getReadonlyRoute` to get the route info.',
+            'Since you don\'t use the same router instance in electron and browser, you can\'t use the global location to get the route info. \n\n'
+            + 'You can use `useLocaltion` or `getReadonlyRoute` to get the route info.',
         },
       ],
     },

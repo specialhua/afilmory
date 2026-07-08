@@ -7,6 +7,7 @@ import {
 } from '@afilmory/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
+import { LogIn, LogOut, User } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
@@ -34,11 +35,11 @@ export const PageHeaderRight = () => {
   const hasViewCustomization = gallerySetting.columns !== 'auto' || gallerySetting.sortOrder !== 'desc'
 
   // 计算过滤器数量
-  const filterCount =
-    gallerySetting.selectedTags.length +
-    gallerySetting.selectedCameras.length +
-    gallerySetting.selectedLenses.length +
-    (gallerySetting.selectedRatings !== null ? 1 : 0)
+  const filterCount
+    = gallerySetting.selectedTags.length
+      + gallerySetting.selectedCameras.length
+      + gallerySetting.selectedLenses.length
+      + (gallerySetting.selectedRatings !== null ? 1 : 0)
 
   return (
     <div className="flex items-center gap-1 lg:gap-1.5">
@@ -95,12 +96,12 @@ const MoreActionMenu = () => {
   const { t } = useTranslation()
   const [settings, setSettings] = useAtom(gallerySettingAtom)
 
-  const githubUrl =
-    siteConfig.social && siteConfig.social.github
+  const githubUrl
+    = siteConfig.social && siteConfig.social.github
       ? resolveSocialUrl(siteConfig.social.github, { baseUrl: 'https://github.com/' })
       : undefined
-  const twitterUrl =
-    siteConfig.social && siteConfig.social.twitter
+  const twitterUrl
+    = siteConfig.social && siteConfig.social.twitter
       ? resolveSocialUrl(siteConfig.social.twitter, { baseUrl: 'https://twitter.com/', stripAt: true })
       : undefined
   const hasRss = true
@@ -119,7 +120,7 @@ const MoreActionMenu = () => {
       <DropdownMenuContent align="end" className="min-w-[180px]">
         <div className="px-2 py-1.5 text-xs font-medium text-white/50">{t('action.view.title')}</div>
         <DropdownMenuItem
-          onClick={() => setSettings((prev) => ({ ...prev, viewMode: 'masonry' }))}
+          onClick={() => setSettings(prev => ({ ...prev, viewMode: 'masonry' }))}
           className="justify-between"
         >
           <span className="flex items-center gap-2">
@@ -129,7 +130,7 @@ const MoreActionMenu = () => {
           {settings.viewMode === 'masonry' && <i className="i-mingcute-check-line text-base" />}
         </DropdownMenuItem>
         <DropdownMenuItem
-          onClick={() => setSettings((prev) => ({ ...prev, viewMode: 'list' }))}
+          onClick={() => setSettings(prev => ({ ...prev, viewMode: 'list' }))}
           className="justify-between"
         >
           <span className="flex items-center gap-2">
@@ -260,7 +261,8 @@ const LoginButton = () => {
     try {
       const { url } = await authApi.signInSocial(provider)
       window.location.href = url
-    } catch (error) {
+    }
+    catch (error) {
       console.error('Sign in failed:', error)
     }
   }
@@ -274,13 +276,13 @@ const LoginButton = () => {
           title={t('action.login')}
           aria-label={t('action.login')}
         >
-          <i className="i-lucide-log-in text-sm lg:text-base" aria-hidden="true" />
+          <LogIn className="size-3.5 lg:size-4" aria-hidden="true" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[200px]">
         <div className="px-2 py-1.5 text-xs text-white/50">{t('comments.chooseProvider')}</div>
         <DropdownMenuSeparator />
-        {socialProviders?.providers.map((provider) => (
+        {socialProviders?.providers.map(provider => (
           <DropdownMenuItem
             key={provider.id}
             onClick={() => handleSignIn(provider.id)}
@@ -323,7 +325,7 @@ const LoginPlatformIcon = ({ provider }: { provider: string }) => {
       )
     }
     default: {
-      return <i className="i-lucide-user text-base" />
+      return <User className="size-4" />
     }
   }
 }
@@ -332,7 +334,7 @@ const LoginPlatformIcon = ({ provider }: { provider: string }) => {
 const UserMenuButton = ({
   user,
 }: {
-  user: { id: string; name?: string | null; image?: string | null; role?: string | null }
+  user: { id: string, name?: string | null, image?: string | null, role?: string | null }
 }) => {
   const { t } = useTranslation()
   const setSessionUser = useSetAtom(sessionUserAtom)
@@ -341,15 +343,19 @@ const UserMenuButton = ({
   const isAdmin = user.role === 'admin' || user.role === 'superadmin'
 
   const handleSignOut = async () => {
-    if (isSigningOut) return
+    if (isSigningOut) {
+      return
+    }
     setIsSigningOut(true)
     try {
       await authApi.signOut()
       setSessionUser(null)
       await queryClient.invalidateQueries({ queryKey: ['session'] })
-    } catch (error) {
+    }
+    catch (error) {
       console.error('Sign out failed:', error)
-    } finally {
+    }
+    finally {
       setIsSigningOut(false)
     }
   }
@@ -387,11 +393,7 @@ const UserMenuButton = ({
           <div className="text-sm font-medium text-white/90">{user.name || user.id}</div>
         </div>
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={handleSignOut}
-          icon={<i className="i-lucide-log-out text-base" />}
-          disabled={isSigningOut}
-        >
+        <DropdownMenuItem onClick={handleSignOut} icon={<LogOut className="size-4" />} disabled={isSigningOut}>
           {t('action.signOut')}
         </DropdownMenuItem>
       </DropdownMenuContent>

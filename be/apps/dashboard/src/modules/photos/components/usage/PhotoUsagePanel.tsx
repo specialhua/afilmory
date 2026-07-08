@@ -1,4 +1,5 @@
 import { Button } from '@afilmory/ui'
+import { RotateCw } from 'lucide-react'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -75,7 +76,7 @@ export function PhotoUsagePanel({ overview, isLoading, isFetching, onRefresh }: 
   )
   const summaryItems = useMemo(() => {
     const totals = overview?.totals ?? []
-    const totalMap = new Map(totals.map((entry) => [entry.eventType, entry.totalQuantity]))
+    const totalMap = new Map(totals.map(entry => [entry.eventType, entry.totalQuantity]))
     return (
       Object.entries(BILLING_USAGE_EVENT_CONFIG) as [
         BillingUsageEvent['eventType'],
@@ -109,14 +110,14 @@ export function PhotoUsagePanel({ overview, isLoading, isFetching, onRefresh }: 
             onClick={onRefresh}
             disabled={isFetching || isLoading}
           >
-            <i className={`i-lucide-rotate-cw size-4 ${isFetching ? 'animate-spin' : ''}`} aria-hidden />
+            <RotateCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} aria-hidden />
             {t(photoUsageI18nKeys.summary.refresh)}
           </Button>
         </div>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           {isLoading && events.length === 0
             ? Array.from({ length: 3 }).map((_, index) => <SummarySkeleton key={`usage-summary-skeleton-${index}`} />)
-            : summaryItems.map((item) => (
+            : summaryItems.map(item => (
                 <SummaryCard
                   key={item.eventType}
                   label={item.label}
@@ -153,7 +154,7 @@ export function PhotoUsagePanel({ overview, isLoading, isFetching, onRefresh }: 
           </div>
         ) : (
           <div className="divide-y divide-border/10">
-            {events.map((event) => (
+            {events.map(event => (
               <UsageEventRow
                 key={event.id}
                 event={event}
@@ -221,8 +222,8 @@ function UsageEventRow({
   const quantityClass = event.quantity >= 0 ? 'text-emerald-400' : 'text-rose-400'
   const dateLabel = formatDateLabel(event.occurredAt, dateTimeFormatter)
   const relativeLabel = formatRelativeLabel(event.occurredAt, relativeTimeFormatter)
-  const unitLabel =
-    event.unit === 'byte' ? t(photoUsageI18nKeys.events.unitByte) : t(photoUsageI18nKeys.events.unitCount)
+  const unitLabel
+    = event.unit === 'byte' ? t(photoUsageI18nKeys.events.unitByte) : t(photoUsageI18nKeys.events.unitCount)
 
   return (
     <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:gap-6">
@@ -265,7 +266,9 @@ function MetadataBadges({ metadata }: { metadata: Record<string, unknown> | null
           key={key}
           className="rounded-full border border-border/50 bg-background/60 px-2 py-0.5 text-xs text-text-secondary"
         >
-          {key}: {formatMetadataValue(value, valueFallback)}
+          {key}
+          :
+          {formatMetadataValue(value, valueFallback)}
         </span>
       ))}
       {remaining > 0 && (
@@ -306,7 +309,8 @@ function formatMetadataValue(value: unknown, fallback: string): string {
 
   try {
     return JSON.stringify(value)
-  } catch {
+  }
+  catch {
     return String(value)
   }
 }

@@ -1,5 +1,6 @@
 import { useAtomValue } from 'jotai'
 import { selectAtom } from 'jotai/utils'
+import { Reply } from 'lucide-react'
 import { useMemo } from 'react'
 import { Trans } from 'react-i18next'
 
@@ -18,7 +19,7 @@ export const CommentContent = ({ comment, parentId, authorName }: CommentContent
   const { atoms } = useCommentsContext()
   const parent = useAtomValue(
     useMemo(
-      () => selectAtom(atoms.relationsAtom, (relations) => (parentId ? relations[parentId] : null)),
+      () => selectAtom(atoms.relationsAtom, relations => (parentId ? relations[parentId] : null)),
       [atoms.relationsAtom, parentId],
     ),
   )
@@ -27,7 +28,7 @@ export const CommentContent = ({ comment, parentId, authorName }: CommentContent
       {parent ? (
         <div className="flex min-w-0 flex-col rounded-lg border border-white/5 bg-white/5 px-3 py-2 text-xs text-white/70">
           <div className="mb-1 flex items-center text-[11px] tracking-wide text-white/40 uppercase">
-            <i className="i-lucide-reply mr-2" />
+            <Reply className="mr-2 size-3" />
 
             <Trans
               i18nKey="comments.replyingTo"

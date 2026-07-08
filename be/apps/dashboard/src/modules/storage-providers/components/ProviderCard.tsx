@@ -1,6 +1,5 @@
 import { Button } from '@afilmory/ui'
 import { clsxm } from '@afilmory/utils'
-import type {LucideIcon} from 'lucide-react';
 import {
   Check,
   CheckCircle,
@@ -9,22 +8,27 @@ import {
   CloudSnow,
   Database,
   Folder,
-  Github,
   Image,
   Pencil,
   Server,
-  XCircle
+  XCircle,
 } from 'lucide-react'
-import type { FC } from 'react'
+import type { ComponentType, FC } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { storageProvidersI18nKeys } from '../constants'
 import type { StorageProvider } from '../types'
 
+type ProviderIcon = ComponentType<{ className?: string }>
+
+const GithubIcon: ProviderIcon = ({ className }) => (
+  <i className={clsxm('i-simple-icons-github', className)} aria-hidden />
+)
+
 const providerTypeConfig: Record<
   string,
   {
-    Icon: LucideIcon
+    Icon: ProviderIcon
     color: string
     bgColor: string
   }
@@ -50,7 +54,7 @@ const providerTypeConfig: Record<
     bgColor: 'bg-sky-500/10',
   },
   github: {
-    Icon: Github,
+    Icon: GithubIcon,
     color: 'text-purple-500',
     bgColor: 'bg-purple-500/10',
   },

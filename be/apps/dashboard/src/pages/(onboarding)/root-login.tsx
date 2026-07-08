@@ -1,4 +1,5 @@
 import { Button, Input, Label, LinearBorderContainer } from '@afilmory/ui'
+import { CircleAlert } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 
@@ -21,7 +22,8 @@ export function Component() {
   const rootLoginHref = useMemo(() => {
     try {
       return buildRootTenantUrl('/root-login')
-    } catch {
+    }
+    catch {
       return '/root-login'
     }
   }, [])
@@ -72,7 +74,11 @@ export function Component() {
               <div className="space-y-5">
                 <h1 className="text-text text-2xl font-semibold">Redirecting to the root portal</h1>
                 <p className="text-text-secondary text-sm">
-                  The root administrator interface is only available on the dedicated <code>root.</code> subdomain.
+                  The root administrator interface is only available on the dedicated
+                  {' '}
+                  <code>root.</code>
+                  {' '}
+                  subdomain.
                   We&apos;re sending you there now.
                 </p>
                 <div className="text-text-tertiary text-xs">
@@ -114,7 +120,7 @@ export function Component() {
               {error && (
                 <div className="border-red/60 bg-red/10 rounded-lg border px-4 py-3.5">
                   <div className="flex items-start gap-3">
-                    <i className="i-lucide-circle-alert text-red mt-0.5 text-base" />
+                    <CircleAlert className="text-red mt-0.5 size-4" />
                     <p className="text-red flex-1 text-sm">{error}</p>
                   </div>
                 </div>
@@ -162,12 +168,16 @@ export function Component() {
               </Button>
 
               <p className="text-text-tertiary text-xs">
-                Lost access to the root credentials? An operator with server access can re-run{' '}
-                <code>pnpm --filter @afilmory/core dev:reset-superadmin-password</code> to rotate them.
+                Lost access to the root credentials? An operator with server access can re-run
+                {' '}
+                <code>pnpm --filter @afilmory/core dev:reset-superadmin-password</code>
+                {' '}
+                to rotate them.
               </p>
 
               <p className="text-text-tertiary text-xs">
-                Tenant administrators should continue to use the regular{' '}
+                Tenant administrators should continue to use the regular
+                {' '}
                 <Link to="/login" className="text-accent underline-offset-4 hover:underline">
                   workspace login page
                 </Link>

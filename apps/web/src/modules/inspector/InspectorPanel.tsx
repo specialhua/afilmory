@@ -3,6 +3,7 @@ import { MobileTabGroup, MobileTabItem, SegmentGroup, SegmentItem } from '@afilm
 import { Spring } from '@afilmory/utils'
 import { useQuery } from '@tanstack/react-query'
 import clsx from 'clsx'
+import { PanelRightClose } from 'lucide-react'
 import { m } from 'motion/react'
 import type { FC } from 'react'
 import { useState } from 'react'
@@ -76,26 +77,26 @@ export const InspectorPanel: FC<{
         {isMobile ? (
           /* Mobile: MobileTabGroup */
           <div className="relative">
-            <MobileTabGroup value={activeTab} onValueChanged={(value) => setActiveTab(value as Tab)} className="mr-12">
+            <MobileTabGroup value={activeTab} onValueChanged={value => setActiveTab(value as Tab)} className="mr-12">
               <MobileTabItem
                 value="info"
-                label={
+                label={(
                   <div className="flex items-center">
                     <i className="i-mingcute-information-line mr-1.5 text-base" />
                     {t('inspector.tab.info')}
                   </div>
-                }
+                )}
               />
               {hasCommentPanel && (
                 <MobileTabItem
                   value="comments"
-                  label={
+                  label={(
                     <div className="flex items-center">
                       <i className="i-mingcute-comment-line mr-1.5 text-base" />
                       {t('inspector.tab.comments')}
                       {hasComments && <div className="bg-accent ml-1.5 size-1.5 rounded-full" />}
                     </div>
-                  }
+                  )}
                 />
               )}
             </MobileTabGroup>
@@ -115,32 +116,32 @@ export const InspectorPanel: FC<{
             <div className="size-8" />
             <SegmentGroup
               value={activeTab}
-              onValueChanged={(value) => setActiveTab(value as Tab)}
+              onValueChanged={value => setActiveTab(value as Tab)}
               className="border-accent/20 bg-material-ultra-thick rounded text-white"
             >
               <SegmentItem
                 value="info"
                 activeBgClassName="bg-accent/20"
                 className="text-white/60 hover:text-white/80 data-[state=active]:text-white"
-                label={
+                label={(
                   <div className="flex items-center">
                     <i className="i-mingcute-information-line mr-1.5" />
                     {t('inspector.tab.info')}
                   </div>
-                }
+                )}
               />
               {hasCommentPanel && (
                 <SegmentItem
                   value="comments"
                   activeBgClassName="bg-accent/20"
                   className="text-white/60 hover:text-white/80 data-[state=active]:text-white"
-                  label={
+                  label={(
                     <div className={clsx('flex items-center', hasComments && 'pr-0.5')}>
                       <i className="i-mingcute-comment-line mr-1.5" />
                       {t('inspector.tab.comments')}
                       {hasComments && <div className="bg-accent absolute top-1 right-1 size-1.5 rounded-full" />}
                     </div>
-                  }
+                  )}
                 />
               )}
             </SegmentGroup>
@@ -151,7 +152,7 @@ export const InspectorPanel: FC<{
                 onClick={onClose}
                 aria-label="Collapse inspector panel"
               >
-                <i className="i-lucide-panel-right-close" />
+                <PanelRightClose className="size-4" />
               </button>
             )}
           </div>

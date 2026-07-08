@@ -1,5 +1,6 @@
 import { Button, Input, Label, LinearBorderContainer } from '@afilmory/ui'
 import { Spring } from '@afilmory/utils'
+import { CircleAlert } from 'lucide-react'
 import { m } from 'motion/react'
 import { useMemo, useState } from 'react'
 
@@ -28,12 +29,16 @@ export function Component() {
 
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value)
-    if (error) clearError()
+    if (error) {
+      clearError()
+    }
   }
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPassword(e.target.value)
-    if (error) clearError()
+    if (error) {
+      clearError()
+    }
   }
 
   return (
@@ -57,7 +62,7 @@ export function Component() {
                     className="border-red/60 bg-red/10 mb-6 rounded-lg border px-4 py-3.5"
                   >
                     <div className="flex items-start gap-3">
-                      <i className="i-lucide-circle-alert text-red mt-0.5 text-base" />
+                      <CircleAlert className="text-red mt-0.5 size-4" />
                       <p className="text-red flex-1 text-sm">{error}</p>
                     </div>
                   </m.div>
