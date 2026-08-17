@@ -3,11 +3,13 @@ import { MobileTabGroup, MobileTabItem } from '@afilmory/ui'
 import { createInspectorSheetPresentation, resolveInspectorSheetHeight } from '@afilmory/viewer-motion'
 import { useQuery } from '@tanstack/react-query'
 import { useDrag } from '@use-gesture/react'
-import { animate, m, type MotionValue, useMotionValue, useTransform } from 'motion/react'
+import type { MotionValue } from 'motion/react'
+import { animate, m, useMotionValue, useTransform } from 'motion/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { useViewport } from '~/hooks/useViewport'
+import { useVisualViewport } from '~/hooks/useVisualViewport'
 import { ExifPanelContent } from '~/modules/metadata/ExifPanel'
 import { CommentsPanel } from '~/modules/social/comments'
 import { canFetchPhotoCommentCount, getPhotoCommentCount, hasCommentPanel } from '~/modules/social/comments/count'
@@ -17,6 +19,10 @@ type Tab = 'info' | 'comments'
 
 const SHEET_HANDLE_CLOSE_DISTANCE = 72
 const SHEET_HANDLE_MAX_DRAG = 120
+/**
+ * 底部被遮挡超过该高度才当作软键盘处理，避免浏览器工具栏 / 橡皮筋回弹带来的抖动。
+ */
+const KEYBOARD_INSET_THRESHOLD = 120
 
 interface MobilePhotoInspectorSheetProps {
   createPresentation?: typeof createInspectorSheetPresentation
@@ -40,9 +46,20 @@ export const MobilePhotoInspectorSheet = ({
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<Tab>('info')
   const sheetRef = useRef<HTMLDivElement>(null)
-  const viewportHeight = useViewport((value) => value.h) || (typeof window !== 'undefined' ? window.innerHeight : 844)
-  const sheetHeight = useMemo(() => resolveHeight(viewportHeight), [resolveHeight, viewportHeight])
+  const viewportHeight = useViewport(value => value.h) || (typeof window !== 'undefined' ? window.innerHeight : 844)
+  const { bottomInset, height: visualViewportHeight } = useVisualViewport()
+
+  // iOS Safari 弹键盘时布局视口不变，需要自己把面板抬到键盘之上；
+  // iOS Firefox 会直接缩小布局视口，此时 bottomInset 约等于 0，viewportHeight 已经是可用高度。
+  const keyboardInset = bottomInset >= KEYBOARD_INSET_THRESHOLD ? bottomInset : 0
+  const availableHeight = keyboardInset > 0 ? Math.min(viewportHeight, visualViewportHeight) : viewportHeight
+  const sheetHeight = useMemo(() => resolveHeight(availableHeight), [resolveHeight, availableHeight])
+  const sheetHeightValue = useMotionValue(sheetHeight)
   const sheetDragOffset = useMotionValue(0)
+
+  useEffect(() => {
+    sheetHeightValue.set(sheetHeight)
+  }, [sheetHeight, sheetHeightValue])
 
   const showSocialFeatures = hasCommentPanel
   const { data: commentCount } = useQuery({
@@ -76,15 +93,33 @@ export const MobilePhotoInspectorSheet = ({
     onClose()
   }, [onClose, sheetDragOffset])
 
-  const getSheetPresentation = () => createPresentation({ progress: progress.get(), sheetHeight })
+  // 从 motion value 读取高度，键盘引起的高度变化才能实时反映到 y / opacity / scale 上
+  const getSheetPresentation = () =>
+    createPresentation({ progress: progress.get(), sheetHeight: sheetHeightValue.get() })
   const sheetY = useTransform(() => getSheetPresentation().y + sheetDragOffset.get())
   const sheetOpacity = useTransform(() => getSheetPresentation().opacity)
   const sheetScale = useTransform(() => getSheetPresentation().scale)
 
+  // 浏览器为了露出聚焦的输入框会去滚动 overflow: hidden 的祖先盒子（iOS Firefox 尤其明显），
+  // 那会把整张面板顶出可视区，这里把它拉回原位，滚动交给内部的滚动容器处理。
+  const handleSheetScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
+    const sheet = event.currentTarget
+    if (sheet.scrollTop !== 0) {
+      sheet.scrollTop = 0
+    }
+    if (sheet.scrollLeft !== 0) {
+      sheet.scrollLeft = 0
+    }
+  }, [])
+
   const bindHandle = useDrag(
     ({ active, down, last, movement: [, my], velocity: [, vy], direction: [, dy], tap }) => {
-      if (!isInteractive) return
-      if (tap) return
+      if (!isInteractive) {
+        return
+      }
+      if (tap) {
+        return
+      }
 
       if (active && down) {
         sheetDragOffset.set(Math.min(Math.max(my, 0), SHEET_HANDLE_MAX_DRAG))
@@ -117,12 +152,14 @@ export const MobilePhotoInspectorSheet = ({
       aria-hidden={!isInteractive}
       inert={!isInteractive}
       style={{
+        bottom: keyboardInset,
         y: sheetY,
         opacity: sheetOpacity,
       }}
     >
       <m.div
         ref={sheetRef}
+        onScroll={handleSheetScroll}
         className="bg-material-ultra-thick border-accent/20 pointer-events-auto relative flex w-full max-w-screen-lg flex-col overflow-hidden rounded-t-[28px] border text-white backdrop-blur-3xl"
         style={{
           height: sheetHeight,
@@ -155,27 +192,27 @@ export const MobilePhotoInspectorSheet = ({
             {showSocialFeatures ? (
               <MobileTabGroup
                 value={activeTab}
-                onValueChanged={(value) => setActiveTab(value as Tab)}
+                onValueChanged={value => setActiveTab(value as Tab)}
                 className="mr-12"
               >
                 <MobileTabItem
                   value="info"
-                  label={
+                  label={(
                     <div className="flex items-center">
                       <i className="i-mingcute-information-line mr-1.5 text-base" />
                       {t('inspector.tab.info')}
                     </div>
-                  }
+                  )}
                 />
                 <MobileTabItem
                   value="comments"
-                  label={
+                  label={(
                     <div className="flex items-center">
                       <i className="i-mingcute-comment-line mr-1.5 text-base" />
                       {t('inspector.tab.comments')}
                       {hasComments && <div className="bg-accent ml-1.5 size-1.5 rounded-full" />}
                     </div>
-                  }
+                  )}
                 />
               </MobileTabGroup>
             ) : (

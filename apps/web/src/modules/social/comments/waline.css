@@ -86,6 +86,15 @@
   background: rgba(var(--color-materialThin), 0.92);
 }
 
+/* iOS 会对字号小于 16px 的输入框在聚焦时自动放大视口，放大伴随的滚动/缩放会让底部面板抖动甚至被顶出可视区。 */
+@media (pointer: coarse) {
+  .afilmory-waline .wl-header input,
+  .afilmory-waline .wl-editor,
+  .afilmory-waline .wl-input {
+    font-size: 16px;
+  }
+}
+
 .afilmory-waline .wl-btn {
   border-radius: 0.85rem;
 }
