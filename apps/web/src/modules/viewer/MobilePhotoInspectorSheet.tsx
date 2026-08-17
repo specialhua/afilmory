@@ -20,9 +20,23 @@ type Tab = 'info' | 'comments'
 const SHEET_HANDLE_CLOSE_DISTANCE = 72
 const SHEET_HANDLE_MAX_DRAG = 120
 /**
- * 底部被遮挡超过该高度才当作软键盘处理，避免浏览器工具栏 / 橡皮筋回弹带来的抖动。
+ * 小于该值的底部遮挡视为滚动回弹抖动，不做偏移。
  */
-const KEYBOARD_INSET_THRESHOLD = 120
+const MIN_BOTTOM_INSET = 24
+/**
+ * 键盘弹出时面板顶部留出的缝隙，露一点照片保持上下文。
+ */
+const KEYBOARD_SHEET_TOP_GAP = 12
+const KEYBOARD_SHEET_MIN_HEIGHT = 220
+/**
+ * 等键盘动画和面板高度变化落定后再把输入框滚进可视区。
+ */
+const SCROLL_INTO_VIEW_DELAY = 320
+
+const EDITABLE_SELECTOR = 'input, textarea, [contenteditable="true"]'
+
+const isEditableElement = (node: EventTarget | null): node is HTMLElement =>
+  node instanceof HTMLElement && node.matches(EDITABLE_SELECTOR)
 
 interface MobilePhotoInspectorSheetProps {
   createPresentation?: typeof createInspectorSheetPresentation
@@ -48,12 +62,21 @@ export const MobilePhotoInspectorSheet = ({
   const sheetRef = useRef<HTMLDivElement>(null)
   const viewportHeight = useViewport(value => value.h) || (typeof window !== 'undefined' ? window.innerHeight : 844)
   const { bottomInset, height: visualViewportHeight } = useVisualViewport()
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false)
 
-  // iOS Safari 弹键盘时布局视口不变，需要自己把面板抬到键盘之上；
-  // iOS Firefox 会直接缩小布局视口，此时 bottomInset 约等于 0，viewportHeight 已经是可用高度。
-  const keyboardInset = bottomInset >= KEYBOARD_INSET_THRESHOLD ? bottomInset : 0
-  const availableHeight = keyboardInset > 0 ? Math.min(viewportHeight, visualViewportHeight) : viewportHeight
-  const sheetHeight = useMemo(() => resolveHeight(availableHeight), [resolveHeight, availableHeight])
+  // 高度基准只认 visualViewport：iOS Firefox 弹键盘时会缩小布局视口，但收起后不一定派发
+  // window resize，window.innerHeight 会卡在键盘态的小值上，面板从此再也长不回来。
+  const availableHeight = visualViewportHeight || viewportHeight
+  const bottomOffset = bottomInset > MIN_BOTTOM_INSET ? bottomInset : 0
+
+  // 键盘弹出时占满可用高度，把空间全给输入区；收起后回到常规比例。
+  const sheetHeight = useMemo(
+    () =>
+      isKeyboardOpen
+        ? Math.max(availableHeight - KEYBOARD_SHEET_TOP_GAP, KEYBOARD_SHEET_MIN_HEIGHT)
+        : resolveHeight(availableHeight),
+    [availableHeight, isKeyboardOpen, resolveHeight],
+  )
   const sheetHeightValue = useMotionValue(sheetHeight)
   const sheetDragOffset = useMotionValue(0)
 
@@ -79,9 +102,58 @@ export const MobilePhotoInspectorSheet = ({
       if (activeElement instanceof HTMLElement && sheetRef.current?.contains(activeElement)) {
         activeElement.blur()
       }
+      setIsKeyboardOpen(false)
       sheetDragOffset.set(0)
     }
   }, [isInteractive, sheetDragOffset])
+
+  // 用焦点判定键盘态，而不是视口数值阈值：数值在 iOS Firefox 上可能不恢复，焦点信号一定会回落，
+  // 面板高度就不会卡在被压矮的状态。
+  useEffect(() => {
+    const sheet = sheetRef.current
+    if (!sheet) {
+      return
+    }
+
+    let blurTimer = 0
+    let scrollTimer = 0
+
+    const handleFocusIn = (event: FocusEvent) => {
+      const { target } = event
+      if (!isEditableElement(target)) {
+        return
+      }
+
+      window.clearTimeout(blurTimer)
+      setIsKeyboardOpen(true)
+
+      window.clearTimeout(scrollTimer)
+      scrollTimer = window.setTimeout(() => {
+        target.scrollIntoView({ block: 'center' })
+      }, SCROLL_INTO_VIEW_DELAY)
+    }
+
+    const handleFocusOut = () => {
+      window.clearTimeout(blurTimer)
+      // 字段间切换焦点会先 focusout 再 focusin，延后一拍再判断，避免高度来回跳
+      blurTimer = window.setTimeout(() => {
+        const { activeElement } = document
+        if (!isEditableElement(activeElement) || !sheet.contains(activeElement)) {
+          setIsKeyboardOpen(false)
+        }
+      }, 80)
+    }
+
+    sheet.addEventListener('focusin', handleFocusIn)
+    sheet.addEventListener('focusout', handleFocusOut)
+
+    return () => {
+      window.clearTimeout(blurTimer)
+      window.clearTimeout(scrollTimer)
+      sheet.removeEventListener('focusin', handleFocusIn)
+      sheet.removeEventListener('focusout', handleFocusOut)
+    }
+  }, [])
 
   const handleClose = useCallback(() => {
     const { activeElement } = document
@@ -152,7 +224,7 @@ export const MobilePhotoInspectorSheet = ({
       aria-hidden={!isInteractive}
       inert={!isInteractive}
       style={{
-        bottom: keyboardInset,
+        bottom: bottomOffset,
         y: sheetY,
         opacity: sheetOpacity,
       }}

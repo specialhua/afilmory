@@ -40,11 +40,20 @@ export const useVisualViewport = (): VisualViewportState => {
   const [state, setState] = useState(readVisualViewport)
 
   useEffect(() => {
+    let timers: number[] = []
+
     const update = () => {
       setState((prev) => {
         const next = readVisualViewport()
         return prev.height === next.height && prev.bottomInset === next.bottomInset ? prev : next
       })
+    }
+
+    // 键盘收放期间视口数值会连续变化，且部分浏览器（iOS Firefox）收起键盘后只派发
+    // visualViewport 事件甚至不派发，这里在焦点变化后多采样几次兜底。
+    const resample = () => {
+      timers.forEach(id => window.clearTimeout(id))
+      timers = [0, 150, 350, 600].map(delay => window.setTimeout(update, delay))
     }
 
     update()
@@ -53,11 +62,16 @@ export const useVisualViewport = (): VisualViewportState => {
     visualViewport?.addEventListener('resize', update)
     visualViewport?.addEventListener('scroll', update)
     window.addEventListener('resize', update)
+    window.addEventListener('focusin', resample)
+    window.addEventListener('focusout', resample)
 
     return () => {
+      timers.forEach(id => window.clearTimeout(id))
       visualViewport?.removeEventListener('resize', update)
       visualViewport?.removeEventListener('scroll', update)
       window.removeEventListener('resize', update)
+      window.removeEventListener('focusin', resample)
+      window.removeEventListener('focusout', resample)
     }
   }, [])
 
