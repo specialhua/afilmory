@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer'
 import { readFile, stat } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -5,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 import type { ExifInfo } from '@afilmory/og-renderer'
 import { renderOgImage } from '@afilmory/og-renderer'
 import type { PhotoManifestItem } from '@afilmory/typing'
+import { formatShutterSpeed } from '@afilmory/utils'
 import type { SatoriOptions } from 'satori'
 
 import type { Logger } from '../../logger/index.js'
@@ -72,7 +74,9 @@ function normalizeDirectory(directory: string | undefined): string {
 }
 
 function trimSlashes(value: string | undefined | null): string | null {
-  if (!value) return null
+  if (!value) {
+    return null
+  }
   const normalized = value.replaceAll('\\', '/').replaceAll(/^\/+|\/+$/g, '')
   return normalized.length > 0 ? normalized : null
 }
@@ -85,7 +89,9 @@ function joinSegments(...segments: Array<string | null | undefined>): string {
 }
 
 function resolveSiteConfigPath(siteConfigPath: string | undefined): string {
-  if (!siteConfigPath) return path.resolve(repoRoot, 'config.json')
+  if (!siteConfigPath) {
+    return path.resolve(repoRoot, 'config.json')
+  }
   return path.isAbsolute(siteConfigPath) ? siteConfigPath : path.resolve(repoRoot, siteConfigPath)
 }
 
@@ -197,8 +203,12 @@ function bufferToDataUrl(buffer: Buffer, contentType: string): string {
 
 function guessContentType(thumbnailUrl: string): string {
   const lowered = thumbnailUrl.toLowerCase()
-  if (lowered.endsWith('.png')) return 'image/png'
-  if (lowered.endsWith('.webp')) return 'image/webp'
+  if (lowered.endsWith('.png')) {
+    return 'image/png'
+  }
+  if (lowered.endsWith('.webp')) {
+    return 'image/webp'
+  }
   return 'image/jpeg'
 }
 
@@ -213,7 +223,9 @@ async function resolveThumbnailDataUrl(
   }
 
   const thumbnailUrl = pluginData?.localUrl || item.thumbnailUrl
-  if (!thumbnailUrl) return null
+  if (!thumbnailUrl) {
+    return null
+  }
 
   const contentType = guessContentType(thumbnailUrl)
 
@@ -270,7 +282,7 @@ function buildExifInfo(photo: PhotoManifestItem): ExifInfo | null {
   const focalLength = exif.FocalLengthIn35mmFormat || exif.FocalLength
   const aperture = exif.FNumber ? `f/${exif.FNumber}` : null
   const iso = exif.ISO ?? null
-  const shutterSpeed = exif.ExposureTime ? `${exif.ExposureTime}s` : null
+  const shutterSpeed = formatShutterSpeed(exif.ExposureTime)
   const camera =
     exif.Make && exif.Model ? `${exif.Make.trim()} ${exif.Model.trim()}`.trim() : (exif.Model ?? exif.Make ?? null)
 
@@ -480,7 +492,9 @@ export default function ogImagePlugin(options: OgImagePluginOptions = {}): Build
         }
       },
       afterBuild: async ({ logger }) => {
-        if (!vendor) return
+        if (!vendor) {
+          return
+        }
 
         try {
           await vendor.build({ repoRoot, logger })

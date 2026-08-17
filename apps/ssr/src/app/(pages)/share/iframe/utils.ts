@@ -1,8 +1,9 @@
 import type { PhotoManifestItem, PickedExif } from '@afilmory/builder'
+import { formatShutterSpeed } from '@afilmory/utils'
 import siteConfig from '@config'
 
 export function decompressThumbHash(compressed: string) {
-  return Uint8Array.from(compressed.match(/.{1,2}/g)!.map(b => Number.parseInt(b, 16)))
+  return Uint8Array.from(compressed.match(/.{1,2}/g)!.map((b) => Number.parseInt(b, 16)))
 }
 
 export function getPhotoDetailUrl(photoId: string) {
@@ -13,8 +14,7 @@ export function getPhotoDetailUrl(photoId: string) {
 export function getSiteName() {
   try {
     return new URL(siteConfig.url).hostname.replace(/^www\./, '')
-  }
-  catch {
+  } catch {
     return siteConfig.name
   }
 }
@@ -39,25 +39,14 @@ export function formatExifChips(exif: PickedExif | null | undefined): ExifChip[]
   if (exif.FNumber) {
     chips.push({ label: `f/${exif.FNumber}` })
   }
-  if (exif.ExposureTime) {
-    chips.push({ label: formatShutter(exif.ExposureTime) })
+  const shutter = formatShutterSpeed(exif.ExposureTime)
+  if (shutter) {
+    chips.push({ label: shutter })
   }
   if (exif.ISO) {
     chips.push({ label: `ISO ${exif.ISO}` })
   }
   return chips
-}
-
-function formatShutter(value: string | number): string {
-  const str = typeof value === 'number' ? String(value) : value
-  if (str.includes('/')) {
-    return `${str}s`
-  }
-  const n = Number.parseFloat(str)
-  if (Number.isFinite(n) && n < 1 && n > 0) {
-    return `1/${Math.round(1 / n)}s`
-  }
-  return `${str}s`
 }
 
 export function formatPhotoSub(photo: PhotoManifestItem): string[] {
@@ -66,8 +55,7 @@ export function formatPhotoSub(photo: PhotoManifestItem): string[] {
   const model = photo.exif?.Model
   if (model) {
     parts.push(make && !model.toLowerCase().includes(make.toLowerCase()) ? `${make} ${model}` : model)
-  }
-  else if (make) {
+  } else if (make) {
     parts.push(make)
   }
   const lens = photo.exif?.LensModel

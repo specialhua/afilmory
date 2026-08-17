@@ -1,5 +1,7 @@
 import type { PhotoManifestItem } from '@afilmory/typing'
 
+import { formatShutterSpeed } from './shutter'
+
 const GENERATOR_NAME = 'Afilmory Feed Generator'
 const EXIF_NAMESPACE = 'https://afilmory.art/rss/exif'
 const PROTOCOL_VERSION = '1.1'
@@ -85,7 +87,9 @@ ${exifTags}
 }
 
 function buildExifTags(photo: PhotoManifestItem): string {
-  if (!photo.exif) return ''
+  if (!photo.exif) {
+    return ''
+  }
 
   const tags: string[] = []
   const { exif } = photo
@@ -94,24 +98,9 @@ function buildExifTags(photo: PhotoManifestItem): string {
   if (exif.FNumber) {
     tags.push(`<exif:aperture>f/${exif.FNumber}</exif:aperture>`)
   }
-  if (exif.ExposureTime) {
-    // Format shutter speed: if < 1, use fraction, else use seconds
-    let ss = String(exif.ExposureTime)
-    if (typeof exif.ExposureTime === 'number') {
-      if (exif.ExposureTime < 1 && exif.ExposureTime > 0) {
-        ss = `1/${Math.round(1 / exif.ExposureTime)}s`
-      } else {
-        ss = `${exif.ExposureTime}s`
-      }
-    } else if (
-      !ss.endsWith('s') && // If it's a string and doesn't end with s, append it?
-      // Actually exiftool usually gives nice strings or numbers.
-      // Let's just trust the value but ensure 's' suffix if it looks like a number
-      !Number.isNaN(Number(ss))
-    ) {
-      ss = `${ss}s`
-    }
-    tags.push(`<exif:shutterSpeed>${ss}</exif:shutterSpeed>`)
+  const shutterSpeed = formatShutterSpeed(exif.ExposureTime)
+  if (shutterSpeed) {
+    tags.push(`<exif:shutterSpeed>${shutterSpeed}</exif:shutterSpeed>`)
   }
   if (exif.ISO) {
     tags.push(`<exif:iso>${exif.ISO}</exif:iso>`)

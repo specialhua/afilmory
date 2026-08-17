@@ -32,9 +32,9 @@ export interface ToneAnalysis {
 }
 
 // Video source sum type: Live Photo or Motion Photo
-export type VideoSource
-  = | { type: 'live-photo', videoUrl: string, s3Key: string }
-    | { type: 'motion-photo', offset: number, size?: number, presentationTimestamp?: number }
+export type VideoSource =
+  | { type: 'live-photo'; videoUrl: string; s3Key: string }
+  | { type: 'motion-photo'; offset: number; size?: number; presentationTimestamp?: number }
 
 export interface PhotoInfo {
   title: string
@@ -125,6 +125,10 @@ export interface PickedExif {
 
   LensMake?: string
   LensModel?: string
+  /**
+   * 部分机身（如理光 GR）不写 LensModel，只在 MakerNotes 里给出 LensType（如 '18.3mm F2.8'）
+   */
+  LensType?: string
 
   // 颜色和拍摄模式
   ColorSpace?: string
@@ -165,6 +169,9 @@ export interface PickedExif {
 
   // 富士胶片配方
   FujiRecipe?: FujiRecipe
+
+  // 理光 / 宾得影像控制
+  RicohRecipe?: RicohRecipe
 
   // HDR 相关
   MPImageType?: Tags['MPImageType']
@@ -267,6 +274,31 @@ export type FujiRecipe = {
    * Dynamic range setting (e.g., Auto, Manual, Standard, Wide1, Wide2, Film Simulation)
    */
   DynamicRangeSetting: Tags['DynamicRangeSetting']
+}
+
+/**
+ * 理光 GR / 宾得机身写在 Pentax MakerNotes 里的拍摄设定。
+ *
+ * 注意：GR III/IV 并不写入影像控制的细分滑块（宾得 0x001f Saturation、0x0020 Contrast、
+ * 0x0021 Sharpness、0x0067 Hue 等标签在 GR 机身上全部缺失），因此这里只收录机身确实写入的项。
+ */
+export type RicohRecipe = {
+  /**
+   * 影像控制（Image Control，Pentax MakerNotes 0x004f）。
+   * GR III/IV 取值：Standard、Vivid、Monotone、Soft Monotone、Hard Monotone、
+   * Hi-contrast B&W、Positive Film、Bleach Bypass 2、Retro、HDR Tone、
+   * Cross Processing 2、Negative Film、Monochrome。
+   * 宾得单反另有 Natural、Bright、Portrait、Landscape、Vibrant、Muted、Reversal Film 等。
+   */
+  ImageTone?: string
+  /**
+   * ND 滤镜，形如 'On (Auto)'、'Off (Off)'
+   */
+  NeutralDensityFilter?: string
+  /**
+   * 对焦模式，形如 'Zone Select'、'Snap'、'Pinpoint'、'Continuous (Macro)'
+   */
+  FocusMode?: string
 }
 
 export type SonyRecipe = {

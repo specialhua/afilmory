@@ -1,6 +1,8 @@
 import path from 'node:path'
+import process from 'node:process'
 
 import type { AfilmoryManifest, CameraInfo, LensInfo, PhotoManifestItem, ProcessPhotoResult } from '@afilmory/typing'
+import { formatCameraDisplayName, formatLensDisplayName, resolveLensModel } from '@afilmory/utils'
 
 import { thumbnailExists } from '../image/thumbnail.js'
 import { logger } from '../logger/index.js'
@@ -223,7 +225,9 @@ export class AfilmoryBuilder {
       if (tasksToProcess.length === 0) {
         logger.main.info('💡 没有需要处理的照片，使用现有 manifest')
         for (const item of existingManifestItems) {
-          if (!s3ImageKeys.has(item.s3Key)) continue
+          if (!s3ImageKeys.has(item.s3Key)) {
+            continue
+          }
 
           await this.emitPluginEvent(runState, 'beforeAddManifestItem', {
             options,
@@ -239,7 +243,9 @@ export class AfilmoryBuilder {
         let completedTaskCount = 0
 
         const applyResultCounters = (result: ProcessPhotoResult | null | undefined): void => {
-          if (!result) return
+          if (!result) {
+            return
+          }
 
           switch (result.type) {
             case 'new': {
@@ -368,7 +374,9 @@ export class AfilmoryBuilder {
         processingResults.push(...results)
 
         for (const result of results) {
-          if (!result.item) continue
+          if (!result.item) {
+            continue
+          }
 
           await this.emitPluginEvent(runState, 'beforeAddManifestItem', {
             options,
@@ -621,7 +629,9 @@ export class AfilmoryBuilder {
 
     const addReference = (ref: BuilderPluginConfigEntry) => {
       if (typeof ref === 'string') {
-        if (seen.has(ref)) return
+        if (seen.has(ref)) {
+          return
+        }
         seen.add(ref)
         references.push(ref)
         return
@@ -767,11 +777,16 @@ export class AfilmoryBuilder {
     const cameraMap = new Map<string, CameraInfo>()
 
     for (const photo of manifest) {
-      if (!photo.exif?.Make || !photo.exif?.Model) continue
+      if (!photo.exif?.Make || !photo.exif?.Model) {
+        continue
+      }
 
       const make = photo.exif.Make.trim()
       const model = photo.exif.Model.trim()
-      const displayName = `${make} ${model}`
+      const displayName = formatCameraDisplayName(make, model)
+      if (!displayName) {
+        continue
+      }
 
       // 使用 displayName 作为唯一键，避免重复
       if (!cameraMap.has(displayName)) {
@@ -796,13 +811,19 @@ export class AfilmoryBuilder {
     const lensMap = new Map<string, LensInfo>()
 
     for (const photo of manifest) {
-      if (!photo.exif?.LensModel) continue
+      if (!photo.exif) {
+        continue
+      }
 
-      const lensModel = photo.exif.LensModel.trim()
-      const lensMake = photo.exif.LensMake?.trim()
-
+      // 理光 GR 这类定焦机身不写 LensModel，退回 MakerNotes 的 LensType
+      const lensModel = resolveLensModel(photo.exif)
       // 生成显示名称：如果有厂商信息则包含，否则只显示型号
-      const displayName = lensMake ? `${lensMake} ${lensModel}` : lensModel
+      const displayName = formatLensDisplayName(photo.exif)
+      if (!lensModel || !displayName) {
+        continue
+      }
+
+      const lensMake = photo.exif.LensMake?.trim()
 
       // 使用 displayName 作为唯一键，避免重复
       if (!lensMap.has(displayName)) {

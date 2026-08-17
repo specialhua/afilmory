@@ -65,6 +65,7 @@ export type {
   LensInfo,
   PhotoManifestItem,
   PickedExif,
+  RicohRecipe,
   ToneAnalysis,
 } from '@afilmory/typing'
 

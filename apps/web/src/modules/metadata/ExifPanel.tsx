@@ -21,10 +21,11 @@ import {
 } from '~/icons'
 import { convertExifGPSToDecimal } from '~/lib/map-utils'
 
-import { formatExifData, Row } from './formatExifData'
+import { formatExifData } from './formatExifData'
 import { HistogramChart } from './HistogramChart'
 import { MiniMap } from './MiniMap'
 import { RawExifViewer } from './RawExifViewer'
+import { Row } from './Row'
 
 interface ExifPanelBaseProps {
   currentPhoto: PhotoManifestItem
@@ -294,15 +295,27 @@ export const ExifPanelContent: FC<ExifPanelContentProps> = ({
             )}
 
             {/* 新增：拍摄模式信息 */}
-            {(formattedExifData.exposureMode ||
-              formattedExifData.exposureProgram ||
-              formattedExifData.meteringMode ||
-              formattedExifData.whiteBalance ||
-              formattedExifData.lightSource ||
-              formattedExifData.flash) && (
+            {[
+              formattedExifData.exposureMode,
+              formattedExifData.exposureProgram,
+              formattedExifData.meteringMode,
+              formattedExifData.whiteBalance,
+              formattedExifData.lightSource,
+              formattedExifData.flash,
+              formattedExifData.ricohRecipe,
+            ].some(Boolean) && (
               <div>
                 <h4 className="my-2 text-sm font-medium text-white/80">{t('exif.capture.mode')}</h4>
                 <div className="space-y-1 text-sm">
+                  {!isNil(formattedExifData.ricohRecipe?.ImageTone) && (
+                    <Row label={t('exif.image.control')} value={formattedExifData.ricohRecipe.ImageTone} />
+                  )}
+                  {!isNil(formattedExifData.ricohRecipe?.NeutralDensityFilter) && (
+                    <Row label={t('exif.nd.filter')} value={formattedExifData.ricohRecipe.NeutralDensityFilter} />
+                  )}
+                  {!isNil(formattedExifData.ricohRecipe?.FocusMode) && (
+                    <Row label={t('exif.focus.mode')} value={formattedExifData.ricohRecipe.FocusMode} />
+                  )}
                   {!isNil(formattedExifData.exposureProgram) && (
                     <Row label={t('exif.exposureprogram.title')} value={formattedExifData.exposureProgram} />
                   )}

@@ -1,5 +1,7 @@
+import type { Buffer } from 'node:buffer'
 import { mkdir, unlink, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import process from 'node:process'
 
 import type { PickedExif } from '@afilmory/typing'
 import { isNil, noop } from 'es-toolkit'
@@ -99,6 +101,7 @@ const pickKeys: Array<keyof Tags | (string & {})> = [
   'SceneCaptureType',
   'LensMake',
   'LensModel',
+  'LensType',
   'MeteringMode',
   'WhiteBalance',
   'WBShiftAB',
@@ -177,6 +180,15 @@ function handleExifData(exifData: Tags): PickedExif {
       SoftSkinEffect: exifData.SoftSkinEffect,
     }
   }
+  // 理光 GR / 宾得机身共用 Pentax MakerNotes，以 PentaxModelID 或厂商名识别
+  let RicohRecipe: any = null
+  const { ImageTone, NeutralDensityFilter, FocusMode } = exifData
+  const isPentaxMakerNotes = exifData.PentaxModelID || exifData.Make?.toUpperCase().startsWith('RICOH')
+  const hasRicohSettings = !isNil(ImageTone) || !isNil(NeutralDensityFilter) || !isNil(FocusMode)
+  if (isPentaxMakerNotes && hasRicohSettings) {
+    RicohRecipe = { ImageTone, NeutralDensityFilter, FocusMode }
+  }
+
   const size = {
     ImageWidth: exifData.ExifImageWidth,
     ImageHeight: exifData.ExifImageHeight,
@@ -196,6 +208,7 @@ function handleExifData(exifData: Tags): PickedExif {
 
     ...(FujiRecipe ? { FujiRecipe } : {}),
     ...(SonyRecipe ? { SonyRecipe } : {}),
+    ...(RicohRecipe ? { RicohRecipe } : {}),
   }
 }
 
