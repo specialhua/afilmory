@@ -120,8 +120,29 @@ const hyobanConfig = await defineConfig(
   globalIgnores(['apps/ssr/src/index.html.ts', 'apps/ssr/public/**', 'apps/web/public/**', 'packages/docs/public/**']),
 )
 
+// Formatting is prettier's job. Despite passing `formatting: false` above,
+// eslint-config-hyoban v7 still enables ~74 `style/*` rules, several of which contradict
+// prettier outright (`brace-style`, `operator-linebreak`, `arrow-parens`, `quotes`, ...).
+// Since lint-staged runs prettier *before* eslint on the same files, no source text can
+// satisfy both: eslint --fix rewrites what prettier just wrote, and prettier reverts it on
+// the next commit. Turn the whole namespace off and let prettier own formatting.
+//
+// Derived from the resolved config instead of a hand-written list so it keeps working when
+// hyoban adds or renames rules. Non-formatting rules (`curly`, `node/*`, `ts/*`, ...) and the
+// repo's own `@stylistic/jsx-self-closing-comp` live in different namespaces and stay enabled.
+const disableStylisticFormatting = {
+  name: 'afilmory/disable-stylistic-formatting',
+  rules: Object.fromEntries(
+    hyobanConfig
+      .flatMap((entry) => Object.keys(entry?.rules ?? {}))
+      .filter((name) => name.startsWith('style/'))
+      .map((name) => [name, 'off']),
+  ),
+}
+
 export default [
   // Ensure ignores are applied globally before any other configs
   rootIgnores,
   ...hyobanConfig,
+  disableStylisticFormatting,
 ]
