@@ -18,24 +18,34 @@
 }
 
 .afilmory-waline [data-waline] {
-  display: flex;
-  flex-direction: column;
   padding-top: 0.25rem;
 }
 
-.afilmory-waline .wl-meta-head,
-.afilmory-waline .wl-empty,
-.afilmory-waline .wl-cards,
-.afilmory-waline .wl-operation,
-.afilmory-waline .wl-loadmore,
-.afilmory-waline .wl-meta-foot {
-  order: 1;
-}
+/* 桌面端把编辑框翻到最下方，做成聊天式的「输入框在底部」。
+   移动端不翻转，沿用 Waline 原生顺序（编辑框 → 评论数/排序 → 列表）：编辑框位于滚动容器
+   顶部，软键盘弹起时天然落在可视区内。若编辑框是最后一个元素，滚动容器无法滚过内容末尾，
+   MobilePhotoInspectorSheet 里的 scrollIntoView({ block: 'center' }) 就不可能真正居中，
+   只能把输入框顶到底边贴着键盘。断点与 useMobile() 的 1024 对齐。 */
+@media (min-width: 1024px) {
+  .afilmory-waline [data-waline] {
+    display: flex;
+    flex-direction: column;
+  }
 
-.afilmory-waline .wl-comment {
-  order: 2;
-  margin-top: 1rem;
-  margin-bottom: 0;
+  .afilmory-waline .wl-meta-head,
+  .afilmory-waline .wl-empty,
+  .afilmory-waline .wl-cards,
+  .afilmory-waline .wl-operation,
+  .afilmory-waline .wl-loadmore,
+  .afilmory-waline .wl-meta-foot {
+    order: 1;
+  }
+
+  .afilmory-waline .wl-comment {
+    order: 2;
+    margin-top: 1rem;
+    margin-bottom: 0;
+  }
 }
 
 .afilmory-waline .wl-panel,
@@ -92,6 +102,30 @@
   .afilmory-waline .wl-editor,
   .afilmory-waline .wl-input {
     font-size: 16px;
+  }
+}
+
+/* 移动端软键盘弹起后可视高度只剩三四百像素，而编辑框默认要占掉约 320px：
+   昵称/邮箱/网址三行 meta、min-height 8.75em 的正文框（触屏上字号被抬到 16px，即 140px）
+   再加底部工具栏，几乎填满整个面板。这里收紧 meta 行的留白并压低正文框初始高度，
+   给评论列表留出可视空间；正文框仍是 resize: vertical，需要时可以拉高。 */
+@media (max-width: 1023.98px) {
+  .afilmory-waline .wl-header label {
+    min-width: 44px;
+    padding-block: 0.35em;
+  }
+
+  .afilmory-waline .wl-header input {
+    padding-block: 0.35em;
+  }
+
+  .afilmory-waline .wl-editor {
+    min-height: 4.5em;
+    margin-block: 0.5em;
+  }
+
+  .afilmory-waline .wl-footer {
+    margin-block: 0.35em;
   }
 }
 

@@ -16,6 +16,8 @@ export const WalineCommentsPanel = ({ photoId }: { photoId: string }) => {
   const walineConfig = siteConfig.comments?.waline
   const path = getWalineCommentPath(photoId)
   const placeholder = t('comments.placeholder')
+  // Waline 用 `sofa` 表示无评论时的空状态文案，复用自建面板的同一个 key 保持两处一致
+  const emptyText = t('comments.empty')
 
   useEffect(() => {
     const container = containerRef.current
@@ -37,13 +39,14 @@ export const WalineCommentsPanel = ({ photoId }: { photoId: string }) => {
       dark: 'html.dark',
       locale: {
         placeholder,
+        sofa: emptyText,
       },
     })
 
     return () => {
       instance?.destroy()
     }
-  }, [i18n.language, path, placeholder, walineConfig?.lang, walineConfig?.serverURL])
+  }, [emptyText, i18n.language, path, placeholder, walineConfig?.lang, walineConfig?.serverURL])
 
   if (!getWalineServerURL()) {
     return (

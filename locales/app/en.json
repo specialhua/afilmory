@@ -69,7 +69,7 @@
   "comments.anonymous": "Guest",
   "comments.cancelReply": "Cancel",
   "comments.chooseProvider": "Choose sign in method",
-  "comments.empty": "No comments yet. Be the first to comment!",
+  "comments.empty": "The comment section is waiting for something interesting from you~",
   "comments.error": "Failed to load comments",
   "comments.loadMore": "Load more",
   "comments.loading": "Loading comments...",
