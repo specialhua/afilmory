@@ -60,7 +60,7 @@ export const MobilePhotoInspectorSheet = ({
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<Tab>('info')
   const sheetRef = useRef<HTMLDivElement>(null)
-  const viewportHeight = useViewport(value => value.h) || (typeof window !== 'undefined' ? window.innerHeight : 844)
+  const viewportHeight = useViewport((value) => value.h) || (typeof window !== 'undefined' ? window.innerHeight : 844)
   const { bottomInset, height: visualViewportHeight } = useVisualViewport()
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false)
 
@@ -264,27 +264,27 @@ export const MobilePhotoInspectorSheet = ({
             {showSocialFeatures ? (
               <MobileTabGroup
                 value={activeTab}
-                onValueChanged={value => setActiveTab(value as Tab)}
+                onValueChanged={(value) => setActiveTab(value as Tab)}
                 className="mr-12"
               >
                 <MobileTabItem
                   value="info"
-                  label={(
+                  label={
                     <div className="flex items-center">
                       <i className="i-mingcute-information-line mr-1.5 text-base" />
                       {t('inspector.tab.info')}
                     </div>
-                  )}
+                  }
                 />
                 <MobileTabItem
                   value="comments"
-                  label={(
+                  label={
                     <div className="flex items-center">
                       <i className="i-mingcute-comment-line mr-1.5 text-base" />
                       {t('inspector.tab.comments')}
                       {hasComments && <div className="bg-accent ml-1.5 size-1.5 rounded-full" />}
                     </div>
-                  )}
+                  }
                 />
               </MobileTabGroup>
             ) : (
@@ -311,7 +311,10 @@ export const MobilePhotoInspectorSheet = ({
               viewportClassName="px-4 pb-[calc(env(safe-area-inset-bottom)+20px)] **:select-text"
             />
           ) : (
-            <div className="min-h-0 flex-1 pb-[calc(env(safe-area-inset-bottom)+8px)]">
+            // 必须是 flex 容器：CommentsPanel 内部靠 flex-1 + min-h-0 撑出一个定高的滚动区。
+            // 若这里是块级盒子，它的高度会退化成 auto，滚动容器与内容等高、永远不溢出，
+            // overflow-y: auto 就失效，超出部分被 sheet 的 overflow-hidden 裁掉且无法滚动。
+            <div className="flex min-h-0 flex-1 flex-col pb-[calc(env(safe-area-inset-bottom)+8px)]">
               <CommentsPanel photoId={currentPhoto.id} />
             </div>
           )}
