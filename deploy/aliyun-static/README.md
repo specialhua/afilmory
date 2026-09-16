@@ -54,13 +54,31 @@ curl -s http://127.0.0.1:3002/health
 
 ## 反向代理
 
-webhook 只监听本机，由 nginx 对外暴露。路径带不带 `/webhook` 前缀都能识别：
+webhook 只监听本机，由 nginx 对外暴露。token 会出现在 URL 中，相关 location 都关闭访问日志。
 
 ```nginx
-location /webhook/ {
+# 状态页：/webhook?token=...
+location = /webhook {
+    proxy_pass http://127.0.0.1:3002/webhook;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    access_log off;
+}
+
+# OSS 事件通知：/webhook/oss/<token>，只允许 POST
+location ~ ^/webhook/oss/[^/]+$ {
     proxy_pass http://127.0.0.1:3002;
-    proxy_set_header X-Forwarded-For $remote_addr;
-    # token 会出现在 URL 中，不写入访问日志
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    limit_except POST { deny all; }
+    access_log off;
+}
+
+# 其他接口：status、logs、build、health
+location /webhook/ {
+    proxy_pass http://127.0.0.1:3002/webhook/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
     access_log off;
 }
 ```

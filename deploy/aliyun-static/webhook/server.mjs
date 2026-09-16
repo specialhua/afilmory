@@ -161,9 +161,14 @@ function extractToken(req, url, pathToken) {
 }
 
 function clientIp(req) {
+  // X-Real-IP 由反向代理直接写入，客户端无法伪造；X-Forwarded-For 首段可被客户端自带
+  const realIp = req.headers['x-real-ip']
+  if (typeof realIp === 'string' && realIp) {
+    return realIp
+  }
   const forwarded = req.headers['x-forwarded-for']
   if (typeof forwarded === 'string' && forwarded) {
-    return forwarded.split(',')[0].trim()
+    return forwarded.split(',').at(-1).trim()
   }
   return req.socket.remoteAddress || '-'
 }
@@ -440,7 +445,12 @@ function readLogs() {
   return lines.map(sanitizeLog).join('\n')
 }
 
-function renderPage(token) {
+/**
+ * 页面链接用相对路径。以 /webhook（无尾随斜杠）访问时，相对路径会解析到站点根目录，
+ * 所以这种情况下要带上最后一段作为前缀。
+ */
+function renderPage(token, pathname) {
+  const linkBase = pathname.endsWith('/') ? '' : `${pathname.split('/').pop()}/`
   const tokenQuery = `?token=${encodeURIComponent(token)}`
   const historyHtml = buildHistory.length > 0
     ? buildHistory
@@ -491,10 +501,10 @@ a{color:#2563eb;margin-right:16px;font-size:14px}
 </div>
 </section>
 <section><h2>最近构建</h2><ul>${historyHtml}</ul></section>
-<section><h2>链接</h2><a href="status${tokenQuery}" target="_blank">状态 JSON</a><a href="logs${tokenQuery}" target="_blank">日志</a><a href="health" target="_blank">健康检查</a></section>
+<section><h2>链接</h2><a href="${escapeHtml(linkBase)}status${tokenQuery}" target="_blank">状态 JSON</a><a href="${escapeHtml(linkBase)}logs${tokenQuery}" target="_blank">日志</a><a href="${escapeHtml(linkBase)}health" target="_blank">健康检查</a></section>
 </main>
 <script>
-const statusUrl = 'status' + location.search
+const statusUrl = ${JSON.stringify(linkBase)} + 'status' + location.search
 async function refresh() {
   try {
     const data = await (await fetch(statusUrl)).json()
@@ -548,7 +558,7 @@ async function handleRequest(req, res) {
     return send(res, 200, readLogs(), 'text/plain; charset=utf-8')
   }
 
-  return send(res, 200, renderPage(token), 'text/html; charset=utf-8')
+  return send(res, 200, renderPage(token, url.pathname), 'text/html; charset=utf-8')
 }
 
 const server = http.createServer((req, res) => {
