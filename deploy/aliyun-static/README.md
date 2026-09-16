@@ -91,23 +91,35 @@ webhook 也能解析 Base64 与 MNS 的 XML / JSON 包装格式，无法解析�
 
 ## 接口
 
-除 `/health` 外都需要 token，可以放在 `X-Webhook-Token` 请求头、`Authorization: Bearer`、`?token=` 查询参数，或路径末尾（仅 `/oss`）。
+只读接口公开，方便随时在网页上查看构建情况；会触发构建的写接口必须带 token。
 表中路径的 `/webhook` 前缀可省略。
 
-| 方法 | 路径                     | 说明                                                          |
-| ---- | ------------------------ | ------------------------------------------------------------- |
-| GET  | `/webhook/health`        | 健康检查，公开                                                |
-| POST | `/webhook/oss`           | OSS 事件通知（token 放请求头，或路径 `/webhook/oss/<token>`） |
-| POST | `/webhook/build`         | 手动触发构建（同样走防抖）                                    |
-| GET  | `/webhook/?token=`       | 状态页                                                        |
-| GET  | `/webhook/status?token=` | 状态 JSON                                                     |
-| GET  | `/webhook/logs?token=`   | 最近 100 行日志（已脱敏）                                     |
+| 方法 | 路径              | 鉴权 | 说明                           |
+| ---- | ----------------- | ---- | ------------------------------ |
+| GET  | `/webhook/`       | 公开 | 构建状态页，自动刷新状态和日志 |
+| GET  | `/webhook/status` | 公开 | 状态 JSON                      |
+| GET  | `/webhook/logs`   | 公开 | 最近 100 行公开日志            |
+| GET  | `/webhook/health` | 公开 | 健康检查                       |
+| POST | `/webhook/oss`    | 需要 | OSS 事件通知                   |
+| POST | `/webhook/build`  | 需要 | 手动触发构建（同样走防抖）     |
+
+写接口的 token 放在 `X-Webhook-Token` 请求头（推荐）、`Authorization: Bearer`、`?token=` 查询参数，或路径末尾（仅 `/oss/<token>`）。
 
 手动触发：
 
 ```bash
 curl -X POST -H "X-Webhook-Token: $WEBHOOK_TOKEN" https://你的域名/build
 ```
+
+### 公开日志的脱敏方式
+
+公开日志不是在原文上遮掉敏感词，而是只展示认得的日志行：
+
+- 照常显示：照片文件名、构建各步骤的开始 / 成功 / 失败、上传与更新元数据的文件名、退出码
+- 只显示概要：步骤失败的原始输出、`错误：` 详情、无法解析的通知、元数据更新失败
+- 不显示：构建进程的 stderr 原文、被拒绝的未授权请求、来源 IP、bucket 名、服务器路径，以及任何未识别的日志行
+
+完整日志保存在服务器的 `webhook/webhook.log`（超过 10MB 轮换为 `webhook.log.1`），每个构建步骤的完整输出在 `BUILD_LOG_DIR`。
 
 ## 手动构建与排错
 
