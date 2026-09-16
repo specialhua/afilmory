@@ -1,0 +1,7 @@
+{
+  "name": "afilmory-oss-event-forwarder",
+  "type": "commonjs",
+  "private": true,
+  "description": "阿里云函数计算：把 OSS 事件转发给 webhook 服务",
+  "main": "index.js"
+}
