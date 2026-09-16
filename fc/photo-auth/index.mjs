@@ -1,15 +1,17 @@
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
-const allowOrigin = process.env.ALLOW_ORIGIN || 'https://afilm.site'
+const allowOrigin = process.env.ALLOW_ORIGIN
 const cdnBaseUrl = process.env.CDN_MEDIA_BASE_URL
 const cdnAuthKey = process.env.CDN_AUTH_KEY
 const authValidSeconds = Number(process.env.CDN_AUTH_VALID_SECONDS || '1800')
 const authOverlapSeconds = Number(process.env.CDN_AUTH_OVERLAP_SECONDS || '900')
 
-if (!cdnBaseUrl || !cdnAuthKey) {
-  throw new Error('CDN_MEDIA_BASE_URL and CDN_AUTH_KEY are required')
+// ALLOW_ORIGIN 不设默认值：漏配时直接报错，避免跨域来源悄悄落到别人的域名上
+if (!cdnBaseUrl || !cdnAuthKey || !allowOrigin) {
+  throw new Error('CDN_MEDIA_BASE_URL, CDN_AUTH_KEY and ALLOW_ORIGIN are required')
 }
 
 const manifestPath = path.join(process.cwd(), 'manifest.photos.json')
