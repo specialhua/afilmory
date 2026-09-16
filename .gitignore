@@ -91,3 +91,6 @@ acceptance-report/
 /metadata/
 apps/mobile/metadata/
 apps/mobile/fastlane/metadata/
+
+# 阿里云静态部署：webhook 运行日志（配置 .env 已由上方规则忽略）
+deploy/aliyun-static/webhook/*.log
