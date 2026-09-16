@@ -1,0 +1,53 @@
+---
+import Base from '../../layouts/Base.astro'
+import LegalPage from '../../components/LegalPage.astro'
+---
+
+<Base title="Account Cleanup Policy · Afilmory" description="Specific timeframes and thresholds for cleaning up long-inactive free accounts on Afilmory.">
+  <LegalPage
+    eyebrow="Account Cleanup"
+    title="Account Cleanup Policy"
+    description="This page sets forth the specific inactivity durations and content thresholds referenced in Section 9.3 of the Terms of Service. Adjustments will be announced here in advance."
+    updatedAt="September 3, 2026"
+    locale="en"
+    alternateHref="/account-cleanup/"
+  >
+    <div class="notice">This page forms an integral part of Section 9 of the Terms of Service. Cleanup applies strictly to accounts and Workspaces on the free tier.</div>
+
+    <section>
+      <h2>1. Current Thresholds</h2>
+      <ul>
+        <li><strong>Inactivity Duration</strong>: 3 consecutive months with no active records;</li>
+        <li><strong>Content Minimum</strong>: 0 photos and 0 bytes of hosted storage utilized;</li>
+        <li><strong>Deactivation to Deletion Interval</strong>: Not less than 14 days.</li>
+      </ul>
+      <p>Only accounts or Workspaces meeting all of the aforementioned criteria concurrently will enter the cleanup pipeline.</p>
+    </section>
+
+    <section>
+      <h2>2. What Constitutes "Activity"</h2>
+      <p>Signing in, uploading or updating content, accessing your Workspace via the app or API, or performing any action requiring identity authentication will reset your activity timer. Automated background synchronization alone does not constitute user activity.</p>
+    </section>
+
+    <section>
+      <h2>3. Accounts Exempt from Cleanup</h2>
+      <ul>
+        <li>Accounts with an active subscription, active sponsorship perk, or paid storage tier;</li>
+        <li>Workspaces with a verified custom domain attached;</li>
+        <li>Platform administrator accounts.</li>
+      </ul>
+      <p>When a subscription expires or is canceled, the account reverts to the free tier and inactivity calculation restarts from that moment forward.</p>
+    </section>
+
+    <section>
+      <h2>4. Canceling Scheduled Cleanup</h2>
+      <p>Simply sign in once before the permanent deletion date. The system will detect your activity, automatically restore the account, and cancel deletion without needing to contact support.</p>
+      <p>Once permanently deleted, data cannot be recovered. If you wish to appeal a deactivation or pending deletion, please reach out via our <a href="/en/support/">Support page</a> before deletion executes.</p>
+    </section>
+
+    <section>
+      <h2>5. Threshold Adjustments</h2>
+      <p>We may adjust thresholds and durations over time. Revisions will be published on this page and apply prospectively from the publication date; accounts already undergoing deactivation will be processed according to the interval in effect when deactivated.</p>
+    </section>
+  </LegalPage>
+</Base>

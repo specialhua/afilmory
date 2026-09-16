@@ -1,9 +1,9 @@
-import { authUsers } from '@afilmory/db'
+import { authUsers, tenantMemberships } from '@afilmory/db'
 import { DbAccessor } from '@core/database/database.provider'
 import { BizException, ErrorCode } from '@core/errors'
 import { normalizeStringToUndefined } from '@core/helpers/normalize.helper'
 import { requireTenantContext } from '@core/modules/platform/tenant/tenant.context'
-import { asc, eq, sql } from 'drizzle-orm'
+import { and, asc, eq, sql } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 
 import { getUiSchemaTranslator } from '../../ui/ui-schema/ui-schema.i18n'
@@ -13,6 +13,17 @@ import { SettingService } from '../setting/setting.service'
 import type { SiteSettingEntryInput, SiteSettingKey, SiteSettingUiSchemaResponse } from './site-setting.type'
 import { ONBOARDING_SITE_SETTING_KEYS, SITE_SETTING_KEYS } from './site-setting.type'
 import { createSiteSettingUiSchema, SITE_SETTING_UI_SCHEMA_KEYS } from './site-setting.ui-schema'
+
+const DEFAULT_SITE_CONFIG: SiteConfig = {
+  name: 'Default Site',
+  title: 'Default Site',
+  description: 'Default Site',
+  url: '',
+  accentColor: '#007bff',
+  author: {
+    name: '',
+  },
+}
 
 @injectable()
 export class SiteSettingService {
@@ -54,7 +65,7 @@ export class SiteSettingService {
       return
     }
 
-    const normalizedEntries = entries.map((entry) => ({
+    const normalizedEntries = entries.map(entry => ({
       ...entry,
       value: typeof entry.value === 'string' ? entry.value : String(entry.value),
     })) as readonly SettingEntryInput[]
@@ -74,16 +85,22 @@ export class SiteSettingService {
       author: { ...DEFAULT_SITE_CONFIG.author },
     }
 
-    assignString(values['site.name'], (value) => (config.name = value))
-    assignString(values['site.title'], (value) => (config.title = value))
-    assignString(values['site.description'], (value) => (config.description = value))
-    assignString(values['site.url'], (value) => (config.url = value))
-    assignString(values['site.accentColor'], (value) => (config.accentColor = value))
+    assignString(values['site.name'], value => (config.name = value))
+    assignString(values['site.title'], value => (config.title = value))
+    assignString(values['site.description'], value => (config.description = value))
+    assignString(values['site.url'], value => (config.url = value))
+    assignString(values['site.accentColor'], value => (config.accentColor = value))
+
+    const viewer = buildViewerConfig(values)
+    if (viewer) {
+      config.viewer = viewer
+    }
 
     const resolvedAuthor = await this.resolveAuthorFromTenant(config.name)
     if (resolvedAuthor) {
       config.author = resolvedAuthor
-    } else if (!config.author.name) {
+    }
+    else if (!config.author.name) {
       config.author.name = config.name
     }
 
@@ -102,7 +119,7 @@ export class SiteSettingService {
       config.map = mapProviders
     }
 
-    assignString(values['site.mapStyle'], (value) => (config.mapStyle = value))
+    assignString(values['site.mapStyle'], value => (config.mapStyle = value))
 
     const projection = normalizeMapProjection(values['site.mapProjection'])
     if (projection) {
@@ -170,11 +187,11 @@ export class SiteSettingService {
     }
 
     const fallbackName = normalizeStringToUndefined(siteName) ?? siteName
-    const normalizedName =
-      normalizeStringToUndefined(user.displayUsername) ??
-      normalizeStringToUndefined(user.username) ??
-      normalizeStringToUndefined(user.name) ??
-      fallbackName
+    const normalizedName
+      = normalizeStringToUndefined(user.displayUsername)
+        ?? normalizeStringToUndefined(user.username)
+        ?? normalizeStringToUndefined(user.name)
+        ?? fallbackName
 
     const author: SiteConfigAuthor = {
       name: normalizedName,
@@ -199,14 +216,15 @@ export class SiteSettingService {
         displayUsername: authUsers.displayUsername,
         username: authUsers.username,
         image: authUsers.image,
-        role: authUsers.role,
+        role: tenantMemberships.role,
         createdAt: authUsers.createdAt,
         updatedAt: authUsers.updatedAt,
       })
       .from(authUsers)
-      .where(eq(authUsers.tenantId, tenant.tenant.id))
+      .innerJoin(tenantMemberships, eq(tenantMemberships.userId, authUsers.id))
+      .where(and(eq(tenantMemberships.tenantId, tenant.tenant.id), eq(tenantMemberships.status, 'active')))
       .orderBy(
-        sql`case when ${authUsers.role} = 'admin' then 0 when ${authUsers.role} = 'superadmin' then 1 else 2 end`,
+        sql`case when ${tenantMemberships.role} = 'owner' then 0 when ${tenantMemberships.role} = 'admin' then 1 else 2 end`,
         asc(authUsers.createdAt),
       )
       .limit(1)
@@ -230,7 +248,8 @@ export class SiteSettingService {
         throw new Error('Invalid protocol')
       }
       return url.toString()
-    } catch {
+    }
+    catch {
       throw new BizException(ErrorCode.COMMON_VALIDATION, {
         message: '头像链接必须是以 http(s) 或 // 开头的有效 URL',
       })
@@ -320,6 +339,12 @@ interface SiteConfigFeed {
   }
 }
 
+interface SiteConfigViewer {
+  regions?: {
+    labelPlacement?: 'edge' | 'above' | 'floating'
+  }
+}
+
 type SiteConfigMapProviders = string[]
 
 type SiteConfigProjection = 'globe' | 'mercator'
@@ -331,22 +356,12 @@ interface SiteConfig {
   url: string
   accentColor: string
   author: SiteConfigAuthor
+  viewer?: SiteConfigViewer
   social?: SiteConfigSocial
   feed?: SiteConfigFeed
   map?: SiteConfigMapProviders
   mapStyle?: string
   mapProjection?: SiteConfigProjection
-}
-
-const DEFAULT_SITE_CONFIG: SiteConfig = {
-  name: 'Default Site',
-  title: 'Default Site',
-  description: 'Default Site',
-  url: '',
-  accentColor: '#007bff',
-  author: {
-    name: '',
-  },
 }
 
 type SiteSettingValueMap = Partial<Record<SiteSettingKey, string | null>>
@@ -389,9 +404,10 @@ function parseJsonStringArray(value: string | null | undefined): string[] | unde
       return undefined
     }
 
-    const result = parsed.filter((entry): entry is string => typeof entry === 'string').map((entry) => entry.trim())
+    const result = parsed.filter((entry): entry is string => typeof entry === 'string').map(entry => entry.trim())
     return result.length > 0 ? result : undefined
-  } catch {
+  }
+  catch {
     return undefined
   }
 }
@@ -439,4 +455,14 @@ function normalizeMapProjection(value: string | null | undefined): SiteConfig['m
   }
 
   return undefined
+}
+
+function buildViewerConfig(values: SiteSettingValueMap): SiteConfigViewer | undefined {
+  const labelPlacement = normalizeRegionLabelPlacement(values['site.viewer.regions.labelPlacement'])
+  return labelPlacement ? { regions: { labelPlacement } } : undefined
+}
+
+function normalizeRegionLabelPlacement(value: string | null | undefined): 'edge' | 'floating' | undefined {
+  const normalized = normalizeStringToUndefined(value)
+  return normalized === 'edge' || normalized === 'floating' ? normalized : undefined
 }

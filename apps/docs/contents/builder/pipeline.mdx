@@ -2,7 +2,7 @@
 title: Processing Flow
 description: End-to-end pipeline, ordering, and incremental rules backed by the code.
 createdAt: 2025-11-23T19:00:00+08:00
-lastModified: 2025-11-23T19:40:52+08:00
+lastModified: 2026-08-08T03:38:03+08:00
 order: 4
 ---
 
@@ -19,9 +19,9 @@ This page walks the real sequence the builder executes, matching `packages/build
 5. For each image:
    - Preprocess (HEIC/HEIF → JPEG, BMP → JPEG) and rotate per EXIF.
    - Build Sharp instance, compute digest, generate 600 px thumbnail + ThumbHash.
-   - Extract EXIF, GPS, recipes; run tone analysis.
+   - Extract EXIF, GPS, recipes, embedded XMP keywords/regions; run tone analysis.
    - Detect HDR GainMap, Motion Photo (embedded) or Live Photo (paired video)—never both.
-   - Compose manifest item with URLs, dimensions, hashes, EXIF, tone, HDR/video flags, tags/title/description.
+   - Compose manifest item with URLs, dimensions, hashes, EXIF, XMP metadata, tone, HDR/video flags, tags/title/description.
 6. Save manifest (`apps/web/src/data/photos-manifest.json`) and write thumbnails to `apps/web/public/thumbnails` (plugins may rewrite `thumbnailUrl` before save).
 7. Clean up orphaned thumbnails when photos were deleted.
 
@@ -30,6 +30,7 @@ This page walks the real sequence the builder executes, matching `packages/build
 - `--force`: process everything.
 - New file: process.
 - Updated `LastModified` or `--force-manifest`: rebuild manifest entry (EXIF + tone).
+- Existing item missing `keywords[]` / `regions[]`: rebuild manifest entry to backfill XMP-derived data.
 - Missing thumbnail or `--force-thumbnails`: regenerate thumbnail + ThumbHash.
 - Otherwise reuse existing item and thumbnail.
 
@@ -37,6 +38,20 @@ This page walks the real sequence the builder executes, matching `packages/build
 
 - **Thumbnails**: one 600 px JPEG per photo, quality 100, filename `<photoId>.jpg`.
 - **Manifest**: `photos-manifest.json` includes `data[]`, `cameras[]`, `lenses[]` sorted by capture time.
+- **XMP metadata**: each item may include `keywords[]` and `regions[]`; keywords are also merged into the photo `tags[]` list for existing tag-driven UI.
+
+## Viewer behavior for regions
+
+When `regions[]` is present, the web viewer uses it in two phases:
+
+1. During the thumbnail placeholder phase, region boxes and labels can already be shown.
+2. After the full-resolution image loads, the same region data is kept aligned in the zoomable viewer.
+
+Known pitfalls:
+
+- Region alignment assumes embedded XMP coordinates match the rendered image after EXIF rotation.
+- Very tall regions may place labels inside the box when there is not enough room above or below.
+- Region overlays currently switch affected photos onto the DOM viewer path instead of the WebGL viewer path so hover and alignment remain stable.
 
 ## Error handling
 

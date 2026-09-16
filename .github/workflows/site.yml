@@ -1,0 +1,42 @@
+name: Deploy Landing Site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/site/**'
+      - '.github/workflows/site.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: afilmory-site
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PUBLIC_API_URL: https://api.afilmory.art
+      AFILMORY_SITE_STRICT: '1'
+      CLOUDFLARE_ACCOUNT_ID: 4d01e7a919eff82eb04333f27cb9da3b
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install site dependencies
+        run: pnpm install --frozen-lockfile --filter @afilmory/site... --ignore-scripts
+
+      - name: Build landing
+        run: pnpm site:build
+
+      - name: Deploy to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: pnpm dlx wrangler@4 pages deploy apps/site/dist --project-name=afilmory-site --branch=main

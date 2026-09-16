@@ -24,7 +24,7 @@ const DEFAULT_TIMEOUT = 1000
 function defaultHandlerOptions(): Required<TaskHandlerOptions> {
   return {
     maxAttempts: 5,
-    backoffStrategy: (attempt) => Math.min(60_000, 2 ** (attempt - 1) * 1000),
+    backoffStrategy: attempt => Math.min(60_000, 2 ** (attempt - 1) * 1000),
     retryableFilter: () => true,
   }
 }
@@ -72,11 +72,14 @@ export class TaskQueue {
   private running = false
   private pollAbort?: AbortController
   private readonly visibilityTimeout: number
+  private readonly concurrency: number
+  private readonly activeExecutions = new Set<Promise<void>>()
 
   constructor(private readonly options: TaskQueueOptions = {}) {
     this.driver = options.driver ?? new InMemoryQueueDriver({ name: options.name })
     this.logger = options.logger ?? createLogger(`TaskQueue${options.name ? `:${options.name}` : ''}`)
     this.visibilityTimeout = Math.max(5_000, options.visibilityTimeoutMs ?? 30_000)
+    this.concurrency = Math.max(1, Math.trunc(options.concurrency ?? 1))
 
     if (options.middlewares) {
       for (const middleware of options.middlewares) {
@@ -144,6 +147,10 @@ export class TaskQueue {
       const { signal } = this.pollAbort!
       while (this.running && !signal.aborted) {
         try {
+          if (this.activeExecutions.size >= this.concurrency) {
+            await Promise.race(this.activeExecutions)
+            continue
+          }
           const task = await this.driver.poll({
             timeoutMs: pollInterval,
             visibilityTimeoutMs: this.visibilityTimeout,
@@ -154,13 +161,19 @@ export class TaskQueue {
             continue
           }
 
-          void this.execute(task)
-        } catch (error) {
+          const execution = this.execute(task)
+            .catch(error => this.logger.error('Task execution infrastructure error', error))
+            .finally(() => {
+              this.activeExecutions.delete(execution)
+            })
+          this.activeExecutions.add(execution)
+        }
+        catch (error) {
           if (signal.aborted) {
             return
           }
           this.logger.error('Polling loop error', error)
-          await new Promise((resolve) => setTimeout(resolve, 100))
+          await new Promise(resolve => setTimeout(resolve, 100))
         }
       }
     }
@@ -180,6 +193,7 @@ export class TaskQueue {
 
   async shutdown(): Promise<void> {
     await this.stop()
+    await Promise.allSettled(this.activeExecutions)
     await this.driver.shutdown()
   }
 
@@ -192,6 +206,7 @@ export class TaskQueue {
     }
 
     const taskLogger = this.logger.extend(task.name)
+    let retryDecision: RetryDecision | undefined
     const context: TaskContext = {
       taskId: task.id,
       name: task.name,
@@ -208,7 +223,6 @@ export class TaskQueue {
       },
     }
 
-    let retryDecision: RetryDecision | undefined
     let error: unknown
 
     const handlerMiddleware: TaskMiddleware = async (ctx) => {
@@ -223,7 +237,8 @@ export class TaskQueue {
         attempts: context.metadata.attempts,
       })
       return
-    } catch (caught) {
+    }
+    catch (caught) {
       error = caught
     }
 

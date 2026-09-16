@@ -2,11 +2,12 @@ import { useQuery } from '@tanstack/react-query'
 import { useSetAtom } from 'jotai'
 import { useEffect } from 'react'
 
-import { sessionUserAtom } from '~/atoms/session'
+import { sessionMembershipAtom, sessionUserAtom } from '~/atoms/session'
 import { authApi } from '~/lib/api/auth'
 
 export function SessionProvider() {
   const setSessionUser = useSetAtom(sessionUserAtom)
+  const setSessionMembership = useSetAtom(sessionMembershipAtom)
 
   const sessionQuery = useQuery({
     queryKey: ['session'],
@@ -16,11 +17,13 @@ export function SessionProvider() {
   useEffect(() => {
     if (sessionQuery.data?.user) {
       setSessionUser(sessionQuery.data.user)
-    } else if (sessionQuery.data === null) {
-      // Explicitly set to null when session is null (not logged in)
-      setSessionUser(null)
+      setSessionMembership(sessionQuery.data.requestedMembership ?? null)
     }
-  }, [sessionQuery.data, setSessionUser])
+    else if (sessionQuery.data === null) {
+      setSessionUser(null)
+      setSessionMembership(null)
+    }
+  }, [sessionQuery.data, setSessionMembership, setSessionUser])
 
   return null
 }

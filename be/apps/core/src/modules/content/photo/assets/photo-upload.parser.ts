@@ -1,12 +1,15 @@
+import { Buffer } from 'node:buffer'
+import process from 'node:process'
 import { Readable } from 'node:stream'
 
 import { BizException, ErrorCode } from '@core/errors'
+import { quotaExceeded } from '@core/modules/platform/billing/quota/billing-quota.error'
 import type { FileInfo } from 'busboy'
 import Busboy from 'busboy'
 import type { Context } from 'hono'
 import { injectable } from 'tsyringe'
 
-import { formatBytesForDisplay, normalizeDirectoryValue, normalizeRequestHeaders } from '../access/storage-access.utils'
+import { formatBytesForDisplay, normalizeDirectoryValue, normalizeRequestHeaders } from '../storage/storage.utils'
 import type { UploadAssetInput } from './photo-asset.types'
 import { MAX_TEXT_FIELDS_PER_REQUEST, MAX_UPLOAD_FILES_PER_BATCH } from './photo-upload-limits'
 
@@ -71,11 +74,11 @@ export class PhotoUploadParser {
         resolve(files)
       }
 
-      const onAbort = () => {
+      function onAbort() {
         fail(new DOMException('Upload aborted', 'AbortError'))
       }
 
-      const onStreamError = (error: Error) => {
+      function onStreamError(error: Error) {
         fail(error)
       }
 
@@ -118,8 +121,13 @@ export class PhotoUploadParser {
             stream.resume()
             process.nextTick(() => {
               fail(
-                new BizException(ErrorCode.COMMON_BAD_REQUEST, {
+                quotaExceeded({
+                  reason: 'upload_size',
                   message: `单次上传大小不能超过 ${formatBytesForDisplay(normalizedBatchLimit)}`,
+                  details: {
+                    limitMb: normalizedBatchLimit / 1024 / 1024,
+                    actualMb: null,
+                  },
                 }),
               )
             })
@@ -136,8 +144,13 @@ export class PhotoUploadParser {
           stream.resume()
           process.nextTick(() => {
             fail(
-              new BizException(ErrorCode.COMMON_BAD_REQUEST, {
+              quotaExceeded({
+                reason: 'upload_size',
                 message: `文件 ${info.filename} 超出大小限制 ${formatBytesForDisplay(normalizedFileSizeLimit)}`,
+                details: {
+                  limitMb: normalizedFileSizeLimit / 1024 / 1024,
+                  actualMb: null,
+                },
               }),
             )
           })

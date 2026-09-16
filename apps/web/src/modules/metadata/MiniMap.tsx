@@ -60,7 +60,7 @@ export const MiniMap = ({ latitude, longitude, photoId }: MiniMapProps) => {
 
       {/* 点击跳转到explore页面的遮罩 */}
       <Link
-        to={`/explory?photoId=${photoId}`}
+        to={`/map?photoId=${photoId}`}
         target="_blank"
         className="absolute inset-0 cursor-pointer transition-opacity duration-200 hover:bg-black/10"
         aria-label={t('minimap.view.in.map')}

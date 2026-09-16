@@ -14,6 +14,8 @@ export function Component() {
     { to: '/superadmin/settings', labelKey: 'superadmin.nav.settings', end: true },
     { to: '/superadmin/plans', labelKey: 'superadmin.nav.plans', end: true },
     { to: '/superadmin/tenants', labelKey: 'superadmin.nav.tenants', end: true },
+    { to: '/superadmin/users', labelKey: 'superadmin.nav.users', end: false },
+    { to: '/superadmin/audit', labelKey: 'superadmin.nav.audit', end: true },
     {
       labelKey: 'superadmin.nav.builder',
       to: '/superadmin/builder',
@@ -37,7 +39,7 @@ export function Component() {
 
           {/* Navigation Tabs */}
           <nav className="flex flex-1 items-center gap-0.5 sm:gap-1 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-            {navItems.map((tab) => (
+            {navItems.map(tab => (
               <NavLink key={tab.to} to={tab.to} end={tab.end}>
                 {({ isActive }) => (
                   <div

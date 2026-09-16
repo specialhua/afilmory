@@ -1,0 +1,1 @@
+CREATE INDEX "idx_photo_asset_tenant_synced" ON "photo_asset" USING btree ("tenant_id","synced_at");

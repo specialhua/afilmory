@@ -17,7 +17,7 @@
       "title": "CLI & Run Modes",
       "description": "Per-run flags, concurrency behavior, and cluster vs worker execution.",
       "createdAt": "2025-11-23T19:00:00+08:00",
-      "lastModified": "2025-11-23T19:40:52+08:00",
+      "lastModified": "2026-08-13T23:17:31+08:00",
       "order": "2"
     }
   },
@@ -48,9 +48,9 @@
     "title": "Configuration",
     "meta": {
       "title": "Configuration",
-      "description": "How to declare storage, system defaults, and plugins in builder.config.ts.",
+      "description": "How to declare storage, system defaults, XMP toggles, and plugins in builder.config.ts.",
       "createdAt": "2025-11-23T19:00:00+08:00",
-      "lastModified": "2025-11-23T19:40:52+08:00",
+      "lastModified": "2026-08-13T23:55:00+08:00",
       "order": "3"
     }
   },
@@ -61,7 +61,7 @@
       "title": "Processing Flow",
       "description": "End-to-end pipeline, ordering, and incremental rules backed by the code.",
       "createdAt": "2025-11-23T19:00:00+08:00",
-      "lastModified": "2025-11-23T19:40:52+08:00",
+      "lastModified": "2026-08-08T03:38:03+08:00",
       "order": "4"
     }
   },
@@ -149,7 +149,7 @@
       "title": "SaaS Architecture",
       "description": "Tenant model, domain routing, OAuth flow, and data injection paths.",
       "createdAt": "2025-11-23T20:20:00+08:00",
-      "lastModified": "2025-11-30T14:03:05+08:00",
+      "lastModified": "2026-08-06T20:44:28+08:00",
       "order": "36"
     }
   },
@@ -171,7 +171,7 @@
       "title": "SaaS Deployment",
       "description": "Deploy the multi-tenant stack (core API + OAuth gateway) with subdomains and custom domains.",
       "createdAt": "2025-11-23T19:50:00+08:00",
-      "lastModified": "2025-11-23T20:44:02+08:00",
+      "lastModified": "2026-08-06T20:44:28+08:00",
       "order": "37"
     }
   },
@@ -202,9 +202,9 @@
     "title": "Builder",
     "meta": {
       "title": "Builder",
-      "description": "Overview of the photo pipeline and how to choose the right entrypoint for your run.",
+      "description": "Overview of the photo pipeline, XMP support, and how to choose the right entrypoint for your run.",
       "createdAt": "2025-11-14T22:10:00+08:00",
-      "lastModified": "2025-11-23T20:44:02+08:00",
+      "lastModified": "2026-08-08T03:38:03+08:00",
       "order": "40"
     }
   },

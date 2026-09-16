@@ -1,4 +1,4 @@
-import { authUsers, comments } from '@afilmory/db'
+import { authUsers, comments, tenantMemberships } from '@afilmory/db'
 import { DbAccessor } from '@core/database/database.provider'
 import { SystemSettingService } from '@core/modules/configuration/system-setting/system-setting.service'
 import { CommentCreatedEvent } from '@core/modules/content/comment/events/comment-created.event'
@@ -103,8 +103,13 @@ export class CommentNotificationListener {
         email: authUsers.email,
       })
       .from(authUsers)
+      .innerJoin(tenantMemberships, eq(tenantMemberships.userId, authUsers.id))
       .where(
-        and(eq(authUsers.tenantId, event.tenantId), or(eq(authUsers.role, 'admin'), eq(authUsers.role, 'superadmin'))),
+        and(
+          eq(tenantMemberships.tenantId, event.tenantId),
+          eq(tenantMemberships.status, 'active'),
+          or(eq(tenantMemberships.role, 'owner'), eq(tenantMemberships.role, 'admin')),
+        ),
       )
 
     for (const admin of admins) {

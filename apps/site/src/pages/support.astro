@@ -1,0 +1,53 @@
+---
+import Base from '../layouts/Base.astro'
+import LegalPage from '../components/LegalPage.astro'
+---
+
+<Base title="支持 · Afilmory" description="获取 Afilmory 账号、照片上传、通知、购买和隐私相关帮助。">
+  <LegalPage
+    eyebrow="Support"
+    title="Afilmory 支持"
+    description="获取账号、画廊、照片上传、Live Photo、通知、赞助购买和隐私相关帮助。"
+    updatedAt="2026 年 8 月 6 日"
+    locale="zh"
+    alternateHref="/en/support/"
+  >
+    <div class="notice">
+      提交支持请求时，请说明 App 版本、设备型号、系统版本和问题复现步骤。请勿发送密码、访问令牌或未公开的原始照片。
+    </div>
+
+    <section>
+      <h2>联系支持</h2>
+      <p>
+        请在 <a href="https://github.com/Afilmory/afilmory/issues/new">Afilmory GitHub Issues</a>
+        中提交问题。公开 Issue 适合功能故障和一般咨询；涉及账号或隐私的敏感问题，请仅描述问题类别，我们会提供进一步的私密处理方式。
+      </p>
+      <p>我们会尽合理努力处理请求，但不承诺固定响应时间。</p>
+    </section>
+
+    <section>
+      <h2>常见问题</h2>
+      <h3>无法登录或 Workspace 不可用</h3>
+      <p>确认网络连接正常，并检查登录方式是否与最初注册时一致。若 Workspace 需要存储配置，所有者应先在 Web 管理界面完成存储设置。</p>
+
+      <h3>照片或 Live Photo 上传失败</h3>
+      <p>保持 App 在前台直至任务进入上传队列，并确认 Afilmory 已获得照片访问权限。Live Photo 需要同时取得照片和配对视频资源。</p>
+
+      <h3>没有收到画廊更新通知</h3>
+      <p>只有在你主动订阅公开画廊后，Afilmory 才会请求通知权限。请在系统设置中确认通知已启用，并重新打开相应画廊检查订阅状态。</p>
+
+      <h3>赞助购买没有完成</h3>
+      <p>赞助购买由 Apple StoreKit 处理。请确认 App Store 账号可购买项目并稍后重试；账单、退款或购买记录问题应通过 Apple 支持渠道处理。</p>
+
+      <h3>如何删除账号</h3>
+      <p>在 App 中打开 <strong>Profile → Delete Account</strong> 并按提示确认。删除可能需要处理 Workspace 所有权、内容、第三方登录授权和法定保留记录。</p>
+    </section>
+
+    <section>
+      <h2>隐私与内容侵权举报</h2>
+      <p>
+        个人信息处理方式见 <a href="/privacy/">隐私政策</a>。如需举报版权侵权、公开画廊、评论或其他侵权内容，请参阅 <a href="/terms/">服务条款</a> 第 4 条（知识产权保护与侵权投诉），并在支持请求中附上权利凭证、涉嫌侵权的公开链接与具体说明。
+      </p>
+    </section>
+  </LegalPage>
+</Base>

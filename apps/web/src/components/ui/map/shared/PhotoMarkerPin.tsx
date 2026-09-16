@@ -3,9 +3,12 @@ import { m } from 'motion/react'
 import { Marker } from 'react-map-gl/maplibre'
 import { Link } from 'react-router'
 
+import { resolvePhotoMarkerCardBehavior } from './photo-marker-card-behavior'
 import type { PhotoMarkerPinProps } from './types'
 
 export const PhotoMarkerPin = ({ marker, isSelected = false, onClick, onClose }: PhotoMarkerPinProps) => {
+  const cardBehavior = resolvePhotoMarkerCardBehavior({ isSelected })
+
   const handleClick = () => {
     onClick?.(marker)
   }
@@ -18,9 +21,9 @@ export const PhotoMarkerPin = ({ marker, isSelected = false, onClick, onClose }:
   return (
     <Marker key={marker.id} longitude={marker.longitude} latitude={marker.latitude}>
       <HoverCard
-        open={isSelected ? true : undefined} // 当选中时强制打开
-        openDelay={isSelected ? 0 : 400} // 选中时立即打开
-        closeDelay={isSelected ? 0 : 100} // 选中时不自动关闭
+        open={cardBehavior.hoverCardOpen}
+        openDelay={cardBehavior.hoverCardOpenDelay}
+        closeDelay={cardBehavior.hoverCardCloseDelay}
       >
         <HoverCardTrigger asChild>
           <m.div
@@ -77,106 +80,137 @@ export const PhotoMarkerPin = ({ marker, isSelected = false, onClick, onClose }:
           </m.div>
         </HoverCardTrigger>
 
-        <HoverCardContent
-          className={`w-80 overflow-hidden border-white/20 bg-white/95 p-0 backdrop-blur-[120px] dark:bg-black/95 ${
-            isSelected ? 'shadow-2xl' : ''
-          }`}
-          side="top"
-          align="center"
-          sideOffset={8}
-          // 当选中时阻止点击外部关闭
-          onPointerDownOutside={isSelected ? (e) => e.preventDefault() : undefined}
-          onEscapeKeyDown={isSelected ? (e) => e.preventDefault() : undefined}
-        >
-          <div className="relative">
-            {/* 选中时显示关闭按钮 */}
-            {isSelected && (
-              <GlassButton className="absolute top-3 right-3 z-10 size-8" onClick={handleClose}>
-                <i className="i-mingcute-close-line text-lg" />
-              </GlassButton>
-            )}
-
-            {/* Photo header */}
-            <div className="relative h-32 overflow-hidden">
-              <LazyImage
-                src={marker.photo.thumbnailUrl || marker.photo.originalUrl}
-                alt={marker.photo.title || marker.photo.id}
-                thumbHash={marker.photo.thumbHash}
-                className="h-full w-full object-cover"
-                rootMargin="200px"
-                threshold={0.1}
-              />
-              {/* Gradient overlay */}
-              <div className="absolute inset-0 bg-linear-to-t from-black/30 to-transparent" />
-            </div>
-
-            {/* Content */}
-            <div className="space-y-3 p-4">
-              {/* Title with link */}
-              <Link
-                to={`/photos/${marker.photo.id}`}
-                target="_blank"
-                className="group/link hover:text-blue flex items-center gap-2 transition-colors"
-              >
-                <h3
-                  className="text-text flex-1 truncate text-sm font-semibold"
-                  title={marker.photo.title || marker.photo.id}
-                >
-                  {marker.photo.title || marker.photo.id}
-                </h3>
-                <i className="i-mingcute-arrow-right-line text-text-secondary transition-transform group-hover/link:translate-x-0.5" />
-              </Link>
-
-              {/* Metadata */}
-              <div className="space-y-2">
-                {marker.photo.exif?.DateTimeOriginal && (
-                  <div className="text-text-secondary flex items-center gap-2 text-xs">
-                    <i className="i-mingcute-calendar-line text-sm" />
-                    <span>
-                      {new Date(marker.photo.exif.DateTimeOriginal).toLocaleDateString('zh-CN', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </span>
-                  </div>
-                )}
-
-                {marker.photo.exif?.Make && marker.photo.exif?.Model && (
-                  <div className="text-text-secondary flex items-center gap-2 text-xs">
-                    <i className="i-mingcute-camera-line text-sm" />
-                    <span className="truncate">
-                      {marker.photo.exif.Make} {marker.photo.exif.Model}
-                    </span>
-                  </div>
-                )}
-
-                <div className="text-text-secondary space-y-1 text-xs">
-                  <div className="flex items-center gap-2">
-                    <i className="i-mingcute-location-line text-sm" />
-                    <span className="font-mono">
-                      <span>{Math.abs(marker.latitude).toFixed(4)}°</span>
-                      <span>{marker.latitudeRef || 'N'}</span>
-                      <span>, </span>
-                      <span>{Math.abs(marker.longitude).toFixed(4)}°</span>
-                      <span>{marker.longitudeRef || 'E'}</span>
-                    </span>
-                  </div>
-                  {marker.altitude !== undefined && (
-                    <div className="flex items-center gap-2">
-                      <i className="i-mingcute-mountain-2-line text-sm" />
-                      <span className="font-mono">
-                        <span>{marker.altitudeRef === 'Below Sea Level' ? '-' : ''}</span>
-                        <span>{Math.abs(marker.altitude).toFixed(1)}m</span>
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </HoverCardContent>
+        {!cardBehavior.renderAnchoredCard && (
+          <HoverCardContent
+            className="w-80 overflow-hidden border-white/20 bg-white/95 p-0 backdrop-blur-[120px] dark:bg-black/95"
+            side="top"
+            align="center"
+            sideOffset={8}
+          >
+            <PhotoMarkerCardContent marker={marker} />
+          </HoverCardContent>
+        )}
       </HoverCard>
+
+      {cardBehavior.renderAnchoredCard && <AnchoredPhotoMarkerCard marker={marker} onClose={handleClose} />}
     </Marker>
   )
 }
+
+const AnchoredPhotoMarkerCard = ({
+  marker,
+  onClose,
+}: {
+  marker: PhotoMarkerPinProps['marker']
+  onClose: (event: React.MouseEvent) => void
+}) => (
+  <div
+    className="pointer-events-auto absolute bottom-full left-1/2 z-30 mb-3 w-80 -translate-x-1/2"
+    onClick={event => event.stopPropagation()}
+    onPointerDown={event => event.stopPropagation()}
+  >
+    <m.div
+      className="origin-bottom overflow-hidden rounded-2xl border border-white/20 bg-white/95 p-0 shadow-2xl backdrop-blur-[120px] dark:bg-black/95"
+      initial={{ opacity: 0, scale: 0.96, y: 4 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{
+        type: 'spring',
+        stiffness: 380,
+        damping: 32,
+      }}
+    >
+      <PhotoMarkerCardContent marker={marker} onClose={onClose} />
+    </m.div>
+  </div>
+)
+
+const PhotoMarkerCardContent = ({
+  marker,
+  onClose,
+}: {
+  marker: PhotoMarkerPinProps['marker']
+  onClose?: (event: React.MouseEvent) => void
+}) => (
+  <div className="relative">
+    {onClose && (
+      <GlassButton className="absolute top-3 right-3 z-10 size-8" onClick={onClose}>
+        <i className="i-mingcute-close-line text-lg" />
+      </GlassButton>
+    )}
+
+    <div className="relative h-32 overflow-hidden">
+      <LazyImage
+        src={marker.photo.thumbnailUrl || marker.photo.originalUrl}
+        alt={marker.photo.title || marker.photo.id}
+        thumbHash={marker.photo.thumbHash}
+        className="h-full w-full object-cover"
+        rootMargin="200px"
+        threshold={0.1}
+      />
+      <div className="absolute inset-0 bg-linear-to-t from-black/30 to-transparent" />
+    </div>
+
+    <div className="space-y-3 p-4">
+      <Link
+        to={`/photos/${marker.photo.id}`}
+        target="_blank"
+        className="group/link hover:text-blue flex items-center gap-2 transition-colors"
+      >
+        <h3 className="text-text flex-1 truncate text-sm font-semibold" title={marker.photo.title || marker.photo.id}>
+          {marker.photo.title || marker.photo.id}
+        </h3>
+        <i className="i-mingcute-arrow-right-line text-text-secondary transition-transform group-hover/link:translate-x-0.5" />
+      </Link>
+
+      <div className="space-y-2">
+        {marker.photo.exif?.DateTimeOriginal && (
+          <div className="text-text-secondary flex items-center gap-2 text-xs">
+            <i className="i-mingcute-calendar-line text-sm" />
+            <span>
+              {new Date(marker.photo.exif.DateTimeOriginal).toLocaleDateString('zh-CN', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+              })}
+            </span>
+          </div>
+        )}
+
+        {marker.photo.exif?.Make && marker.photo.exif?.Model && (
+          <div className="text-text-secondary flex items-center gap-2 text-xs">
+            <i className="i-mingcute-camera-line text-sm" />
+            <span className="truncate">
+              <span>{marker.photo.exif.Make}</span>
+              <span> </span>
+              <span>{marker.photo.exif.Model}</span>
+            </span>
+          </div>
+        )}
+
+        <div className="text-text-secondary space-y-1 text-xs">
+          <div className="flex items-center gap-2">
+            <i className="i-mingcute-location-line text-sm" />
+            <span className="font-mono">
+              <span>{Math.abs(marker.latitude).toFixed(4)}</span>
+              <span>°</span>
+              <span>{marker.latitudeRef || 'N'}</span>
+              <span>, </span>
+              <span>{Math.abs(marker.longitude).toFixed(4)}</span>
+              <span>°</span>
+              <span>{marker.longitudeRef || 'E'}</span>
+            </span>
+          </div>
+          {marker.altitude !== undefined && (
+            <div className="flex items-center gap-2">
+              <i className="i-mingcute-mountain-2-line text-sm" />
+              <span className="font-mono">
+                <span>{marker.altitude.toFixed(1)}</span>
+                <span>m</span>
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
+)

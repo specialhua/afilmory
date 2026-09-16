@@ -1,5 +1,5 @@
 import { BizException, ErrorCode } from '@core/errors'
-import { Roles } from '@core/guards/roles.decorator'
+import { PlatformRoles } from '@core/guards/roles.decorator'
 import { BypassResponseTransform } from '@core/interceptors/response-transform.decorator'
 import { Body, Controller, Delete, Get, Param, Post } from '@tsuki-hono/common'
 
@@ -10,7 +10,7 @@ import type { SettingEntryInput } from './setting.service'
 import { SettingService } from './setting.service'
 
 @Controller('settings')
-@Roles('superadmin')
+@PlatformRoles('superadmin')
 export class SettingController {
   constructor(private readonly settingService: SettingService) {}
 

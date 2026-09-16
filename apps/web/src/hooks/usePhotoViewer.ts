@@ -220,10 +220,10 @@ export const usePhotoViewer = () => {
     }))
 
     // Navigate back to gallery (creates history entry)
-    // Check if we're on explory path to preserve it
-    const isExploryPath = location.pathname.includes('/explory')
-    if (isExploryPath) {
-      navigate(`/explory${location.search}`)
+    // Check if we're on the map path to preserve it
+    const isMapPath = location.pathname.includes('/map')
+    if (isMapPath) {
+      navigate(`/map${location.search}`)
     }
     else {
       navigate(`/${location.search}`)

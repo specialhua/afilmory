@@ -1,6 +1,9 @@
 import { isExiftoolLoadedAtom } from '~/atoms/app'
 
 import { jotaiStore } from './jotai'
+import zeroperlWasmUrl from './zeroperl.wasm?url'
+
+const fetchZeroperlWasm = (..._args: unknown[]) => fetch(zeroperlWasmUrl)
 
 class ExifToolManagerStatic {
   private isLoaded = false
@@ -8,9 +11,10 @@ class ExifToolManagerStatic {
   private exifTool: typeof import('@uswriting/exiftool') | null = null
 
   async load() {
-    if (this.isLoaded) return
+    if (this.isLoaded) {
+      return
+    }
     const exiftool = await import('@uswriting/exiftool')
-    console.info('ExifTool loaded...')
     this.exifTool = exiftool
     this.isLoaded = true
 
@@ -29,7 +33,9 @@ class ExifToolManagerStatic {
     if (!this.exifTool) {
       throw new Error('ExifTool not loaded')
     }
-    const metadata = await this.exifTool.parseMetadata(new File([buffer], `/afilmory/${filename}`))
+    const metadata = await this.exifTool.parseMetadata(new File([buffer], `/afilmory/${filename}`), {
+      fetch: fetchZeroperlWasm,
+    })
 
     if (!metadata.success) {
       throw new Error(metadata.error)

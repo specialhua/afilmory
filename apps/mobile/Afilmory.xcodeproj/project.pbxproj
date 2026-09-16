@@ -1,0 +1,1012 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0036AB47AA345AEDC151E854 /* google-g.png in Resources */ = {isa = PBXBuildFile; fileRef = 25B5393D7A1A38FF74141B1C /* google-g.png */; };
+		1C5D38C777EAB742DA92A47E /* GalleryPushImageAttachment.swift in Sources */ = {isa = PBXBuildFile; fileRef = F79DDD6CE6213A680D3B3093 /* GalleryPushImageAttachment.swift */; };
+		5E204357F276F92B477326DF /* GalleryPushCommunication.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BAD9D0EF35936D19B1691E1 /* GalleryPushCommunication.swift */; };
+		76D823DDC359CAF2BDCEEA32 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 6AF472CC061F0A538031C03B /* GRDB */; };
+		8AF800F517A9D7C64EAE699A /* AfilmoryLocal.icon in Resources */ = {isa = PBXBuildFile; fileRef = 3983EB8B2EFD494138D3C9C5 /* AfilmoryLocal.icon */; };
+		AF274338BBFF344A7BAEBFE9 /* Afilmory.icon in Resources */ = {isa = PBXBuildFile; fileRef = 2B40A13E3BF517C4D52948AA /* Afilmory.icon */; };
+		C1A991BD5A56277D4221B474 /* SDWebImage in Frameworks */ = {isa = PBXBuildFile; productRef = 13DF510201D12CE06D3CE37B /* SDWebImage */; };
+		C363A8EC4AC4B02E9EF816AF /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93B790B374D13B20C390F53E /* WidgetSnapshot.swift */; };
+		D69FA277A4EB1BA671FCF76B /* Intents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D205E83D76679EEFDEAFCF79 /* Intents.framework */; };
+		E94E60AB2D0A3A2A0A1A8362 /* AfilmoryNotification.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A900A86121037AFE9773DBDF /* AfilmoryNotification.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		ECF656AA24646E37091A813F /* AfilmoryShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7D17294B38A9991D586FCEA0 /* AfilmoryShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		EF187F8AE4575B5B50FBC76A /* AfilmoryWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A3E83850A95108CE09366C23 /* AfilmoryWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		10F636B930F4BE69904B4BE3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E3FF1388E7806E07493CD991 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 355117DF7EBA74FB8E2A3F01;
+			remoteInfo = AfilmoryShare;
+		};
+		3D38448C37F8D0A73C6FF9ED /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E3FF1388E7806E07493CD991 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 49FCC468078AAEFC1B5AA196;
+			remoteInfo = Afilmory;
+		};
+		5A70247A07DC7CF31D5CA23A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E3FF1388E7806E07493CD991 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8C8591ADA4B3ACD6020325F9;
+			remoteInfo = AfilmoryNotification;
+		};
+		705AD7B2843D3DE13373B4EE /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E3FF1388E7806E07493CD991 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EED569562E5B8E4DD3F3C7F1;
+			remoteInfo = AfilmoryWidgets;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		690B7D90A4B9DE5A8F4F19F7 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				ECF656AA24646E37091A813F /* AfilmoryShare.appex in Embed Foundation Extensions */,
+				EF187F8AE4575B5B50FBC76A /* AfilmoryWidgets.appex in Embed Foundation Extensions */,
+				E94E60AB2D0A3A2A0A1A8362 /* AfilmoryNotification.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		0BAD9D0EF35936D19B1691E1 /* GalleryPushCommunication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryPushCommunication.swift; sourceTree = "<group>"; };
+		25B5393D7A1A38FF74141B1C /* google-g.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "google-g.png"; sourceTree = "<group>"; };
+		2B40A13E3BF517C4D52948AA /* Afilmory.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = Afilmory.icon; sourceTree = "<group>"; };
+		3983EB8B2EFD494138D3C9C5 /* AfilmoryLocal.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AfilmoryLocal.icon; sourceTree = "<group>"; };
+		7D17294B38A9991D586FCEA0 /* AfilmoryShare.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = AfilmoryShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		93B790B374D13B20C390F53E /* WidgetSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshot.swift; sourceTree = "<group>"; };
+		A3E83850A95108CE09366C23 /* AfilmoryWidgets.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = AfilmoryWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A900A86121037AFE9773DBDF /* AfilmoryNotification.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = AfilmoryNotification.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		D205E83D76679EEFDEAFCF79 /* Intents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Intents.framework; path = System/Library/Frameworks/Intents.framework; sourceTree = SDKROOT; };
+		E5ADC356FDCD915A2B141CB0 /* AfilmoryTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = AfilmoryTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		E7C24D2808A5C15D8643768F /* Afilmory.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Afilmory.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F79DDD6CE6213A680D3B3093 /* GalleryPushImageAttachment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryPushImageAttachment.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		12283EAD29279421E3B5938D /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 8C8591ADA4B3ACD6020325F9 /* AfilmoryNotification */;
+		};
+		BBB023149912B5D758089AD3 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = EED569562E5B8E4DD3F3C7F1 /* AfilmoryWidgets */;
+		};
+		C5AF8F5ACB66F2E603D1F9F2 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 355117DF7EBA74FB8E2A3F01 /* AfilmoryShare */;
+		};
+		DEABCC8786843E2BCAB67A1B /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 49FCC468078AAEFC1B5AA196 /* Afilmory */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		2241A14B486857EDFAA4D436 /* Afilmory */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				DEABCC8786843E2BCAB67A1B /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = Afilmory;
+			sourceTree = "<group>";
+		};
+		363C0633498AD7FB6A29DB76 /* targets/share */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C5AF8F5ACB66F2E603D1F9F2 /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = targets/share;
+			sourceTree = "<group>";
+		};
+		575F7F6CF19B796A338D29A5 /* Tests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		87E41E18BDAE2D40961A3359 /* targets/widgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				BBB023149912B5D758089AD3 /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = targets/widgets;
+			sourceTree = "<group>";
+		};
+		BECBC75D21472EF02A7ECB14 /* targets/notification */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				12283EAD29279421E3B5938D /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = targets/notification;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		34BA265DC83CD4D7FBE42094 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D69FA277A4EB1BA671FCF76B /* Intents.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C917EBF8F91D5CBCE842C420 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C1A991BD5A56277D4221B474 /* SDWebImage in Frameworks */,
+				76D823DDC359CAF2BDCEEA32 /* GRDB in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0E12E619DF00F0AACBD7B062 /* Push */ = {
+			isa = PBXGroup;
+			children = (
+				0BAD9D0EF35936D19B1691E1 /* GalleryPushCommunication.swift */,
+				F79DDD6CE6213A680D3B3093 /* GalleryPushImageAttachment.swift */,
+			);
+			path = Push;
+			sourceTree = "<group>";
+		};
+		6F0AADD47B0E75021D267508 /* Widgets */ = {
+			isa = PBXGroup;
+			children = (
+				93B790B374D13B20C390F53E /* WidgetSnapshot.swift */,
+			);
+			path = Widgets;
+			sourceTree = "<group>";
+		};
+		75721C460ECAD410BBA1BC86 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				0E12E619DF00F0AACBD7B062 /* Push */,
+				6F0AADD47B0E75021D267508 /* Widgets */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		A3AF475FD4E25C2AC4658B92 = {
+			isa = PBXGroup;
+			children = (
+				D0539BCC111E5D10BFA9A46E /* Afilmory */,
+				2241A14B486857EDFAA4D436 /* Afilmory */,
+				F7E1D90B31803524C6BD87AC /* icons */,
+				CC890C61115C8862C1BE9EB2 /* images */,
+				BECBC75D21472EF02A7ECB14 /* targets/notification */,
+				363C0633498AD7FB6A29DB76 /* targets/share */,
+				87E41E18BDAE2D40961A3359 /* targets/widgets */,
+				575F7F6CF19B796A338D29A5 /* Tests */,
+				CC2504C5C860BC194E664ACD /* Frameworks */,
+				B0A5F813E326BDDE0F59B032 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		B0A5F813E326BDDE0F59B032 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				E7C24D2808A5C15D8643768F /* Afilmory.app */,
+				A900A86121037AFE9773DBDF /* AfilmoryNotification.appex */,
+				7D17294B38A9991D586FCEA0 /* AfilmoryShare.appex */,
+				E5ADC356FDCD915A2B141CB0 /* AfilmoryTests.xctest */,
+				A3E83850A95108CE09366C23 /* AfilmoryWidgets.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		CC2504C5C860BC194E664ACD /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D205E83D76679EEFDEAFCF79 /* Intents.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		CC890C61115C8862C1BE9EB2 /* images */ = {
+			isa = PBXGroup;
+			children = (
+				25B5393D7A1A38FF74141B1C /* google-g.png */,
+			);
+			name = images;
+			path = assets/images;
+			sourceTree = "<group>";
+		};
+		D0539BCC111E5D10BFA9A46E /* Afilmory */ = {
+			isa = PBXGroup;
+			children = (
+				75721C460ECAD410BBA1BC86 /* Core */,
+			);
+			path = Afilmory;
+			sourceTree = "<group>";
+		};
+		F7E1D90B31803524C6BD87AC /* icons */ = {
+			isa = PBXGroup;
+			children = (
+				2B40A13E3BF517C4D52948AA /* Afilmory.icon */,
+				3983EB8B2EFD494138D3C9C5 /* AfilmoryLocal.icon */,
+			);
+			name = icons;
+			path = assets/icons;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		355117DF7EBA74FB8E2A3F01 /* AfilmoryShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DCDE9882D1583A4F5B14DAD4 /* Build configuration list for PBXNativeTarget "AfilmoryShare" */;
+			buildPhases = (
+				E9D9F7621CC7644B811720C2 /* Sources */,
+				84340D4609A04FA7546FB333 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				363C0633498AD7FB6A29DB76 /* targets/share */,
+			);
+			name = AfilmoryShare;
+			packageProductDependencies = (
+			);
+			productName = AfilmoryShare;
+			productReference = 7D17294B38A9991D586FCEA0 /* AfilmoryShare.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		418883D2F6760B61427AFE0B /* AfilmoryTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 372AED46956849B4B2F033BD /* Build configuration list for PBXNativeTarget "AfilmoryTests" */;
+			buildPhases = (
+				879444FE7B5BE34947A053FB /* Sources */,
+				B9624D206FFF83A33257C93A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				90C8B9F69FF550A8CABD8A82 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				575F7F6CF19B796A338D29A5 /* Tests */,
+			);
+			name = AfilmoryTests;
+			packageProductDependencies = (
+			);
+			productName = AfilmoryTests;
+			productReference = E5ADC356FDCD915A2B141CB0 /* AfilmoryTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		49FCC468078AAEFC1B5AA196 /* Afilmory */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 87FDBEAD353E9D7025483411 /* Build configuration list for PBXNativeTarget "Afilmory" */;
+			buildPhases = (
+				4684EEBBA53293F4CDD22475 /* Sources */,
+				795FBA0B87E05C321B4B6FBF /* Resources */,
+				C917EBF8F91D5CBCE842C420 /* Frameworks */,
+				690B7D90A4B9DE5A8F4F19F7 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				ABD3C7E27F0F01CC57B0CA1F /* PBXTargetDependency */,
+				704E52E79B0FB771488F8088 /* PBXTargetDependency */,
+				EF80FDCFFE8F24A6DD6A49AA /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				2241A14B486857EDFAA4D436 /* Afilmory */,
+			);
+			name = Afilmory;
+			packageProductDependencies = (
+				13DF510201D12CE06D3CE37B /* SDWebImage */,
+				6AF472CC061F0A538031C03B /* GRDB */,
+			);
+			productName = Afilmory;
+			productReference = E7C24D2808A5C15D8643768F /* Afilmory.app */;
+			productType = "com.apple.product-type.application";
+		};
+		8C8591ADA4B3ACD6020325F9 /* AfilmoryNotification */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F6953E112FA58DA690DBB733 /* Build configuration list for PBXNativeTarget "AfilmoryNotification" */;
+			buildPhases = (
+				5DF63A30C60096E22609E5B2 /* Sources */,
+				BE1F05CA99B65FCF49BA2BE5 /* Resources */,
+				34BA265DC83CD4D7FBE42094 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				BECBC75D21472EF02A7ECB14 /* targets/notification */,
+			);
+			name = AfilmoryNotification;
+			packageProductDependencies = (
+			);
+			productName = AfilmoryNotification;
+			productReference = A900A86121037AFE9773DBDF /* AfilmoryNotification.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		EED569562E5B8E4DD3F3C7F1 /* AfilmoryWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BE969F057815D97DC5376ABD /* Build configuration list for PBXNativeTarget "AfilmoryWidgets" */;
+			buildPhases = (
+				A0B37D18DCFBA8A2F5B43A7A /* Sources */,
+				6C1FE54AC0B71025C23A980A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				87E41E18BDAE2D40961A3359 /* targets/widgets */,
+			);
+			name = AfilmoryWidgets;
+			packageProductDependencies = (
+			);
+			productName = AfilmoryWidgets;
+			productReference = A3E83850A95108CE09366C23 /* AfilmoryWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		E3FF1388E7806E07493CD991 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					355117DF7EBA74FB8E2A3F01 = {
+						DevelopmentTeam = KAMM5N88X3;
+					};
+					418883D2F6760B61427AFE0B = {
+						DevelopmentTeam = KAMM5N88X3;
+					};
+					49FCC468078AAEFC1B5AA196 = {
+						DevelopmentTeam = KAMM5N88X3;
+					};
+					8C8591ADA4B3ACD6020325F9 = {
+						DevelopmentTeam = KAMM5N88X3;
+					};
+					EED569562E5B8E4DD3F3C7F1 = {
+						DevelopmentTeam = KAMM5N88X3;
+					};
+				};
+			};
+			buildConfigurationList = FBEFFB2ECD8D5922F1C3A4DE /* Build configuration list for PBXProject "Afilmory" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = A3AF475FD4E25C2AC4658B92;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				8452E412C433CF2D29D70CD6 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+				937ECADF4805A3330B0552D9 /* XCRemoteSwiftPackageReference "SDWebImage" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = B0A5F813E326BDDE0F59B032 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				49FCC468078AAEFC1B5AA196 /* Afilmory */,
+				8C8591ADA4B3ACD6020325F9 /* AfilmoryNotification */,
+				355117DF7EBA74FB8E2A3F01 /* AfilmoryShare */,
+				418883D2F6760B61427AFE0B /* AfilmoryTests */,
+				EED569562E5B8E4DD3F3C7F1 /* AfilmoryWidgets */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		6C1FE54AC0B71025C23A980A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		795FBA0B87E05C321B4B6FBF /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AF274338BBFF344A7BAEBFE9 /* Afilmory.icon in Resources */,
+				8AF800F517A9D7C64EAE699A /* AfilmoryLocal.icon in Resources */,
+				0036AB47AA345AEDC151E854 /* google-g.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		84340D4609A04FA7546FB333 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B9624D206FFF83A33257C93A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BE1F05CA99B65FCF49BA2BE5 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		4684EEBBA53293F4CDD22475 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5DF63A30C60096E22609E5B2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5E204357F276F92B477326DF /* GalleryPushCommunication.swift in Sources */,
+				1C5D38C777EAB742DA92A47E /* GalleryPushImageAttachment.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		879444FE7B5BE34947A053FB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A0B37D18DCFBA8A2F5B43A7A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C363A8EC4AC4B02E9EF816AF /* WidgetSnapshot.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E9D9F7621CC7644B811720C2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		704E52E79B0FB771488F8088 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = EED569562E5B8E4DD3F3C7F1 /* AfilmoryWidgets */;
+			targetProxy = 705AD7B2843D3DE13373B4EE /* PBXContainerItemProxy */;
+		};
+		90C8B9F69FF550A8CABD8A82 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 49FCC468078AAEFC1B5AA196 /* Afilmory */;
+			targetProxy = 3D38448C37F8D0A73C6FF9ED /* PBXContainerItemProxy */;
+		};
+		ABD3C7E27F0F01CC57B0CA1F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 355117DF7EBA74FB8E2A3F01 /* AfilmoryShare */;
+			targetProxy = 10F636B930F4BE69904B4BE3 /* PBXContainerItemProxy */;
+		};
+		EF80FDCFFE8F24A6DD6A49AA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8C8591ADA4B3ACD6020325F9 /* AfilmoryNotification */;
+			targetProxy = 5A70247A07DC7CF31D5CA23A /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0955F03199FE1274ED3A82AD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = targets/notification/AfilmoryNotification.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = targets/notification/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.4;
+				PRODUCT_BUNDLE_IDENTIFIER = app.afilmory.notification;
+				PRODUCT_MODULE_NAME = AfilmoryNotification;
+				PRODUCT_NAME = AfilmoryNotification;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		257B8361321DF15339A535B2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = KAMM5N88X3;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = targeted;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		313782784C8A0898255949FF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = targets/notification/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.4;
+				PRODUCT_BUNDLE_IDENTIFIER = app.afilmory.local.notification;
+				PRODUCT_MODULE_NAME = AfilmoryNotification;
+				PRODUCT_NAME = AfilmoryNotification;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		3A909547F2A3F2E07C58FF03 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = targets/share/AfilmoryShare.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = targets/share/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.4;
+				PRODUCT_BUNDLE_IDENTIFIER = app.afilmory.share;
+				PRODUCT_MODULE_NAME = AfilmoryShare;
+				PRODUCT_NAME = AfilmoryShare;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		65F14F63E41EE58A9F7FC995 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.afilmory.tests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Afilmory.app/Afilmory";
+			};
+			name = Release;
+		};
+		7393D393D7CA726F35C406CE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				AFILMORY_API_ENVIRONMENT = local;
+				AFILMORY_APP_GROUP_IDENTIFIER = "";
+				AFILMORY_APP_VARIANT = local;
+				AFILMORY_DISPLAY_NAME = "Afilmory Local";
+				AFILMORY_URL_SCHEME = "afilmory-local";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AfilmoryLocal;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Afilmory/AfilmoryLocal.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = Afilmory/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.4;
+				PRODUCT_BUNDLE_IDENTIFIER = app.afilmory.local;
+				PRODUCT_MODULE_NAME = Afilmory;
+				PRODUCT_NAME = Afilmory;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		96BF9C0D51CFE9E6F85153BF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = $accent;
+				CODE_SIGN_ENTITLEMENTS = targets/widgets/AfilmoryWidgets.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = targets/widgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.4;
+				PRODUCT_BUNDLE_IDENTIFIER = app.afilmory.widgets;
+				PRODUCT_MODULE_NAME = AfilmoryWidgets;
+				PRODUCT_NAME = AfilmoryWidgets;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		A68A51A62CF86FBA9B8C1F78 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Afilmory/AfilmoryLocal.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = targets/share/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.4;
+				PRODUCT_BUNDLE_IDENTIFIER = app.afilmory.local.share;
+				PRODUCT_MODULE_NAME = AfilmoryShare;
+				PRODUCT_NAME = AfilmoryShare;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		C66F282836B3BC8B85DC0F95 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = $accent;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = targets/widgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.4;
+				PRODUCT_BUNDLE_IDENTIFIER = app.afilmory.local.widgets;
+				PRODUCT_MODULE_NAME = AfilmoryWidgets;
+				PRODUCT_NAME = AfilmoryWidgets;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		DC5DCBBD16BA1361DE7878E7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				AFILMORY_API_ENVIRONMENT = production;
+				AFILMORY_APP_GROUP_IDENTIFIER = group.app.afilmory;
+				AFILMORY_APP_VARIANT = production;
+				AFILMORY_DISPLAY_NAME = Afilmory;
+				AFILMORY_URL_SCHEME = afilmory;
+				ASSETCATALOG_COMPILER_APPICON_NAME = Afilmory;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Afilmory/Afilmory.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = Afilmory/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.4;
+				PRODUCT_BUNDLE_IDENTIFIER = app.afilmory;
+				PRODUCT_MODULE_NAME = Afilmory;
+				PRODUCT_NAME = Afilmory;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		E8EB7EA8256AA7BC70E1ACD4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = KAMM5N88X3;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = targeted;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		EB2858804961BB65280E35C9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.afilmory.tests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Afilmory.app/Afilmory";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		372AED46956849B4B2F033BD /* Build configuration list for PBXNativeTarget "AfilmoryTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EB2858804961BB65280E35C9 /* Debug */,
+				65F14F63E41EE58A9F7FC995 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		87FDBEAD353E9D7025483411 /* Build configuration list for PBXNativeTarget "Afilmory" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7393D393D7CA726F35C406CE /* Debug */,
+				DC5DCBBD16BA1361DE7878E7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		BE969F057815D97DC5376ABD /* Build configuration list for PBXNativeTarget "AfilmoryWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C66F282836B3BC8B85DC0F95 /* Debug */,
+				96BF9C0D51CFE9E6F85153BF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		DCDE9882D1583A4F5B14DAD4 /* Build configuration list for PBXNativeTarget "AfilmoryShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A68A51A62CF86FBA9B8C1F78 /* Debug */,
+				3A909547F2A3F2E07C58FF03 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F6953E112FA58DA690DBB733 /* Build configuration list for PBXNativeTarget "AfilmoryNotification" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				313782784C8A0898255949FF /* Debug */,
+				0955F03199FE1274ED3A82AD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		FBEFFB2ECD8D5922F1C3A4DE /* Build configuration list for PBXProject "Afilmory" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E8EB7EA8256AA7BC70E1ACD4 /* Debug */,
+				257B8361321DF15339A535B2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		8452E412C433CF2D29D70CD6 /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/groue/GRDB.swift.git";
+			requirement = {
+				kind = exactVersion;
+				version = 7.6.1;
+			};
+		};
+		937ECADF4805A3330B0552D9 /* XCRemoteSwiftPackageReference "SDWebImage" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SDWebImage/SDWebImage.git";
+			requirement = {
+				kind = exactVersion;
+				version = 5.21.7;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		13DF510201D12CE06D3CE37B /* SDWebImage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 937ECADF4805A3330B0552D9 /* XCRemoteSwiftPackageReference "SDWebImage" */;
+			productName = SDWebImage;
+		};
+		6AF472CC061F0A538031C03B /* GRDB */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8452E412C433CF2D29D70CD6 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			productName = GRDB;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = E3FF1388E7806E07493CD991 /* Project object */;
+}

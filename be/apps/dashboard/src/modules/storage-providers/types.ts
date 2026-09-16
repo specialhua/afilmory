@@ -12,7 +12,6 @@ export interface StorageProvider {
 export interface StorageProvidersPayload {
   providers: StorageProvider[]
   activeProviderId: string | null
-  secureAccessEnabled: boolean
 }
 
 export interface StorageSettingEntry {
@@ -32,6 +31,6 @@ export interface StorageProviderFieldDefinition {
 }
 
 export interface StorageProviderFormSchema {
-  types: ReadonlyArray<{ value: StorageProviderType; label: string }>
+  types: ReadonlyArray<{ value: StorageProviderType, label: string }>
   fields: Record<string, ReadonlyArray<StorageProviderFieldDefinition>>
 }

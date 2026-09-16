@@ -2,7 +2,7 @@
 title: SaaS Deployment
 description: Deploy the multi-tenant stack (core API + OAuth gateway) with subdomains and custom domains.
 createdAt: 2025-11-23T19:50:00+08:00
-lastModified: 2025-11-23T20:44:02+08:00
+lastModified: 2026-08-06T20:44:28+08:00
 order: 37
 ---
 
@@ -19,12 +19,16 @@ order: 37
 
 - **Base domain**: `<slug>.<baseDomain>` (default `afilmory.art`).
 - **OAuth callback domain**: `auth.<baseDomain>` → gateway.
-- **Custom domains**: tenants bind via CNAME to base domain or TXT token.
+- **Custom domains**: Pro tenants can bind one CNAME to the configured Cloudflare for SaaS target. Core enforces the plan quota, then registers and monitors the hostname through the Cloudflare Custom Hostnames API.
 
 DNS checklist:
+
 - `A/AAAA` or `CNAME` for `<baseDomain>` → core LB.
 - `CNAME *.<baseDomain>` → core LB (wildcard tenants).
 - `CNAME auth.<baseDomain>` → gateway LB.
+- Proxied `CNAME customers.<baseDomain>` → the active Cloudflare for SaaS fallback origin.
+
+Before accepting custom domains, enable Cloudflare for SaaS for the zone, configure an active fallback origin, and create a proxied CNAME target. The API token used by core requires `SSL and Certificates Write` permission for the zone.
 
 ## Quick start with Docker (core)
 
@@ -69,6 +73,9 @@ PORT=1841
 DATABASE_URL=postgres://localhost:5432/afilmory
 REDIS_URL=redis://localhost:6379
 CONFIG_ENCRYPTION_KEY=<openssl -hex 64>
+CLOUDFLARE_API_TOKEN=<zone-scoped API token>
+CLOUDFLARE_ZONE_ID=<32-character zone ID>
+CLOUDFLARE_CUSTOM_HOSTNAME_TARGET=customers.<baseDomain>
 ```
 
 ## OAuth Gateway
@@ -108,7 +115,7 @@ Run: `pnpm --filter @afilmory/oauth-gateway dev` (or containerize). Expose HTTPS
 3. Deploy OAuth Gateway at `auth.<baseDomain>`; set System Settings `oauthGatewayUrl`.
 4. Set System Settings `baseDomain`; restart core if host/ports change.
 5. Create superadmin/tenant; test subdomain login and OAuth.
-6. Test custom domain binding (CNAME or TXT token) and HTTPS.
+6. Test custom domain binding: create the hostname, publish its CNAME, and confirm both Cloudflare hostname and SSL states become `active`.
 
 ## Licensing notice (commercial use)
 

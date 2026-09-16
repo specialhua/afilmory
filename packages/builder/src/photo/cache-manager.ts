@@ -43,6 +43,17 @@ export async function shouldProcessPhoto(
     }
   }
 
+  const needsXmpBackfill =
+    (options.xmpKeywordsEnabled && !Array.isArray((existingItem as Partial<PhotoManifestItem>).keywords)) ||
+    (options.xmpRegionsEnabled && !Array.isArray((existingItem as Partial<PhotoManifestItem>).regions))
+
+  if (needsXmpBackfill) {
+    return {
+      shouldProcess: true,
+      reason: '补全 XMP 字段',
+    }
+  }
+
   // 检查缩略图是否存在
   const hasThumbnail = await thumbnailExists(photoId)
   if (!hasThumbnail || options.isForceThumbnails) {

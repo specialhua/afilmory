@@ -20,22 +20,16 @@ export function useStorageProvidersQuery(options?: { enabled?: boolean }) {
       const response = await getStorageSettings([
         STORAGE_SETTING_KEYS.providers,
         STORAGE_SETTING_KEYS.activeProvider,
-        STORAGE_SETTING_KEYS.secureAccess,
       ])
 
       const rawProviders = response.values[STORAGE_SETTING_KEYS.providers] ?? '[]'
-      const providers = parseStorageProviders(rawProviders).map((provider) => normalizeStorageProviderConfig(provider))
+      const providers = parseStorageProviders(rawProviders).map(provider => normalizeStorageProviderConfig(provider))
       const activeProviderRaw = response.values[STORAGE_SETTING_KEYS.activeProvider] ?? ''
-      const activeProviderId =
-        typeof activeProviderRaw === 'string' && activeProviderRaw.trim().length > 0 ? activeProviderRaw.trim() : null
-      const secureAccessRaw = response.values[STORAGE_SETTING_KEYS.secureAccess] ?? 'false'
-      const secureAccessEnabled =
-        typeof secureAccessRaw === 'string' ? secureAccessRaw.trim().toLowerCase() === 'true' : Boolean(secureAccessRaw)
-
+      const activeProviderId
+        = typeof activeProviderRaw === 'string' && activeProviderRaw.trim().length > 0 ? activeProviderRaw.trim() : null
       return {
         providers,
         activeProviderId: ensureActiveProviderId(providers, activeProviderId),
-        secureAccessEnabled,
       }
     },
     enabled: options?.enabled ?? true,
@@ -55,11 +49,10 @@ export function useUpdateStorageProvidersMutation() {
 
   return useMutation({
     mutationFn: async (payload: StorageProvidersPayload) => {
-      const currentProviders = payload.providers.map((provider) => normalizeStorageProviderConfig(provider))
+      const currentProviders = payload.providers.map(provider => normalizeStorageProviderConfig(provider))
       const previousProviders = queryClient.getQueryData<{
         providers: StorageProvider[]
         activeProviderId: string | null
-        secureAccessEnabled: boolean
       }>(STORAGE_PROVIDERS_QUERY_KEY)?.providers
 
       const resolvedProviders = restoreProviderSecrets(currentProviders, previousProviders ?? [])
@@ -79,7 +72,6 @@ export function useUpdateStorageProvidersMutation() {
       return {
         providers: resolvedProviders,
         activeProviderId: resolvedActiveId,
-        secureAccessEnabled: payload.secureAccessEnabled,
       }
     },
     onSuccess: (data) => {
@@ -91,49 +83,11 @@ export function useUpdateStorageProvidersMutation() {
   })
 }
 
-export function useUpdateStorageSecureAccessMutation() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async (enabled: boolean) => {
-      await updateStorageSettings([
-        {
-          key: STORAGE_SETTING_KEYS.secureAccess,
-          value: enabled ? 'true' : 'false',
-        },
-      ])
-      return enabled
-    },
-    onSuccess: (nextEnabled) => {
-      queryClient.setQueryData(
-        STORAGE_PROVIDERS_QUERY_KEY,
-        (
-          previous:
-            | {
-                providers: StorageProvider[]
-                activeProviderId: string | null
-                secureAccessEnabled: boolean
-              }
-            | undefined,
-        ) => {
-          if (!previous) {
-            return previous
-          }
-          return {
-            ...previous,
-            secureAccessEnabled: nextEnabled,
-          }
-        },
-      )
-    },
-  })
-}
-
 function restoreProviderSecrets(
   nextProviders: StorageProvider[],
   previousProviders: StorageProvider[],
 ): StorageProvider[] {
-  const previousMap = new Map(previousProviders.map((provider) => [provider.id, provider]))
+  const previousMap = new Map(previousProviders.map(provider => [provider.id, provider]))
 
   return nextProviders.map((provider) => {
     const previous = previousMap.get(provider.id)

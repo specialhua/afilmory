@@ -1,4 +1,12 @@
-export type UiFieldComponentType = 'text' | 'secret' | 'textarea' | 'select' | 'slot' | 'switch'
+export type UiFieldComponentType
+  = | 'color'
+    | 'multiSelect'
+    | 'secret'
+    | 'select'
+    | 'slot'
+    | 'switch'
+    | 'text'
+    | 'textarea'
 
 interface UiFieldComponentBase<Type extends UiFieldComponentType> {
   readonly type: Type
@@ -8,6 +16,8 @@ export interface UiTextInputComponent extends UiFieldComponentBase<'text'> {
   readonly inputType?: 'text' | 'email' | 'url' | 'number'
   readonly placeholder?: string
   readonly autoComplete?: string
+  readonly autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters'
+  readonly autoCorrect?: boolean
 }
 
 export interface UiSecretInputComponent extends UiFieldComponentBase<'secret'> {
@@ -26,6 +36,15 @@ export interface UiSelectComponent extends UiFieldComponentBase<'select'> {
   readonly placeholder?: string
   readonly options?: readonly string[]
   readonly allowCustom?: boolean
+  readonly presentation?: 'automatic' | 'menu' | 'navigationLink' | 'segmented'
+}
+
+export interface UiMultiSelectComponent extends UiFieldComponentBase<'multiSelect'> {
+  readonly options: readonly string[]
+}
+
+export interface UiColorComponent extends UiFieldComponentBase<'color'> {
+  readonly supportsOpacity?: boolean
 }
 
 export interface UiSwitchComponent extends UiFieldComponentBase<'switch'> {
@@ -43,13 +62,15 @@ export interface UiSlotComponent<Key extends string = string> extends UiFieldCom
   readonly props?: Readonly<Record<string, unknown>>
 }
 
-export type UiFieldComponentDefinition<Key extends string = string> =
-  | UiTextInputComponent
-  | UiSecretInputComponent
-  | UiTextareaComponent
-  | UiSelectComponent
-  | UiSwitchComponent
-  | UiSlotComponent<Key>
+export type UiFieldComponentDefinition<Key extends string = string>
+  = | UiColorComponent
+    | UiMultiSelectComponent
+    | UiTextInputComponent
+    | UiSecretInputComponent
+    | UiTextareaComponent
+    | UiSelectComponent
+    | UiSwitchComponent
+    | UiSlotComponent<Key>
 
 interface BaseUiNode {
   readonly id: string

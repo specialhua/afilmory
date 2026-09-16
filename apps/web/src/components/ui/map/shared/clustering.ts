@@ -8,12 +8,22 @@ import type { ClusterPoint } from './types'
  * @param zoom Current zoom level
  * @returns Array of cluster points
  */
-export function clusterMarkers(markers: PhotoMarker[], zoom: number): ClusterPoint[] {
-  if (markers.length === 0) return []
+interface ClusterMarkersOptions {
+  selectedMarkerId?: string | null
+}
+
+export function clusterMarkers(
+  markers: PhotoMarker[],
+  zoom: number,
+  options: ClusterMarkersOptions = {},
+): ClusterPoint[] {
+  if (markers.length === 0) {
+    return []
+  }
 
   // At high zoom levels, don't cluster
   if (zoom >= 15) {
-    return markers.map((marker) => ({
+    return markers.map(marker => ({
       type: 'Feature' as const,
       properties: { marker },
       geometry: {
@@ -25,23 +35,42 @@ export function clusterMarkers(markers: PhotoMarker[], zoom: number): ClusterPoi
 
   const clusters: ClusterPoint[] = []
   const processed = new Set<string>()
+  const selectedMarkerId = options.selectedMarkerId
 
   // Simple distance-based clustering
-  const threshold = Math.max(0.001, 0.01 / Math.pow(2, zoom - 10)) // Adjust threshold based on zoom
+  const threshold = Math.max(0.001, 0.01 / 2 ** (zoom - 10)) // Adjust threshold based on zoom
 
   for (const marker of markers) {
-    if (processed.has(marker.id)) continue
+    if (processed.has(marker.id)) {
+      continue
+    }
+
+    if (marker.id === selectedMarkerId) {
+      processed.add(marker.id)
+      clusters.push({
+        type: 'Feature',
+        properties: { marker },
+        geometry: {
+          type: 'Point',
+          coordinates: [marker.longitude, marker.latitude],
+        },
+      })
+      continue
+    }
 
     const nearby = [marker]
     processed.add(marker.id)
 
     // Find nearby markers
     for (const other of markers) {
-      if (processed.has(other.id)) continue
+      if (processed.has(other.id)) {
+        continue
+      }
+      if (other.id === selectedMarkerId) {
+        continue
+      }
 
-      const distance = Math.sqrt(
-        Math.pow(marker.longitude - other.longitude, 2) + Math.pow(marker.latitude - other.latitude, 2),
-      )
+      const distance = Math.sqrt((marker.longitude - other.longitude) ** 2 + (marker.latitude - other.latitude) ** 2)
 
       if (distance < threshold) {
         nearby.push(other)
@@ -59,7 +88,8 @@ export function clusterMarkers(markers: PhotoMarker[], zoom: number): ClusterPoi
           coordinates: [marker.longitude, marker.latitude],
         },
       })
-    } else {
+    }
+    else {
       // Cluster
       const centerLng = nearby.reduce((sum, m) => sum + m.longitude, 0) / nearby.length
       const centerLat = nearby.reduce((sum, m) => sum + m.latitude, 0) / nearby.length

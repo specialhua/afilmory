@@ -10,11 +10,13 @@ import { InspectorPanel } from './InspectorPanel'
 export interface PhotoInspectorProps {
   currentPhoto: PhotoManifest
   exifData: PickedExif | null
+  activeRegionId?: string | null
   visible?: boolean
   onClose?: () => void
+  onActiveRegionChange?: (regionId: string | null) => void
 }
 
-const CloudInspector: FC<PhotoInspectorProps> = (props) => <InspectorPanel {...props} />
+const CloudInspector: FC<PhotoInspectorProps> = props => <InspectorPanel {...props} />
 
 const LegacyInspector: FC<PhotoInspectorProps> = ({ currentPhoto, exifData, ...rest }) => (
   <ExifPanel currentPhoto={currentPhoto} exifData={exifData} {...rest} />

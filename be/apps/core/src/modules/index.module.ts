@@ -20,6 +20,7 @@ import { StorageSettingModule } from './configuration/storage-setting/storage-se
 import { SystemSettingModule } from './configuration/system-setting/system-setting.module'
 import { CommentModule } from './content/comment/comment.module'
 import { FeedModule } from './content/feed/feed.module'
+import { ManifestSyncModule } from './content/manifest-sync/manifest-sync.module'
 import { OgModule } from './content/og/og.module'
 import { PhotoModule } from './content/photo/photo.module'
 import { ReactionModule } from './content/reaction/reaction.module'
@@ -27,14 +28,21 @@ import { CacheModule } from './infrastructure/cache/cache.module'
 import { DataSyncModule } from './infrastructure/data-sync/data-sync.module'
 import { HealthModule } from './infrastructure/health/health.module'
 import { StaticWebModule } from './infrastructure/static-web/static-web.module'
+import { WellKnownModule } from './infrastructure/well-known/well-known.module'
 import { MailModule } from './mail/mail.module'
+import { AccountDeletionModule } from './platform/account-deletion/account-deletion.module'
+import { ActivityModule } from './platform/activity/activity.module'
 import { AuthModule } from './platform/auth/auth.module'
 import { BillingModule } from './platform/billing/billing.module'
 import { DashboardModule } from './platform/dashboard/dashboard.module'
 import { DataManagementModule } from './platform/data-management/data-management.module'
 import { FeaturedGalleriesModule } from './platform/featured-galleries/featured-galleries.module'
+import { GallerySubscriptionModule } from './platform/gallery-subscriptions/gallery-subscription.module'
+import { MobileModule } from './platform/mobile/mobile.module'
+import { PushNotificationModule } from './platform/push-notifications/push-notification.module'
 import { SuperAdminModule } from './platform/super-admin/super-admin.module'
 import { TenantModule } from './platform/tenant/tenant.module'
+import { UserSafetyModule } from './platform/user-safety/user-safety.module'
 
 function createEventModuleOptions(redis: RedisAccessor) {
   return {
@@ -52,7 +60,9 @@ function createEventModuleOptions(redis: RedisAccessor) {
     }),
     RedisModule,
     MailModule,
+    ActivityModule,
     AuthModule,
+    AccountDeletionModule,
     CacheModule,
     HealthModule,
     SettingModule,
@@ -61,18 +71,24 @@ function createEventModuleOptions(redis: RedisAccessor) {
     SiteSettingModule,
     SystemSettingModule,
     SuperAdminModule,
+    ManifestSyncModule,
     PhotoModule,
     CommentModule,
     ReactionModule,
     DashboardModule,
     BillingModule,
+    MobileModule,
     DataManagementModule,
     TenantModule,
+    UserSafetyModule,
     FeaturedGalleriesModule,
+    GallerySubscriptionModule,
+    PushNotificationModule,
     DataSyncModule,
     FeedModule,
     OgModule,
     AppInitializationModule,
+    WellKnownModule,
 
     // This must be last
     StaticWebModule,

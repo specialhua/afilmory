@@ -12,6 +12,12 @@ const rootIgnores = globalIgnores([
   'apps/ssr/public/**',
   'apps/web/public/**',
   'packages/docs/public/**',
+  'apps/mobile/ios/**',
+  'apps/mobile/android/**',
+  'apps/mobile/.expo/**',
+  'apps/mobile/expo-env.d.ts',
+  'apps/mobile/Tests/Fixtures/**',
+  'scripts/webgpu-hdr-spike/**',
 ])
 
 const hyobanConfig = await defineConfig(
@@ -113,6 +119,16 @@ const hyobanConfig = await defineConfig(
     files: ['be/packages/framework/**/*.{ts,tsx}'],
     rules: {
       'react-hooks/rules-of-hooks': 'off',
+    },
+  },
+
+  // Expo inlines EXPO_PUBLIC_* env vars only through literal `process.env` access,
+  // and expo-router route files / page definitions must export non-component values.
+  {
+    files: ['apps/mobile/**/*.{ts,tsx}'],
+    rules: {
+      'node/prefer-global/process': 'off',
+      'react-refresh/only-export-components': 'off',
     },
   },
 

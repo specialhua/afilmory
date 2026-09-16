@@ -15,6 +15,12 @@
   <a href="#-self-hosting">Self-Hosting</a>
 </p>
 
+<p align="center">
+  <a href="https://testflight.apple.com/join/ywnq5mns">
+    <img src="https://gist.githubusercontent.com/lexrus/eadc04582835d9f16ea4d4448d0e8b2c/raw/b8d0af68ca4be55fcc59876cec05de4206e0f191/available-on-testflight.svg" alt="Available on TestFlight" width="333" />
+  </a>
+</p>
+
 ---
 
 **Afilmory** (/əˈfɪlməri/, "uh-FIL-muh-ree") is a comprehensive photo gallery solution that combines **Auto Focus (AF)**, **Aperture** (light control), **Film** (vintage medium), and **Memory** (captured moments). Built with React + TypeScript, it offers automatic photo synchronization from multiple storage sources, high-performance WebGL rendering, and professional EXIF metadata display.

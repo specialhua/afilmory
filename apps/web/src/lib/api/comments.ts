@@ -4,15 +4,15 @@ export type CommentStatus = 'pending' | 'approved' | 'rejected' | 'hidden'
 
 export interface CommentDto {
   id: string
-  photo_id: string
-  parent_id: string | null
-  user_id: string
+  photoId: string
+  parentId: string | null
+  userId: string
   content: string
   status: CommentStatus
-  created_at: string
-  updated_at: string
-  reaction_counts?: Record<string, number>
-  viewer_reactions?: string[]
+  createdAt: string
+  updatedAt: string
+  reactionCounts?: Record<string, number>
+  viewerReactions?: string[]
 }
 
 export interface Comment {
@@ -70,7 +70,7 @@ interface CommentListResponseDto {
   comments: CommentDto[]
   relations: Record<string, CommentDto>
   users: Record<string, CommentUserDto>
-  next_cursor: string | null
+  nextCursor: string | null
 }
 
 interface CreateCommentResponseDto {
@@ -82,15 +82,15 @@ interface CreateCommentResponseDto {
 function mapComment(dto: CommentDto): Comment {
   return {
     id: dto.id,
-    photoId: dto.photo_id,
-    parentId: dto.parent_id,
-    userId: dto.user_id,
+    photoId: dto.photoId,
+    parentId: dto.parentId,
+    userId: dto.userId,
     content: dto.content,
     status: dto.status,
-    createdAt: dto.created_at,
-    updatedAt: dto.updated_at,
-    reactionCounts: dto.reaction_counts ?? {},
-    viewerReactions: dto.viewer_reactions ?? [],
+    createdAt: dto.createdAt,
+    updatedAt: dto.updatedAt,
+    reactionCounts: dto.reactionCounts ?? {},
+    viewerReactions: dto.viewerReactions ?? [],
   }
 }
 
@@ -108,14 +108,16 @@ export const commentsApi = {
       photoId,
       limit: String(limit),
     })
-    if (cursor) params.set('cursor', cursor)
+    if (cursor) {
+      params.set('cursor', cursor)
+    }
 
     const data = await apiFetch<CommentListResponseDto>(`/api/comments?${params.toString()}`)
     return {
       comments: data.comments.map(mapComment),
       relations: mapRelations(data.relations),
       users: data.users,
-      nextCursor: data.next_cursor ?? null,
+      nextCursor: data.nextCursor ?? null,
     }
   },
 

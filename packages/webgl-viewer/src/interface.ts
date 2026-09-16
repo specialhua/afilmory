@@ -28,7 +28,20 @@ export interface VelocityAnimationConfig {
   sensitivity: number
   animationTime: number
 }
-export interface WebGLImageViewerProps {
+
+export interface ImageViewportState {
+  containerWidth: number
+  containerHeight: number
+  imageWidth: number
+  imageHeight: number
+  scale: number
+  relativeScale: number
+  fitToScreenScale: number
+  translateX: number
+  translateY: number
+}
+
+export interface ImageViewerOptions {
   src: string
   className?: string
   width?: number // 可选的预知图片宽度，用于优化加载
@@ -46,6 +59,7 @@ export interface WebGLImageViewerProps {
   alignmentAnimation?: AlignmentAnimationConfig
   velocityAnimation?: VelocityAnimationConfig
   onZoomChange?: (originalScale: number, relativeScale: number) => void
+  onViewportChange?: (viewport: ImageViewportState) => void
   onImageCopied?: () => void
   onLoadingStateChange?: (
     isLoading: boolean,
@@ -54,7 +68,7 @@ export interface WebGLImageViewerProps {
   ) => void
   debug?: boolean
 }
-export interface WebGLImageViewerRef {
+export interface ImageViewerRef {
   zoomIn: (animated?: boolean) => void
   zoomOut: (animated?: boolean) => void
   resetView: () => void
@@ -62,14 +76,16 @@ export interface WebGLImageViewerRef {
 }
 
 export interface DebugInfo {
+  renderer?: 'webgpu' | 'webgl'
+  hdr?: boolean
   scale: number
   relativeScale: number
   translateX: number
   translateY: number
   currentLOD: number
   lodLevels: number
-  canvasSize: { width: number; height: number }
-  imageSize: { width: number; height: number }
+  canvasSize: { width: number, height: number }
+  imageSize: { width: number, height: number }
   fitToScreenScale: number
   userMaxScale: number
   effectiveMaxScale: number

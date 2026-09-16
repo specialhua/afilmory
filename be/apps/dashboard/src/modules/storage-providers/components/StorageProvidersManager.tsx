@@ -1,4 +1,4 @@
-import { Button, Modal, Prompt, Switch } from '@afilmory/ui'
+import { Button, Modal, Prompt } from '@afilmory/ui'
 import { Spring } from '@afilmory/utils'
 import { ShieldCheck } from 'lucide-react'
 import { m } from 'motion/react'
@@ -19,7 +19,6 @@ import {
   useStorageProviderSchemaQuery,
   useStorageProvidersQuery,
   useUpdateStorageProvidersMutation,
-  useUpdateStorageSecureAccessMutation,
 } from '../hooks'
 import type { StorageProvider } from '../types'
 import { createEmptyProvider } from '../utils'
@@ -42,7 +41,6 @@ export function StorageProvidersManager() {
     error: schemaError,
   } = useStorageProviderSchemaQuery()
   const updateMutation = useUpdateStorageProvidersMutation()
-  const secureAccessMutation = useUpdateStorageSecureAccessMutation()
   const managedPlansQuery = useManagedStoragePlansQuery()
   const { setHeaderActionState } = useMainPageLayout()
   const navigate = useNavigate()
@@ -52,13 +50,12 @@ export function StorageProvidersManager() {
   const schemaReady = Boolean(providerForm)
   const isLoading = (isProvidersLoading || isSchemaLoading) && (!data || !schemaReady)
   const isError = isProvidersError || isSchemaError
-  const errorMessage =
-    (providersError instanceof Error ? providersError.message : undefined) ??
-    (schemaError instanceof Error ? schemaError.message : undefined)
+  const errorMessage
+    = (providersError instanceof Error ? providersError.message : undefined)
+      ?? (schemaError instanceof Error ? schemaError.message : undefined)
 
   const [providers, setProviders] = useState<StorageProvider[]>([])
   const [activeProviderId, setActiveProviderId] = useState<string | null>(null)
-  const [secureAccessEnabled, setSecureAccessEnabled] = useState(false)
   const [isDirty, setIsDirty] = useState(false)
   const initialProviderStateRef = useRef<boolean | null>(null)
   const hasShownSyncPromptRef = useRef(false)
@@ -82,7 +79,6 @@ export function StorageProvidersManager() {
     startTransition(() => {
       setProviders(initialProviders)
       setActiveProviderId(activeId)
-      setSecureAccessEnabled(data.secureAccessEnabled ?? false)
       setIsDirty(false)
     })
   }, [data])
@@ -100,7 +96,7 @@ export function StorageProvidersManager() {
     if (!providerForm) {
       return new Map<string, string>()
     }
-    return new Map(providerForm.types.map((type) => [type.value, type.label]))
+    return new Map(providerForm.types.map(type => [type.value, type.label]))
   }, [providerForm])
 
   const managedPlanAvailable = Boolean(managedPlansQuery.data?.currentPlan)
@@ -139,9 +135,9 @@ export function StorageProvidersManager() {
 
   const handleSaveProvider = (updatedProvider: StorageProvider) => {
     setProviders((prev) => {
-      const exists = prev.some((p) => p.id === updatedProvider.id)
+      const exists = prev.some(p => p.id === updatedProvider.id)
       if (exists) {
-        return prev.map((p) => (p.id === updatedProvider.id ? updatedProvider : p))
+        return prev.map(p => (p.id === updatedProvider.id ? updatedProvider : p))
       }
       // New provider
       const result = [...prev, updatedProvider]
@@ -160,20 +156,19 @@ export function StorageProvidersManager() {
   }
 
   const handleSave = () => {
-    const resolvedActiveId =
-      activeProviderId === MANAGED_STORAGE_ACTIVE_ID ? MANAGED_STORAGE_ACTIVE_ID : activeProviderId
+    const resolvedActiveId
+      = activeProviderId === MANAGED_STORAGE_ACTIVE_ID ? MANAGED_STORAGE_ACTIVE_ID : activeProviderId
 
     updateMutation.mutate(
       {
         providers,
         activeProviderId: resolvedActiveId,
-        secureAccessEnabled,
       },
       {
         onSuccess: () => {
           setIsDirty(false)
-          const hadProvidersInitially =
-            initialProviderStateRef.current ?? ((data?.providers.length ?? 0) > 0 ? true : false)
+          const hadProvidersInitially
+            = initialProviderStateRef.current ?? ((data?.providers.length ?? 0) > 0)
           if (!hadProvidersInitially && providers.length > 0 && !hasShownSyncPromptRef.current) {
             initialProviderStateRef.current = true
             hasShownSyncPromptRef.current = true
@@ -197,26 +192,13 @@ export function StorageProvidersManager() {
     )
   }
 
-  const handleSecureAccessToggle = (nextValue: boolean) => {
-    if (managedActive) {
-      return
-    }
-    const previous = secureAccessEnabled
-    setSecureAccessEnabled(nextValue)
-    secureAccessMutation.mutate(nextValue, {
-      onError: () => {
-        setSecureAccessEnabled(previous)
-      },
-    })
-  }
-
-  const disableSave =
-    isLoading ||
-    isError ||
-    !schemaReady ||
-    !isDirty ||
-    updateMutation.isPending ||
-    (providers.length === 0 && activeProviderId !== MANAGED_STORAGE_ACTIVE_ID)
+  const disableSave
+    = isLoading
+      || isError
+      || !schemaReady
+      || !isDirty
+      || updateMutation.isPending
+      || (providers.length === 0 && activeProviderId !== MANAGED_STORAGE_ACTIVE_ID)
   useEffect(() => {
     setHeaderActionState((prev) => {
       const nextState = {
@@ -260,7 +242,7 @@ export function StorageProvidersManager() {
           transition={Spring.presets.smooth}
           className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
         >
-          {[1, 2, 3, 4].map((i) => (
+          {[1, 2, 3, 4].map(i => (
             <div key={i} className="bg-background-tertiary h-[180px] animate-pulse rounded" />
           ))}
         </m.div>
@@ -274,7 +256,9 @@ export function StorageProvidersManager() {
         {headerActionPortal}
         <div className="bg-background-tertiary text-red flex items-center justify-center gap-3 rounded p-8 text-sm">
           <span>
-            {t(storageProvidersI18nKeys.errors.load)}：<span>{errorMessage ?? t('common.unknown-error')}</span>
+            {t(storageProvidersI18nKeys.errors.load)}
+            ：
+            <span>{errorMessage ?? t('common.unknown-error')}</span>
           </span>
         </div>
       </>
@@ -382,40 +366,6 @@ export function StorageProvidersManager() {
         </LinearBorderPanel>
       </m.div>
 
-      <m.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={Spring.presets.smooth}
-        className="mb-6"
-      >
-        <LinearBorderPanel className="bg-background-secondary/40 p-4 sm:p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1.5">
-              <p className="text-text text-sm font-semibold sm:text-base">
-                {t(storageProvidersI18nKeys.secureAccess.title)}
-              </p>
-              <p className="text-text-secondary text-xs leading-relaxed sm:text-sm">
-                {t(storageProvidersI18nKeys.secureAccess.description)}
-              </p>
-              <p className="text-text-tertiary text-[11px] sm:text-xs">
-                {t(storageProvidersI18nKeys.secureAccess.helper)}
-              </p>
-              {managedActive ? (
-                <p className="text-warning text-[11px] sm:text-xs">
-                  {t(storageProvidersI18nKeys.secureAccess.managedNote)}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex items-center gap-3">
-              <Switch
-                checked={secureAccessEnabled}
-                onCheckedChange={handleSecureAccessToggle}
-                disabled={managedActive || updateMutation.isPending || secureAccessMutation.isPending}
-              />
-            </div>
-          </div>
-        </LinearBorderPanel>
-      </m.div>
     </>
   )
 }

@@ -10,20 +10,23 @@ import { injectable } from 'tsyringe'
 export class ReactionService {
   constructor(private readonly dbAccessor: DbAccessor) {}
 
-  async addReaction(refKey: string, reaction: string): Promise<void> {
+  async addReaction(refKey: string, reaction: string, count = 1): Promise<void> {
     const tenant = requireTenantContext()
     const db = this.dbAccessor.get()
 
     // Check if photo exists (you might want to validate this differently based on your photo storage)
     // For now, we'll just add the reaction assuming the refKey is valid
 
+    const row = {
+      tenantId: tenant.tenant.id,
+      refKey,
+      reaction,
+    }
+
     try {
-      await db.insert(reactions).values({
-        tenantId: tenant.tenant.id,
-        refKey,
-        reaction,
-      })
-    } catch (error) {
+      await db.insert(reactions).values(Array.from<typeof row>({ length: count }).fill(row))
+    }
+    catch (error) {
       console.error('Failed to add reaction:', error)
       throw new BizException(ErrorCode.COMMON_BAD_REQUEST, {
         message: 'Failed to add reaction',

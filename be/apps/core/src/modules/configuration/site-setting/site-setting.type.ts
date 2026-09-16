@@ -8,6 +8,7 @@ export const SITE_SETTING_KEYS = [
   'site.description',
   'site.url',
   'site.accentColor',
+  'site.viewer.regions.labelPlacement',
   'site.social.twitter',
   'site.social.github',
   'site.feed.folo.challenge.feedId',

@@ -14,9 +14,9 @@ export class ReactionController {
 
   @Post('/add')
   async addReaction(@Body() body: ReactionDto) {
-    const { refKey, reaction } = body
+    const { count, refKey, reaction } = body
 
-    await this.reactionService.addReaction(refKey, reaction)
+    await this.reactionService.addReaction(refKey, reaction, count)
   }
 
   @Get('/')

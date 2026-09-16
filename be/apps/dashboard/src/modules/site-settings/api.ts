@@ -6,6 +6,7 @@ import type {
   SiteSettingEntryInput,
   SiteSettingUiSchemaResponse,
   TenantDomain,
+  TenantDomainsResponse,
   UpdateSiteAuthorPayload,
 } from './types'
 
@@ -34,23 +35,23 @@ export async function updateSiteAuthorProfile(payload: UpdateSiteAuthorPayload) 
 }
 
 export async function listTenantDomains() {
-  const result = await coreApi<{ domains: TenantDomain[] }>('/tenant/domains')
-  return camelCaseKeys(result) as { domains: TenantDomain[] }
+  const result = await coreApi<TenantDomainsResponse>('/tenant/domains')
+  return camelCaseKeys(result) as TenantDomainsResponse
 }
 
 export async function requestTenantDomain(domain: string) {
-  const result = await coreApi<{ domain: TenantDomain }>('/tenant/domains', {
+  const result = await coreApi<{ cnameTarget: string, domain: TenantDomain }>('/tenant/domains', {
     method: 'POST',
     body: { domain },
   })
-  return camelCaseKeys(result) as { domain: TenantDomain }
+  return camelCaseKeys(result) as { cnameTarget: string, domain: TenantDomain }
 }
 
 export async function verifyTenantDomain(domainId: string) {
-  const result = await coreApi<{ domain: TenantDomain }>(`/tenant/domains/${domainId}/verify`, {
+  const result = await coreApi<{ cnameTarget: string, domain: TenantDomain }>(`/tenant/domains/${domainId}/verify`, {
     method: 'POST',
   })
-  return camelCaseKeys(result) as { domain: TenantDomain }
+  return camelCaseKeys(result) as { cnameTarget: string, domain: TenantDomain }
 }
 
 export async function deleteTenantDomain(domainId: string) {

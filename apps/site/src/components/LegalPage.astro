@@ -1,0 +1,121 @@
+---
+interface Props {
+  eyebrow: string
+  title: string
+  description: string
+  updatedAt: string
+  locale?: 'zh' | 'en'
+  alternateHref?: string
+}
+
+const { eyebrow, title, description, updatedAt, locale = 'zh', alternateHref } = Astro.props
+
+const isEn = locale === 'en'
+const homeHref = isEn ? '/en/' : '/'
+const supportHref = isEn ? '/en/support/' : '/support/'
+const privacyHref = isEn ? '/en/privacy/' : '/privacy/'
+const termsHref = isEn ? '/en/terms/' : '/terms/'
+const lastUpdatedLabel = isEn ? 'Last updated: ' : '最后更新：'
+const backHomeLabel = isEn ? 'Back to home' : '返回首页'
+const langSwitchLabel = isEn ? '中文' : 'English'
+---
+
+<main class="mx-auto min-h-screen max-w-3xl px-6 py-12 sm:px-8 sm:py-20">
+  <nav class="mb-16 flex flex-wrap items-center justify-between gap-4 border-b border-line pb-5">
+    <a href={homeHref} class="font-serif text-2xl tracking-tight">Afilmory</a>
+    <div class="flex items-center gap-5 font-mono text-[11px] uppercase tracking-[0.16em] text-muted">
+      <a class="transition-colors hover:text-fg" href={supportHref}>{isEn ? 'Support' : '支持'}</a>
+      <a class="transition-colors hover:text-fg" href={privacyHref}>{isEn ? 'Privacy' : '隐私'}</a>
+      <a class="transition-colors hover:text-fg" href={termsHref}>{isEn ? 'Terms' : '条款'}</a>
+      {alternateHref && (
+        <a class="border-l border-line pl-4 text-accent transition-colors hover:text-fg" href={alternateHref}>
+          {langSwitchLabel}
+        </a>
+      )}
+    </div>
+  </nav>
+
+  <header class="mb-14 border-b border-line pb-12">
+    <p class="mb-5 font-mono text-[11px] uppercase tracking-[0.2em] text-accent">{eyebrow}</p>
+    <h1 class="font-serif text-5xl leading-none sm:text-6xl">{title}</h1>
+    <p class="mt-6 max-w-2xl text-base leading-7 text-muted">{description}</p>
+    <p class="mt-5 font-mono text-[11px] uppercase tracking-[0.14em] text-dim">
+      {lastUpdatedLabel}{updatedAt}
+    </p>
+  </header>
+
+  <article class="legal-copy">
+    <slot />
+  </article>
+
+  <footer class="mt-20 flex flex-wrap justify-between gap-4 border-t border-line pt-6 font-mono text-[11px] uppercase tracking-[0.14em] text-dim">
+    <span>© 2026 Afilmory</span>
+    <a class="transition-colors hover:text-fg" href={homeHref}>{backHomeLabel}</a>
+  </footer>
+</main>
+
+<style>
+  .legal-copy :global(section) {
+    margin-top: 3rem;
+  }
+
+  .legal-copy :global(h2) {
+    margin: 0 0 1rem;
+    color: var(--color-fg);
+    font-family: var(--font-serif);
+    font-size: clamp(1.8rem, 4vw, 2.25rem);
+    font-weight: 400;
+    line-height: 1.15;
+  }
+
+  .legal-copy :global(h3) {
+    margin: 1.75rem 0 0.6rem;
+    color: var(--color-fg);
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+
+  .legal-copy :global(p),
+  .legal-copy :global(li) {
+    color: var(--color-muted);
+    font-size: 0.95rem;
+    line-height: 1.85;
+  }
+
+  .legal-copy :global(p) {
+    margin: 0.9rem 0;
+  }
+
+  .legal-copy :global(ul) {
+    margin: 1rem 0;
+    padding-left: 1.3rem;
+  }
+
+  .legal-copy :global(li) {
+    margin: 0.55rem 0;
+    padding-left: 0.35rem;
+  }
+
+  .legal-copy :global(strong) {
+    color: var(--color-fg);
+    font-weight: 500;
+  }
+
+  .legal-copy :global(a) {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in oklab, var(--color-accent) 45%, transparent);
+    text-underline-offset: 0.2em;
+  }
+
+  .legal-copy :global(a:hover) {
+    text-decoration-color: var(--color-accent);
+  }
+
+  .legal-copy :global(.notice) {
+    margin: 2rem 0;
+    border: 1px solid var(--color-line);
+    background: var(--color-card);
+    padding: 1.25rem 1.35rem;
+  }
+</style>

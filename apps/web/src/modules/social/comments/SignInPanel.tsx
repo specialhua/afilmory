@@ -44,6 +44,9 @@ export const SignInPanel = () => {
 
 const LoginPlatfoIcon = ({ provider, className }: { provider: string; className?: string }) => {
   switch (provider) {
+    case 'apple': {
+      return <i className={cn('i-simple-icons-apple', className)} />
+    }
     case 'github': {
       return <i className={cn('i-simple-icons-github text-black dark:text-white', className)} />
     }

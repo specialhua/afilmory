@@ -13,6 +13,7 @@ import {
   isBitmap,
   preprocessImageBuffer,
 } from '../image/processor.js'
+import { extractXmpMetadataFromExif } from '../image/exif.js'
 import type { PluginRunState } from '../plugins/manager.js'
 import { THUMBNAIL_PLUGIN_DATA_KEY } from '../plugins/thumbnail-storage/shared.js'
 import type { S3ObjectLike } from '../types/s3.js'
@@ -26,6 +27,11 @@ import { getGlobalLoggers } from './logger-adapter.js'
 import { detectMotionPhoto } from './motion-photo-detector.js'
 import type { PhotoProcessorOptions } from './processor.js'
 import { buildProtectedMediaUrl } from './protected-media-url.js'
+
+const EMPTY_XMP_METADATA = {
+  keywords: [] as string[],
+  regions: [],
+}
 
 export interface ProcessedImageData {
   sharpInstance: sharp.Sharp
@@ -183,6 +189,15 @@ export async function executePhotoProcessingPipeline(
 
     // 4. 处理 EXIF 数据
     const exifData = await processExifData(imageBuffer, imageData.rawBuffer, photoKey, existingItem, options)
+    const exiftoolXmpMetadata = options.xmpKeywordsEnabled || options.xmpRegionsEnabled
+      ? extractXmpMetadataFromExif(exifData)
+      : EMPTY_XMP_METADATA
+    const xmpKeywords = options.xmpKeywordsEnabled
+      ? exiftoolXmpMetadata.keywords
+      : []
+    const xmpRegions = options.xmpRegionsEnabled
+      ? exiftoolXmpMetadata.regions
+      : []
 
     // 5. 检测 HDR GainMap（Ultra HDR 图片）
     const hasGainMap = detectGainMap({
@@ -229,7 +244,7 @@ export async function executePhotoProcessingPipeline(
       title: photoInfo.title,
       description: photoInfo.description,
       dateTaken: photoInfo.dateTaken,
-      tags: photoInfo.tags,
+      tags: options.xmpKeywordsEnabled ? mergeUniqueTags(photoInfo.tags, xmpKeywords) : photoInfo.tags,
       originalUrl,
       thumbnailUrl: thumbnailResult.thumbnailUrl,
       thumbHash: thumbnailResult.thumbHash ? compressUint8Array(thumbnailResult.thumbHash) : null,
@@ -241,23 +256,25 @@ export async function executePhotoProcessingPipeline(
       size: obj.Size || 0,
       digest: contentDigest,
       exif: exifData,
+      keywords: xmpKeywords,
+      regions: xmpRegions,
       toneAnalysis,
       location: existingItem?.location ?? null,
       // Video source (Motion Photo or Live Photo)
       video:
         motionPhotoMetadata?.isMotionPhoto && motionPhotoMetadata.motionPhotoOffset !== undefined
           ? {
-              type: 'motion-photo',
-              offset: motionPhotoMetadata.motionPhotoOffset,
-              size: motionPhotoMetadata.motionPhotoVideoSize,
-              presentationTimestamp: motionPhotoMetadata.presentationTimestampUs,
-            }
+            type: 'motion-photo',
+            offset: motionPhotoMetadata.motionPhotoOffset,
+            size: motionPhotoMetadata.motionPhotoVideoSize,
+            presentationTimestamp: motionPhotoMetadata.presentationTimestampUs,
+          }
           : livePhotoResult.isLivePhoto
             ? {
-                type: 'live-photo',
-                videoUrl: livePhotoVideoUrl ?? '',
-                s3Key: livePhotoResult.livePhotoVideoS3Key!,
-              }
+              type: 'live-photo',
+              videoUrl: livePhotoVideoUrl ?? '',
+              s3Key: livePhotoResult.livePhotoVideoS3Key!,
+            }
             : undefined,
       // HDR 相关字段
       isHDR:
@@ -272,6 +289,25 @@ export async function executePhotoProcessingPipeline(
     loggers.image.error(`❌ 处理管道失败：${photoKey}`, error)
     return null
   }
+}
+
+function mergeUniqueTags(...groups: string[][]): string[] {
+  const seen = new Set<string>()
+  const merged: string[] = []
+
+  for (const group of groups) {
+    for (const value of group) {
+      const normalized = value.trim()
+      if (!normalized || seen.has(normalized)) {
+        continue
+      }
+
+      seen.add(normalized)
+      merged.push(normalized)
+    }
+  }
+
+  return merged
 }
 
 /**

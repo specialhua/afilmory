@@ -1,19 +1,20 @@
 import type { PhotoManifestItem } from '@afilmory/builder'
 import type { ManifestVersion } from '@afilmory/builder/manifest/version.js'
 import { CURRENT_MANIFEST_VERSION } from '@afilmory/builder/manifest/version.ts'
-import { relations } from 'drizzle-orm'
+import { relations, sql } from 'drizzle-orm'
 import {
   bigint,
   boolean,
+  foreignKey,
   index,
   integer,
   jsonb,
   pgEnum,
   pgTable,
-  primaryKey,
   text,
   timestamp,
   unique,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core'
 
 import { generateId } from './snowflake'
@@ -27,12 +28,60 @@ const snowflakeId = createSnowflakeId('id').primaryKey()
 // Better Auth custom schema
 // =========================
 
-export const userRoleEnum = pgEnum('user_role', ['user', 'admin', 'superadmin'])
+export const platformRoleEnum = pgEnum('platform_role', ['user', 'superadmin'])
+export const tenantMembershipRoleEnum = pgEnum('tenant_membership_role', ['member', 'admin', 'owner'])
+export const tenantMembershipStatusEnum = pgEnum('tenant_membership_status', ['active', 'suspended'])
 
 export const tenantStatusEnum = pgEnum('tenant_status', ['pending', 'active', 'inactive', 'suspended'])
 export const tenantDomainStatusEnum = pgEnum('tenant_domain_status', ['pending', 'verified', 'disabled'])
 export const photoSyncStatusEnum = pgEnum('photo_sync_status', ['pending', 'synced', 'conflict'])
 export const commentStatusEnum = pgEnum('comment_status', ['pending', 'approved', 'rejected', 'hidden'])
+export const contentReportStatusEnum = pgEnum('content_report_status', ['pending', 'reviewed', 'dismissed', 'actioned'])
+export const apnsEnvironmentEnum = pgEnum('apns_environment', ['development', 'production'])
+export const appleAuthorizationStatusEnum = pgEnum('apple_authorization_status', [
+  'active',
+  'revoked',
+  'revocation_failed',
+])
+export const accountDeletionStatusEnum = pgEnum('account_deletion_status', [
+  'requested',
+  'processing',
+  'retryable_failure',
+  'manual_intervention',
+  'completed',
+])
+export const accountDeletionStageEnum = pgEnum('account_deletion_stage', [
+  'revoke_providers',
+  'resolve_billing',
+  'delete_storage',
+  'finalize_database',
+  'completed',
+])
+export const billingProviderEnum = pgEnum('billing_provider', ['creem', 'app_store'])
+export const billingSubscriptionStatusEnum = pgEnum('billing_subscription_status', [
+  'pending',
+  'active',
+  'grace_period',
+  'billing_retry',
+  'cancel_scheduled',
+  'expired',
+  'revoked',
+  'conflict',
+])
+export const billingEntitlementKindEnum = pgEnum('billing_entitlement_kind', ['application_plan', 'managed_storage'])
+export const billingEntitlementSourceEnum = pgEnum('billing_entitlement_source', ['subscription', 'manual'])
+export const billingEntitlementStatusEnum = pgEnum('billing_entitlement_status', ['active', 'inactive'])
+export const billingProviderEventStatusEnum = pgEnum('billing_provider_event_status', [
+  'pending',
+  'processed',
+  'failed',
+])
+export const mobileStorageHandoffStatusEnum = pgEnum('mobile_storage_handoff_status', [
+  'issued',
+  'exchanged',
+  'completed',
+  'expired',
+])
 export const CURRENT_PHOTO_MANIFEST_VERSION: ManifestVersion = CURRENT_MANIFEST_VERSION
 
 export type PhotoAssetConflictType = 'missing-in-storage' | 'metadata-mismatch' | 'photo-id-conflict'
@@ -86,7 +135,7 @@ export const tenants = pgTable(
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
   },
-  (t) => [unique('uq_tenant_slug').on(t.slug)],
+  t => [unique('uq_tenant_slug').on(t.slug)],
 )
 
 export const tenantDomains = pgTable(
@@ -98,16 +147,20 @@ export const tenantDomains = pgTable(
       .references(() => tenants.id, { onDelete: 'cascade' }),
     domain: text('domain').notNull(),
     status: tenantDomainStatusEnum('status').notNull().default('pending'),
-    verificationToken: text('verification_token').notNull(),
+    cloudflareHostnameId: text('cloudflare_hostname_id'),
+    hostnameStatus: text('hostname_status'),
+    sslStatus: text('ssl_status'),
+    verificationErrors: jsonb('verification_errors').$type<string[]>().notNull().default([]),
+    lastSyncedAt: timestamp('last_synced_at', { mode: 'string' }),
     verifiedAt: timestamp('verified_at', { mode: 'string' }),
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
   },
-  (t) => [unique('uq_tenant_domain_domain').on(t.domain), index('idx_tenant_domain_tenant').on(t.tenantId)],
+  t => [unique('uq_tenant_domain_domain').on(t.domain), index('idx_tenant_domain_tenant').on(t.tenantId)],
 )
 
-// Custom users table (Better Auth: user)
-// Note: Multi-tenant design - same email can exist in different tenants
+// Platform-global users table (Better Auth: user).
+// Workspace permissions live exclusively in tenantMemberships.
 export const authUsers = pgTable(
   'auth_user',
   {
@@ -117,8 +170,8 @@ export const authUsers = pgTable(
     emailVerified: boolean('email_verified').default(false).notNull(),
     image: text('image'),
     creemCustomerId: text('creem_customer_id'),
-    role: userRoleEnum('role').notNull().default('user'),
-    tenantId: text('tenant_id').references(() => tenants.id, { onDelete: 'set null' }),
+    hadTrial: boolean('had_trial').default(false).notNull(),
+    role: platformRoleEnum('role').notNull().default('user'),
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
     twoFactorEnabled: boolean('two_factor_enabled').default(false).notNull(),
@@ -127,12 +180,77 @@ export const authUsers = pgTable(
     banned: boolean('banned').default(false).notNull(),
     banReason: text('ban_reason'),
     banExpires: timestamp('ban_expires_at', { mode: 'string' }),
+    deletionRequestedAt: timestamp('deletion_requested_at', { mode: 'string' }),
+    lastSignedInAt: timestamp('last_signed_in_at', { mode: 'string' }),
+    lastActiveAt: timestamp('last_active_at', { mode: 'string' }),
+    lastActiveSurface: text('last_active_surface'),
   },
-  (t) => [
-    // Multi-tenant: same email can exist in different tenants
-    unique('uq_auth_user_tenant_email').on(t.tenantId, t.email),
-    index('idx_auth_user_email').on(t.email),
-    index('idx_auth_user_tenant').on(t.tenantId),
+  t => [uniqueIndex('uq_auth_user_email_normalized').on(sql`lower(trim(${t.email}))`)],
+)
+
+export const tenantMemberships = pgTable(
+  'tenant_membership',
+  {
+    id: snowflakeId,
+    tenantId: text('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => authUsers.id, { onDelete: 'cascade' }),
+    role: tenantMembershipRoleEnum('role').notNull().default('member'),
+    status: tenantMembershipStatusEnum('status').notNull().default('active'),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
+  },
+  t => [
+    unique('uq_tenant_membership_tenant_user').on(t.tenantId, t.userId),
+    uniqueIndex('uq_tenant_membership_active_owner')
+      .on(t.tenantId)
+      .where(sql`${t.role} = 'owner' and ${t.status} = 'active'`),
+    index('idx_tenant_membership_user_status').on(t.userId, t.status),
+    index('idx_tenant_membership_tenant_role_status').on(t.tenantId, t.role, t.status),
+  ],
+)
+
+export const gallerySubscriptions = pgTable(
+  'gallery_subscription',
+  {
+    id: snowflakeId,
+    subscriberUserId: text('subscriber_user_id')
+      .notNull()
+      .references(() => authUsers.id, { onDelete: 'cascade' }),
+    targetTenantId: text('target_tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  },
+  t => [
+    unique('uq_gallery_subscription_subscriber_target').on(t.subscriberUserId, t.targetTenantId),
+    index('idx_gallery_subscription_target').on(t.targetTenantId),
+    index('idx_gallery_subscription_subscriber_created').on(t.subscriberUserId, t.createdAt),
+  ],
+)
+
+export const apnsDevices = pgTable(
+  'apns_device',
+  {
+    id: snowflakeId,
+    userId: text('user_id')
+      .notNull()
+      .references(() => authUsers.id, { onDelete: 'cascade' }),
+    deviceToken: text('device_token').notNull(),
+    environment: apnsEnvironmentEnum('environment').notNull(),
+    locale: text('locale'),
+    appVersion: text('app_version'),
+    enabled: boolean('enabled').notNull().default(true),
+    lastSeenAt: timestamp('last_seen_at', { mode: 'string' }).defaultNow().notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
+  },
+  t => [
+    unique('uq_apns_device_token_environment').on(t.deviceToken, t.environment),
+    index('idx_apns_device_user_enabled').on(t.userId, t.enabled),
   ],
 )
 
@@ -145,14 +263,13 @@ export const authSessions = pgTable('auth_session', {
   updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
   ipAddress: text('ip_address'),
   userAgent: text('user_agent'),
-  tenantId: text('tenant_id').references(() => tenants.id, { onDelete: 'set null' }),
+  activeTenantId: text('active_tenant_id').references(() => tenants.id, { onDelete: 'set null' }),
   userId: text('user_id')
     .notNull()
     .references(() => authUsers.id, { onDelete: 'cascade' }),
 })
 
-// Custom accounts table (Better Auth: account)
-// Note: Multi-tenant design - same social account can exist in different tenants
+// Platform-global accounts table (Better Auth: account).
 export const authAccounts = pgTable(
   'auth_account',
   {
@@ -162,7 +279,6 @@ export const authAccounts = pgTable(
     userId: text('user_id')
       .notNull()
       .references(() => authUsers.id, { onDelete: 'cascade' }),
-    tenantId: text('tenant_id').references(() => tenants.id, { onDelete: 'set null' }),
     accessToken: text('access_token'),
     refreshToken: text('refresh_token'),
     idToken: text('id_token'),
@@ -173,12 +289,9 @@ export const authAccounts = pgTable(
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
   },
-  (t) => [
-    // Multi-tenant: same social account can exist in different tenants
-    unique('uq_auth_account_tenant_provider').on(t.tenantId, t.providerId, t.accountId),
+  t => [
+    unique('uq_auth_account_provider').on(t.providerId, t.accountId),
     index('idx_auth_account_user').on(t.userId),
-    index('idx_auth_account_tenant').on(t.tenantId),
-    index('idx_auth_account_provider').on(t.providerId, t.accountId),
   ],
 )
 
@@ -191,8 +304,63 @@ export const authVerifications = pgTable('auth_verification', {
   updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
 })
 
+export const appleAuthorizations = pgTable(
+  'apple_authorization',
+  {
+    id: snowflakeId,
+    userId: text('user_id')
+      .notNull()
+      .references(() => authUsers.id, { onDelete: 'cascade' }),
+    accountId: text('account_id')
+      .notNull()
+      .references(() => authAccounts.id, { onDelete: 'cascade' }),
+    subject: text('subject').notNull(),
+    clientId: text('client_id').notNull(),
+    encryptedRefreshToken: text('encrypted_refresh_token').notNull(),
+    authorizationCodeHash: text('authorization_code_hash'),
+    status: appleAuthorizationStatusEnum('status').notNull().default('active'),
+    lastRevocationError: text('last_revocation_error'),
+    revokedAt: timestamp('revoked_at', { mode: 'string' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
+  },
+  t => [
+    unique('uq_apple_authorization_account').on(t.accountId),
+    unique('uq_apple_authorization_subject_client').on(t.subject, t.clientId),
+    uniqueIndex('uq_apple_authorization_code_hash').on(t.authorizationCodeHash),
+    index('idx_apple_authorization_user_status').on(t.userId, t.status),
+  ],
+)
+
+export const accountDeletionRequests = pgTable(
+  'account_deletion_request',
+  {
+    id: snowflakeId,
+    subjectUserId: text('subject_user_id'),
+    statusTokenHash: text('status_token_hash').notNull(),
+    status: accountDeletionStatusEnum('status').notNull().default('requested'),
+    stage: accountDeletionStageEnum('stage').notNull().default('revoke_providers'),
+    impactSnapshot: jsonb('impact_snapshot').$type<Record<string, unknown>>().notNull(),
+    attempts: integer('attempts').notNull().default(0),
+    nextAttemptAt: timestamp('next_attempt_at', { mode: 'string' }),
+    lastErrorCode: text('last_error_code'),
+    accessRevokedAt: timestamp('access_revoked_at', { mode: 'string' }),
+    completedAt: timestamp('completed_at', { mode: 'string' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
+  },
+  t => [
+    unique('uq_account_deletion_status_token_hash').on(t.statusTokenHash),
+    uniqueIndex('uq_account_deletion_active_user')
+      .on(t.subjectUserId)
+      .where(sql`${t.subjectUserId} is not null and ${t.status} <> 'completed'`),
+    index('idx_account_deletion_retry').on(t.status, t.nextAttemptAt),
+  ],
+)
+
 export const creemSubscriptions = pgTable('creem_subscription', {
   id: text('id').primaryKey(),
+  tenantId: text('tenant_id').references(() => tenants.id, { onDelete: 'set null' }),
   productId: text('product_id').notNull(),
   referenceId: text('reference_id').notNull(),
   creemCustomerId: text('creem_customer_id'),
@@ -205,6 +373,168 @@ export const creemSubscriptions = pgTable('creem_subscription', {
   createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
 })
+
+export const billingSubjects = pgTable(
+  'billing_subject',
+  {
+    tenantId: text('tenant_id')
+      .primaryKey()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    appAccountToken: text('app_account_token').notNull(),
+    billingOwnerUserId: text('billing_owner_user_id').references(() => authUsers.id, { onDelete: 'set null' }),
+    tombstonedAt: timestamp('tombstoned_at', { mode: 'string' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
+  },
+  t => [unique('uq_billing_subject_app_account_token').on(t.appAccountToken)],
+)
+
+export const billingOffers = pgTable('billing_offer', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  applicationPlanId: text('application_plan_id'),
+  storagePlanId: text('storage_plan_id'),
+  rank: integer('rank').notNull().default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
+})
+
+export const billingOfferProducts = pgTable(
+  'billing_offer_product',
+  {
+    id: snowflakeId,
+    offerId: text('offer_id')
+      .notNull()
+      .references(() => billingOffers.id, { onDelete: 'cascade' }),
+    provider: billingProviderEnum('provider').notNull(),
+    externalProductId: text('external_product_id').notNull(),
+    environment: text('environment').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
+  },
+  t => [
+    unique('uq_billing_offer_product_provider_environment_external').on(t.provider, t.environment, t.externalProductId),
+    index('idx_billing_offer_product_offer').on(t.offerId),
+  ],
+)
+
+export const billingSubscriptions = pgTable(
+  'billing_subscription',
+  {
+    id: snowflakeId,
+    tenantId: text('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    billingOwnerUserId: text('billing_owner_user_id').references(() => authUsers.id, { onDelete: 'set null' }),
+    offerId: text('offer_id')
+      .notNull()
+      .references(() => billingOffers.id, { onDelete: 'restrict' }),
+    provider: billingProviderEnum('provider').notNull(),
+    externalSubscriptionId: text('external_subscription_id').notNull(),
+    originalTransactionId: text('original_transaction_id'),
+    appAccountToken: text('app_account_token'),
+    environment: text('environment').notNull(),
+    status: billingSubscriptionStatusEnum('status').notNull().default('pending'),
+    periodStart: timestamp('period_start', { mode: 'string' }),
+    periodEnd: timestamp('period_end', { mode: 'string' }),
+    cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
+    providerUpdatedAt: timestamp('provider_updated_at', { mode: 'string' }),
+    metadata: jsonb('metadata').$type<Record<string, unknown> | null>().default(null),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
+  },
+  t => [
+    unique('uq_billing_subscription_provider_environment_external').on(
+      t.provider,
+      t.environment,
+      t.externalSubscriptionId,
+    ),
+    uniqueIndex('uq_billing_subscription_provider_environment_original')
+      .on(t.provider, t.environment, t.originalTransactionId)
+      .where(sql`${t.originalTransactionId} is not null`),
+    index('idx_billing_subscription_tenant_status').on(t.tenantId, t.status),
+    index('idx_billing_subscription_app_account_token').on(t.appAccountToken),
+  ],
+)
+
+export const billingEntitlements = pgTable(
+  'billing_entitlement',
+  {
+    id: snowflakeId,
+    tenantId: text('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    kind: billingEntitlementKindEnum('kind').notNull(),
+    value: text('value').notNull(),
+    sourceType: billingEntitlementSourceEnum('source_type').notNull(),
+    sourceId: text('source_id').notNull(),
+    status: billingEntitlementStatusEnum('status').notNull().default('active'),
+    rank: integer('rank').notNull().default(0),
+    startsAt: timestamp('starts_at', { mode: 'string' }).defaultNow().notNull(),
+    endsAt: timestamp('ends_at', { mode: 'string' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
+  },
+  t => [
+    unique('uq_billing_entitlement_source_kind').on(t.sourceType, t.sourceId, t.kind),
+    index('idx_billing_entitlement_tenant_status').on(t.tenantId, t.status, t.kind),
+  ],
+)
+
+export const billingProviderEvents = pgTable(
+  'billing_provider_event',
+  {
+    id: snowflakeId,
+    provider: billingProviderEnum('provider').notNull(),
+    environment: text('environment').notNull(),
+    externalEventId: text('external_event_id').notNull(),
+    externalSubscriptionId: text('external_subscription_id'),
+    signedAt: timestamp('signed_at', { mode: 'string' }),
+    receivedAt: timestamp('received_at', { mode: 'string' }).defaultNow().notNull(),
+    payload: jsonb('payload').$type<Record<string, unknown>>().notNull(),
+    payloadDigest: text('payload_digest').notNull(),
+    processingStatus: billingProviderEventStatusEnum('processing_status').notNull().default('pending'),
+    processedAt: timestamp('processed_at', { mode: 'string' }),
+    errorCode: text('error_code'),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
+  },
+  t => [
+    unique('uq_billing_provider_event_provider_environment_external').on(t.provider, t.environment, t.externalEventId),
+    index('idx_billing_provider_event_processing').on(t.processingStatus, t.receivedAt),
+  ],
+)
+
+export const mobileStorageHandoffs = pgTable(
+  'mobile_storage_handoff',
+  {
+    id: snowflakeId,
+    tenantId: text('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => authUsers.id, { onDelete: 'cascade' }),
+    tokenHash: text('token_hash').notNull(),
+    capabilityTokenHash: text('capability_token_hash'),
+    status: mobileStorageHandoffStatusEnum('status').notNull().default('issued'),
+    expiresAt: timestamp('expires_at', { mode: 'string' }).notNull(),
+    capabilityExpiresAt: timestamp('capability_expires_at', { mode: 'string' }),
+    exchangedAt: timestamp('exchanged_at', { mode: 'string' }),
+    completedAt: timestamp('completed_at', { mode: 'string' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
+  },
+  t => [
+    unique('uq_mobile_storage_handoff_token_hash').on(t.tokenHash),
+    uniqueIndex('uq_mobile_storage_handoff_capability_token_hash')
+      .on(t.capabilityTokenHash)
+      .where(sql`${t.capabilityTokenHash} is not null`),
+    index('idx_mobile_storage_handoff_tenant_status').on(t.tenantId, t.status),
+  ],
+)
 
 export const settings = pgTable(
   'settings',
@@ -221,7 +551,7 @@ export const settings = pgTable(
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
   },
-  (t) => [unique('uq_settings_tenant_key').on(t.tenantId, t.key)],
+  t => [unique('uq_settings_tenant_key').on(t.tenantId, t.key)],
 )
 
 export const systemSettings = pgTable(
@@ -235,7 +565,7 @@ export const systemSettings = pgTable(
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
   },
-  (t) => [unique('uq_system_setting_key').on(t.key)],
+  t => [unique('uq_system_setting_key').on(t.key)],
 )
 
 export const reactions = pgTable(
@@ -249,7 +579,7 @@ export const reactions = pgTable(
     refKey: text('ref_key').notNull(),
     reaction: text('reaction').notNull(),
   },
-  (t) => [index('idx_reactions_tenant_ref_key').on(t.tenantId, t.refKey)],
+  t => [index('idx_reactions_tenant_ref_key').on(t.tenantId, t.refKey)],
 )
 
 export const comments = pgTable(
@@ -272,7 +602,12 @@ export const comments = pgTable(
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
     deletedAt: timestamp('deleted_at', { mode: 'string' }),
   },
-  (t) => [
+  t => [
+    foreignKey({
+      name: 'fk_comment_parent',
+      columns: [t.parentId],
+      foreignColumns: [t.id],
+    }).onDelete('set null'),
     index('idx_comment_tenant_photo').on(t.tenantId, t.photoId),
     index('idx_comment_parent').on(t.parentId),
     index('idx_comment_user').on(t.userId),
@@ -303,9 +638,56 @@ export const commentReactions = pgTable(
     reaction: text('reaction').notNull(),
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
-  (t) => [
+  t => [
     unique('uq_comment_reaction_user').on(t.tenantId, t.commentId, t.userId, t.reaction),
     index('idx_comment_reaction_comment').on(t.tenantId, t.commentId),
+  ],
+)
+
+export const contentReports = pgTable(
+  'content_report',
+  {
+    id: snowflakeId,
+    tenantId: text('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    commentId: text('comment_id').references(() => comments.id, { onDelete: 'set null' }),
+    reporterUserId: text('reporter_user_id')
+      .notNull()
+      .references(() => authUsers.id, { onDelete: 'cascade' }),
+    reportedUserId: text('reported_user_id')
+      .notNull()
+      .references(() => authUsers.id, { onDelete: 'cascade' }),
+    reason: text('reason').notNull(),
+    details: text('details'),
+    contentSnapshot: text('content_snapshot').notNull(),
+    status: contentReportStatusEnum('status').notNull().default('pending'),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
+  },
+  t => [
+    unique('uq_content_report_reporter_comment').on(t.reporterUserId, t.commentId),
+    index('idx_content_report_tenant_status').on(t.tenantId, t.status, t.createdAt),
+    index('idx_content_report_reported_user').on(t.reportedUserId, t.createdAt),
+  ],
+)
+
+export const userBlocks = pgTable(
+  'user_block',
+  {
+    id: snowflakeId,
+    blockerUserId: text('blocker_user_id')
+      .notNull()
+      .references(() => authUsers.id, { onDelete: 'cascade' }),
+    blockedUserId: text('blocked_user_id')
+      .notNull()
+      .references(() => authUsers.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  },
+  t => [
+    unique('uq_user_block_pair').on(t.blockerUserId, t.blockedUserId),
+    index('idx_user_block_blocker').on(t.blockerUserId, t.createdAt),
+    index('idx_user_block_blocked').on(t.blockedUserId, t.createdAt),
   ],
 )
 
@@ -326,7 +708,7 @@ export const managedStorageUsages = pgTable(
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
   },
-  (t) => [
+  t => [
     index('idx_managed_storage_usage_tenant_recorded').on(t.tenantId, t.recordedAt),
     index('idx_managed_storage_usage_provider').on(t.providerKey),
   ],
@@ -351,7 +733,7 @@ export const managedStorageFileReferences = pgTable(
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
   },
-  (t) => [
+  t => [
     unique('uq_managed_storage_file_ref_tenant_key').on(t.tenantId, t.storageKey),
     index('idx_managed_storage_file_ref_provider').on(t.providerKey),
     index('idx_managed_storage_file_ref_reference').on(t.referenceType, t.referenceId),
@@ -381,61 +763,58 @@ export const photoAssets = pgTable(
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
   },
-  (t) => [
+  t => [
     unique('uq_photo_asset_tenant_storage_key').on(t.tenantId, t.storageKey),
     unique('uq_photo_asset_tenant_photo_id').on(t.tenantId, t.photoId),
+    index('idx_photo_asset_tenant_synced').on(t.tenantId, t.syncedAt),
   ],
 )
 
-export const photoAccessLogs = pgTable(
-  'photo_access_log',
-  {
-    id: snowflakeId,
-    tenantId: text('tenant_id')
-      .notNull()
-      .references(() => tenants.id, { onDelete: 'cascade' }),
-    photoAssetId: text('photo_asset_id')
-      .notNull()
-      .references(() => photoAssets.id, { onDelete: 'cascade' }),
-    photoId: text('photo_id').notNull(),
-    storageKey: text('storage_key').notNull(),
-    provider: text('provider').notNull(),
-    intent: text('intent').notNull().default('original'),
-    tokenId: text('token_id').notNull(),
-    signedUrl: text('signed_url').notNull(),
-    status: text('status').notNull().default('issued'),
-    clientIp: text('client_ip'),
-    userAgent: text('user_agent'),
-    referer: text('referer'),
-    expiresAt: timestamp('expires_at', { mode: 'string' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
-  },
-  (t) => [
-    index('idx_photo_access_log_tenant').on(t.tenantId),
-    index('idx_photo_access_log_asset').on(t.photoAssetId),
-    index('idx_photo_access_log_token').on(t.tokenId),
-  ],
-)
+export type ManifestChangeOperation = 'upsert' | 'delete'
 
-export const photoAccessStats = pgTable(
-  'photo_access_stat',
+export type ManifestChangePayload = {
+  operation: ManifestChangeOperation
+  photoId: string
+  assetId: string | null
+  published: boolean
+  photo: PhotoManifestItem | null
+  asset: {
+    id: string
+    photoId: string
+    storageKey: string
+    storageProvider: string
+    syncStatus: 'pending' | 'synced' | 'conflict'
+    size: number | null
+    createdAt: string
+    updatedAt: string
+    syncedAt: string
+    publicUrl: string | null
+  } | null
+}
+
+export const tenantManifestStates = pgTable('tenant_manifest_state', {
+  tenantId: text('tenant_id')
+    .primaryKey()
+    .references(() => tenants.id, { onDelete: 'cascade' }),
+  revision: bigint('revision', { mode: 'number' }).notNull().default(0),
+  updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
+})
+
+export const tenantManifestChanges = pgTable(
+  'tenant_manifest_change',
   {
     tenantId: text('tenant_id')
       .notNull()
       .references(() => tenants.id, { onDelete: 'cascade' }),
-    photoAssetId: text('photo_asset_id')
-      .notNull()
-      .references(() => photoAssets.id, { onDelete: 'cascade' }),
+    revision: bigint('revision', { mode: 'number' }).notNull(),
+    operation: text('operation').$type<ManifestChangeOperation>().notNull(),
     photoId: text('photo_id').notNull(),
-    viewCount: bigint('view_count', { mode: 'number' }).notNull().default(0),
-    lastViewedAt: timestamp('last_viewed_at', { mode: 'string' }),
+    payload: jsonb('payload').$type<ManifestChangePayload>().notNull(),
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
   },
-  (t) => [
-    primaryKey({ name: 'pk_photo_access_stat', columns: [t.tenantId, t.photoAssetId] }),
-    index('idx_photo_access_stat_photo').on(t.tenantId, t.photoId),
+  t => [
+    unique('uq_tenant_manifest_change_revision').on(t.tenantId, t.revision),
+    index('idx_tenant_manifest_change_tenant_revision').on(t.tenantId, t.revision),
   ],
 )
 
@@ -454,7 +833,7 @@ export const photoSyncRuns = pgTable(
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
   },
-  (t) => [index('idx_photo_sync_run_tenant').on(t.tenantId)],
+  t => [index('idx_photo_sync_run_tenant').on(t.tenantId)],
 )
 
 export type BillingUsageMetadata = Record<string, unknown>
@@ -474,9 +853,117 @@ export const billingUsageEvents = pgTable(
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
   },
-  (t) => [
+  t => [
     index('idx_billing_usage_event_tenant').on(t.tenantId),
     index('idx_billing_usage_event_type').on(t.eventType),
+  ],
+)
+
+export type PlatformActivityMetadata = Record<string, unknown>
+
+export const platformActivityEvents = pgTable(
+  'platform_activity_event',
+  {
+    id: snowflakeId,
+    userId: text('user_id')
+      .notNull()
+      .references(() => authUsers.id, { onDelete: 'cascade' }),
+    tenantId: text('tenant_id').references(() => tenants.id, { onDelete: 'set null' }),
+    sessionId: text('session_id'),
+    eventType: text('event_type').notNull(),
+    surface: text('surface').notNull(),
+    appVersion: text('app_version'),
+    metadata: jsonb('metadata').$type<PlatformActivityMetadata | null>().default(null),
+    occurredAt: timestamp('occurred_at', { mode: 'string' }).defaultNow().notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  },
+  t => [
+    index('idx_platform_activity_user_occurred').on(t.userId, t.occurredAt),
+    index('idx_platform_activity_tenant_occurred').on(t.tenantId, t.occurredAt),
+    index('idx_platform_activity_type_occurred').on(t.eventType, t.occurredAt),
+  ],
+)
+
+export type SuperAdminAuditSnapshot = Record<string, unknown>
+
+export const superAdminAuditLogs = pgTable(
+  'super_admin_audit_log',
+  {
+    id: snowflakeId,
+    actorUserId: text('actor_user_id').references(() => authUsers.id, { onDelete: 'set null' }),
+    action: text('action').notNull(),
+    targetType: text('target_type').notNull(),
+    targetId: text('target_id').notNull(),
+    before: jsonb('before').$type<SuperAdminAuditSnapshot | null>().default(null),
+    after: jsonb('after').$type<SuperAdminAuditSnapshot | null>().default(null),
+    requestId: text('request_id'),
+    batchId: text('batch_id'),
+    result: text('result').notNull().default('success'),
+    errorCode: text('error_code'),
+    occurredAt: timestamp('occurred_at', { mode: 'string' }).defaultNow().notNull(),
+  },
+  t => [
+    index('idx_super_admin_audit_actor_occurred').on(t.actorUserId, t.occurredAt),
+    index('idx_super_admin_audit_target_occurred').on(t.targetType, t.targetId, t.occurredAt),
+    index('idx_super_admin_audit_batch').on(t.batchId),
+  ],
+)
+
+export interface CleanupCriteria {
+  inactiveMonths: number
+  maxPhotos: number
+  maxStorageMb: number
+  onlyReported: boolean
+  minSuspendedDays: number
+}
+
+// Rows cover both tenants and users; the table name predates user support.
+export const tenantCleanupBatches = pgTable(
+  'tenant_cleanup_batch',
+  {
+    id: snowflakeId,
+    actorUserId: text('actor_user_id').references(() => authUsers.id, { onDelete: 'set null' }),
+    subjectType: text('subject_type').notNull().default('tenant'),
+    mode: text('mode').notNull().default('delete'),
+    criteria: jsonb('criteria').$type<CleanupCriteria | null>().default(null),
+    inactiveMonths: integer('inactive_months').notNull().default(3),
+    status: text('status').notNull().default('processing'),
+    candidateCount: integer('candidate_count').notNull().default(0),
+    suspendedCount: integer('suspended_count').notNull().default(0),
+    deletedCount: integer('deleted_count').notNull().default(0),
+    skippedCount: integer('skipped_count').notNull().default(0),
+    failedCount: integer('failed_count').notNull().default(0),
+    startedAt: timestamp('started_at', { mode: 'string' }).defaultNow().notNull(),
+    completedAt: timestamp('completed_at', { mode: 'string' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  },
+  t => [index('idx_tenant_cleanup_batch_created').on(t.createdAt)],
+)
+
+export const tenantCleanupItems = pgTable(
+  'tenant_cleanup_item',
+  {
+    id: snowflakeId,
+    batchId: text('batch_id')
+      .notNull()
+      .references(() => tenantCleanupBatches.id, { onDelete: 'cascade' }),
+    subjectType: text('subject_type').notNull().default('tenant'),
+    tenantId: text('tenant_id'),
+    tenantSlug: text('tenant_slug'),
+    userId: text('user_id'),
+    subjectLabel: text('subject_label'),
+    status: text('status').notNull().default('pending'),
+    lastActivityAt: timestamp('last_activity_at', { mode: 'string' }),
+    reason: text('reason'),
+    errorCode: text('error_code'),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    completedAt: timestamp('completed_at', { mode: 'string' }),
+  },
+  t => [
+    unique('uq_tenant_cleanup_item_batch_tenant').on(t.batchId, t.tenantId),
+    unique('uq_tenant_cleanup_item_batch_user').on(t.batchId, t.userId),
+    index('idx_tenant_cleanup_item_batch_status').on(t.batchId, t.status),
+    index('idx_tenant_cleanup_item_sweep').on(t.status, t.completedAt),
   ],
 )
 
@@ -484,23 +971,41 @@ export const dbSchema = {
   tenants,
   tenantDomains,
   authUsers,
+  tenantMemberships,
+  gallerySubscriptions,
+  apnsDevices,
   authSessions,
   authAccounts,
   authVerifications,
+  appleAuthorizations,
+  accountDeletionRequests,
   creemSubscriptions,
+  billingSubjects,
+  billingOffers,
+  billingOfferProducts,
+  billingSubscriptions,
+  billingEntitlements,
+  billingProviderEvents,
+  mobileStorageHandoffs,
 
   settings,
   systemSettings,
   reactions,
   comments,
   commentReactions,
+  contentReports,
+  userBlocks,
   managedStorageUsages,
   managedStorageFileReferences,
   photoAssets,
-  photoAccessLogs,
-  photoAccessStats,
+  tenantManifestStates,
+  tenantManifestChanges,
   photoSyncRuns,
   billingUsageEvents,
+  platformActivityEvents,
+  superAdminAuditLogs,
+  tenantCleanupBatches,
+  tenantCleanupItems,
 }
 
 export type DBSchema = typeof dbSchema

@@ -1,18 +1,30 @@
+import { createHash } from 'node:crypto'
+
 import type { AfilmoryManifest, CameraInfo, LensInfo, PhotoManifestItem } from '@afilmory/builder'
 import { CURRENT_MANIFEST_VERSION, migrateManifest } from '@afilmory/builder'
 import type { ManifestVersion } from '@afilmory/builder/manifest/version.js'
 import type { PhotoAssetManifest } from '@afilmory/db'
 import { CURRENT_PHOTO_MANIFEST_VERSION, photoAssets } from '@afilmory/db'
 import { DbAccessor } from '@core/database/database.provider'
-import { StorageAccessService } from '@core/modules/content/photo/access/storage-access.service'
-import { createProxyUrl } from '@core/modules/content/photo/access/storage-access.utils'
-import { PhotoStorageService } from '@core/modules/content/photo/storage/photo-storage.service'
 import { requireTenantContext } from '@core/modules/platform/tenant/tenant.context'
 import { createLogger } from '@tsuki-hono/common'
 import { and, eq, inArray } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 
+import { ManifestSyncService } from '../manifest-sync/manifest-sync.service'
+import { revisionETag } from '../manifest-sync/manifest-sync.types'
 import { ensureCurrentPhotoAssetManifest } from './manifest-migration.helper'
+
+export function computeManifestETag(maxUpdatedAt: string | null, photoCount: number): string {
+  const hash = createHash('sha256')
+    .update(`${maxUpdatedAt ?? ''}:${photoCount}`)
+    .digest('hex')
+  return `"${hash}"`
+}
+
+export function computeRevisionETag(revision: number): string {
+  return revisionETag(revision)
+}
 
 export interface AfilmorySearchQuery {
   tags?: string[]
@@ -38,9 +50,16 @@ export class ManifestService {
 
   constructor(
     private readonly dbAccessor: DbAccessor,
-    private readonly photoStorageService: PhotoStorageService,
-    private readonly storageAccessService: StorageAccessService,
+    private readonly manifestSyncService: ManifestSyncService,
   ) {}
+
+  async getManifestRevision(): Promise<number> {
+    return await this.manifestSyncService.getRevision()
+  }
+
+  async getManifestETag(): Promise<string> {
+    return revisionETag(await this.getManifestRevision())
+  }
 
   async getManifest(): Promise<AfilmoryManifest> {
     const tenant = requireTenantContext()
@@ -50,7 +69,6 @@ export class ManifestService {
       .select({
         id: photoAssets.id,
         manifest: photoAssets.manifest,
-        storageProvider: photoAssets.storageProvider,
       })
       .from(photoAssets)
       .where(and(eq(photoAssets.tenantId, tenant.tenant.id), inArray(photoAssets.syncStatus, ['synced', 'conflict'])))
@@ -64,24 +82,6 @@ export class ManifestService {
       }
     }
 
-    let storageConfig: Awaited<ReturnType<PhotoStorageService['resolveConfigForTenant']>>['storageConfig']
-    try {
-      const resolved = await this.photoStorageService.resolveConfigForTenant(tenant.tenant.id)
-      storageConfig = resolved.storageConfig
-    }
-    catch {
-      this.logger.debug('Storage not configured for tenant, returning empty manifest')
-      return {
-        version: CURRENT_PHOTO_MANIFEST_VERSION,
-        data: [],
-        cameras: [],
-        lenses: [],
-      }
-    }
-    const secureAccessEnabled = await this.storageAccessService.resolveSecureAccessPreference(
-      storageConfig,
-      tenant.tenant.id,
-    )
     const items: PhotoManifestItem[] = []
     const upgrades: Array<{ id: string, manifest: PhotoAssetManifest }> = []
 
@@ -95,16 +95,7 @@ export class ManifestService {
         upgrades.push({ id: record.id, manifest })
       }
 
-      const normalized = structuredClone(manifest.data)
-      if (secureAccessEnabled && (record.storageProvider === 'managed' || record.storageProvider === 's3')) {
-        if (normalized.s3Key) {
-          normalized.originalUrl = createProxyUrl(normalized.s3Key)
-        }
-        if (normalized.video?.type === 'live-photo' && normalized.video.s3Key) {
-          normalized.video.videoUrl = createProxyUrl(normalized.video.s3Key, 'live-video')
-        }
-      }
-      items.push(normalized)
+      items.push(structuredClone(manifest.data))
     }
 
     if (upgrades.length > 0) {
@@ -140,7 +131,6 @@ export class ManifestService {
       .select({
         id: photoAssets.id,
         manifest: photoAssets.manifest,
-        storageProvider: photoAssets.storageProvider,
       })
       .from(photoAssets)
       .where(
@@ -155,7 +145,6 @@ export class ManifestService {
       return []
     }
 
-    const secureAccessEnabled = await this.resolveSecureAccessEnabled()
     const itemMap = new Map<string, PhotoManifestItem>()
     const upgrades: Array<{ id: string, manifest: PhotoAssetManifest }> = []
 
@@ -168,7 +157,7 @@ export class ManifestService {
         upgrades.push({ id: record.id, manifest })
       }
 
-      const normalized = this.applySecureAccessTransform(manifest.data, record.storageProvider, secureAccessEnabled)
+      const normalized = structuredClone(manifest.data)
       itemMap.set(normalized.id, normalized)
     }
 
@@ -246,34 +235,6 @@ export class ManifestService {
     return { data: photos.slice(offset, offset + limit), total }
   }
 
-  private async resolveSecureAccessEnabled(): Promise<boolean> {
-    const tenant = requireTenantContext()
-    try {
-      const resolved = await this.photoStorageService.resolveConfigForTenant(tenant.tenant.id)
-      return await this.storageAccessService.resolveSecureAccessPreference(resolved.storageConfig, tenant.tenant.id)
-    }
-    catch {
-      return false
-    }
-  }
-
-  private applySecureAccessTransform(
-    item: PhotoManifestItem,
-    storageProvider: string,
-    secureAccessEnabled: boolean,
-  ): PhotoManifestItem {
-    const normalized = structuredClone(item)
-    if (secureAccessEnabled && (storageProvider === 'managed' || storageProvider === 's3')) {
-      if (normalized.s3Key) {
-        normalized.originalUrl = createProxyUrl(normalized.s3Key)
-      }
-      if (normalized.video?.type === 'live-photo' && normalized.video.s3Key) {
-        normalized.video.videoUrl = createProxyUrl(normalized.video.s3Key, 'live-video')
-      }
-    }
-    return normalized
-  }
-
   async getPhoto(photoId: string): Promise<PhotoManifestItem | null> {
     const tenant = requireTenantContext()
     const db = this.dbAccessor.get()
@@ -282,7 +243,6 @@ export class ManifestService {
       .select({
         id: photoAssets.id,
         manifest: photoAssets.manifest,
-        storageProvider: photoAssets.storageProvider,
       })
       .from(photoAssets)
       .where(
@@ -308,30 +268,7 @@ export class ManifestService {
       await this.persistManifestUpgrades([{ id: record.id, manifest }])
     }
 
-    let storageConfig: Awaited<ReturnType<PhotoStorageService['resolveConfigForTenant']>>['storageConfig']
-    try {
-      const resolved = await this.photoStorageService.resolveConfigForTenant(tenant.tenant.id)
-      storageConfig = resolved.storageConfig
-    }
-    catch {
-      return structuredClone(manifest.data)
-    }
-    const secureAccessEnabled = await this.storageAccessService.resolveSecureAccessPreference(
-      storageConfig,
-      tenant.tenant.id,
-    )
-
-    const normalized = structuredClone(manifest.data)
-    if (secureAccessEnabled && (record.storageProvider === 'managed' || record.storageProvider === 's3')) {
-      if (normalized.s3Key) {
-        normalized.originalUrl = createProxyUrl(normalized.s3Key)
-      }
-      if (normalized.video?.type === 'live-photo' && normalized.video.s3Key) {
-        normalized.video.videoUrl = createProxyUrl(normalized.video.s3Key, 'live-video')
-      }
-    }
-
-    return normalized
+    return structuredClone(manifest.data)
   }
 
   private resolveManifestVersion(

@@ -1,7 +1,7 @@
 import { tenantDomains, tenants } from '@afilmory/db'
 import { DbAccessor } from '@core/database/database.provider'
 import { BizException, ErrorCode } from '@core/errors'
-import { and, desc, eq } from 'drizzle-orm'
+import { and, count, desc, eq } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 
 import type { TenantDomainAggregate, TenantDomainRecord } from './tenant.types'
@@ -77,17 +77,34 @@ export class TenantDomainRepository {
       .orderBy(desc(tenantDomains.createdAt))
   }
 
+  async countByTenant(tenantId: string): Promise<number> {
+    const db = this.dbAccessor.get()
+    const [row] = await db.select({ count: count() }).from(tenantDomains).where(eq(tenantDomains.tenantId, tenantId))
+    return row?.count ?? 0
+  }
+
   async createDomain(payload: {
     tenantId: string
     domain: string
-    verificationToken: string
+    cloudflareHostnameId: string
+    hostnameStatus: string
+    sslStatus: string
+    verificationErrors: string[]
+    lastSyncedAt: string
+    status: TenantDomainRecord['status']
+    verifiedAt: string | null
   }): Promise<TenantDomainAggregate> {
     const db = this.dbAccessor.get()
     await db.insert(tenantDomains).values({
       tenantId: payload.tenantId,
       domain: payload.domain,
-      status: 'pending',
-      verificationToken: payload.verificationToken,
+      status: payload.status,
+      cloudflareHostnameId: payload.cloudflareHostnameId,
+      hostnameStatus: payload.hostnameStatus,
+      sslStatus: payload.sslStatus,
+      verificationErrors: payload.verificationErrors,
+      lastSyncedAt: payload.lastSyncedAt,
+      verifiedAt: payload.verifiedAt,
     })
 
     const aggregate = await this.findByDomain(payload.domain)
@@ -100,7 +117,18 @@ export class TenantDomainRepository {
 
   async updateDomain(
     id: string,
-    patch: Partial<Pick<TenantDomainRecord, 'status' | 'verificationToken' | 'verifiedAt'>>,
+    patch: Partial<
+      Pick<
+        TenantDomainRecord,
+        | 'cloudflareHostnameId'
+        | 'hostnameStatus'
+        | 'lastSyncedAt'
+        | 'sslStatus'
+        | 'status'
+        | 'verificationErrors'
+        | 'verifiedAt'
+      >
+    >,
   ): Promise<TenantDomainAggregate> {
     const db = this.dbAccessor.get()
     await db

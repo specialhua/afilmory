@@ -1,4 +1,4 @@
-import { Roles } from '@core/guards/roles.decorator'
+import { PlatformRoles } from '@core/guards/roles.decorator'
 import { BypassResponseTransform } from '@core/interceptors/response-transform.decorator'
 import { Body, Controller, Get, Post } from '@tsuki-hono/common'
 
@@ -6,7 +6,7 @@ import { UpdateBuilderSettingsDto } from './builder-setting.dto'
 import { BuilderSettingService } from './builder-setting.service'
 
 @Controller('builder/settings')
-@Roles('superadmin')
+@PlatformRoles('superadmin')
 export class BuilderSettingController {
   constructor(private readonly builderSettingService: BuilderSettingService) {}
 

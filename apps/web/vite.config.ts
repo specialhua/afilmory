@@ -27,6 +27,7 @@ import { manifestInjectPlugin } from './plugins/vite/manifest-inject'
 import { ogImagePlugin } from './plugins/vite/og-image-plugin'
 import { photosStaticPlugin } from './plugins/vite/photos-static'
 import { siteConfigInjectPlugin } from './plugins/vite/site-config-inject'
+import { vibeloftTelemetryPlugin } from './plugins/vite/vibeloft-telemetry'
 
 const devPrint = (): PluginOption => ({
   name: 'dev-print',
@@ -176,6 +177,7 @@ const BUILD_FOR_SERVER_SERVE = process.env.BUILD_FOR_SERVER_SERVE === '1'
 export default defineConfig(() => {
   return {
     base: BUILD_FOR_SERVER_SERVE ? '/static/web/' : '/',
+    assetsInclude: ['**/*.wasm'],
     build: {
       rollupOptions: BUILD_FOR_SERVER_SERVE
         ? {
@@ -213,6 +215,7 @@ export default defineConfig(() => {
       localesJsonPlugin(),
       tailwindcss(),
       ...(BUILD_FOR_SERVER_SERVE ? [] : staticWebBuildPlugins),
+      vibeloftTelemetryPlugin(),
       process.env.analyzer && analyzer(),
 
       devPrint(),

@@ -82,6 +82,7 @@ async function processExistingThumbnail(photoId: string): Promise<ThumbnailResul
 async function generateNewThumbnail(
   imageBuffer: Buffer,
   photoId: string,
+  persistToDisk = true,
   limitInputPixels?: number | boolean,
 ): Promise<ThumbnailResult> {
   const { thumbnailPath, thumbnailUrl } = getThumbnailPaths(photoId)
@@ -104,7 +105,9 @@ async function generateNewThumbnail(
       .toBuffer()
 
     // 保存到文件
-    await fs.writeFile(thumbnailPath, thumbnailBuffer)
+    if (persistToDisk) {
+      await fs.writeFile(thumbnailPath, thumbnailBuffer)
+    }
 
     // 记录生成信息
     const duration = Date.now() - startTime
@@ -126,12 +129,15 @@ export async function generateThumbnailAndBlurhash(
   imageBuffer: Buffer,
   photoId: string,
   forceRegenerate = false,
+  persistToDisk = true,
   limitInputPixels?: number | boolean,
 ): Promise<ThumbnailResult> {
   const thumbnailLog = getGlobalLoggers().thumbnail
 
   try {
-    await ensureThumbnailDir()
+    if (persistToDisk) {
+      await ensureThumbnailDir()
+    }
 
     // 如果不是强制模式且缩略图已存在，尝试复用现有文件
     if (!forceRegenerate && (await thumbnailExists(photoId))) {
@@ -144,7 +150,7 @@ export async function generateThumbnailAndBlurhash(
     }
 
     // 生成新的缩略图
-    return await generateNewThumbnail(imageBuffer, photoId, limitInputPixels)
+    return await generateNewThumbnail(imageBuffer, photoId, persistToDisk, limitInputPixels)
   } catch (error) {
     thumbnailLog.error(`处理失败：${photoId}`, error)
     return createFailureResult()

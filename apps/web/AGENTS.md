@@ -1,43 +1,42 @@
 # agents.md
 
-This agent file only for under this folder project use.
+This agent file only applies under this folder.
 
-## Glassmorphic Depth Design System
+## Design system
 
-This application utilizes a sophisticated glassmorphic depth design system for elevated UI components like modals, toasts, and floating panels. This system creates a sense of visual hierarchy through layered transparency and subtle color accents.
+**`/DESIGN.md` at the repo root is the normative design spec for `apps/web` and `packages/ui`.
+Read it before non-trivial UI work.** It is derived from the shipped code and covers colour
+tokens, material/blur roles, radius, typography, motion, z-index tiers, layout, iconography, and
+an explicit list of files that violate the system and must not be copied.
 
-### Design Principles
+The `afilmory-web-design` skill (`.agents/skills/afilmory-web-design/`) is the fast path: the
+surface recipe, lookup tables, and red lines.
 
-- **Multi-layer Depth**: Create visual depth through stacked transparent layers.
-- **Subtle Color Accents**: Use brand colors at very low opacity (5-20%) for borders, glows, and backgrounds.
-- **Refined Blur**: Employ heavy backdrop blur (`backdrop-blur-2xl`) for a frosted glass effect.
-- **Minimal Shadows**: Combine multiple soft shadows with accent colors for depth perception.
-- **Smooth Animations**: Use spring-based presets for all transitions to ensure fluid motion.
+## Red lines
 
-### Color Usage
+Binary rules. The surrounding code never justifies breaking them — some existing files do, and
+they are enumerated in `/DESIGN.md` §13.
 
-**IMPORTANT**: Prefer Tailwind CSS classes with opacity modifiers (e.g., `/20`) over inline styles for applying colors.
+- **Semantic tokens only.** No raw hex, `rgb()`, or `gray-*`/`zinc-*`/`slate-*` for chrome. Use
+  the Apple UIKit families: `text-text-*`, `bg-fill-*`, `bg-material-*`, `border-accent/20`.
+  `color-mix()` in an inline style is reserved for multi-stop gradients and layered shadows.
+- **Dark-only.** `index.html` hardcodes `data-theme="dark"`. Never write a hand-rolled
+  `dark:` pair, add a theme toggle, or branch on `prefers-color-scheme` for chrome.
+- **Accent is content-derived.** Consume `var(--color-accent)` / `bg-accent`. Never hardcode
+  `#007aff`.
+- **Springs for spatial motion.** `Spring.presets.*` from `@afilmory/utils`; no new
+  `cubic-bezier`. `duration-200` and friends are for opacity/colour only.
+- **z-index comes from the two tiers in `/DESIGN.md` §7.** No new magic numbers.
+- **Blur has three roles**: `2xl` panels/menus/chrome, `md` controls over a photo, `sm` scrims.
+  Use `LinearBlur` for fade bands under fixed edges.
+- **Icons are `i-mingcute-*`.** No new `lucide-react` imports.
 
-- **Borders**: `border-accent/20`
-- **Backgrounds**: `bg-accent/5`, `bg-accent/[0.03]`
-- **Text**: `text-accent/80`
+## Structure
 
-Use inline styles with `color-mix()` only for complex gradients or shadows that Tailwind classes do not support.
+- `pages/` — thin routing shells only. No layout, no business logic.
+- `modules/<domain>/` — all real UI and logic. A component that knows about photos lives here.
+- `components/ui/` — product-shaped but domain-free (map, slider, number).
+- `packages/ui` (workspace) — headless-first primitives with zero product knowledge.
 
-### Component Structure Example
-
-```tsx
-<div
-  className="rounded-2xl border border-accent/20 backdrop-blur-2xl"
-  style={{
-    backgroundImage: 'linear-gradient(...)',
-    boxShadow: '0 8px 32px color-mix(...)',
-  }}
->
-  {/* Inner glow and content */}
-</div>
-```
-
-### Interactive Elements
-
-Prefer CSS-driven hover effects using `data-highlighted` attributes (for Radix UI components) or custom CSS classes over JavaScript event handlers for better performance.
+State that is shareable belongs in the URL (filters as search params, open photo as
+`/photos/:photoId`). Ephemeral UI state belongs in a colocated Jotai atom, not prop drilling.

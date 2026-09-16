@@ -35,8 +35,18 @@ export type TenantDomain = {
   tenantId: string
   domain: string
   status: 'pending' | 'verified' | 'disabled'
-  verificationToken: string
+  cloudflareHostnameId: string | null
+  hostnameStatus: string | null
+  sslStatus: string | null
+  verificationErrors: string[]
+  lastSyncedAt: string | null
   verifiedAt: string | null
   createdAt: string
   updatedAt: string
+}
+
+export type TenantDomainsResponse = {
+  cnameTarget: string
+  customDomainLimit: number | null
+  domains: TenantDomain[]
 }

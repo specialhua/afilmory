@@ -7,12 +7,12 @@ const SETTINGS_TABS = [
     path: '/settings/site',
     end: true,
   },
-  // {
-  //   id: 'domain',
-  //   labelKey: 'settings.nav.domain',
-  //   path: '/settings/domain',
-  //   end: true,
-  // },
+  {
+    id: 'domain',
+    labelKey: 'settings.nav.domain',
+    path: '/settings/domain',
+    end: true,
+  },
   {
     id: 'user',
     labelKey: 'settings.nav.user',
@@ -43,7 +43,7 @@ export function SettingsNavigation({ active }: SettingsNavigationProps) {
   return (
     <PageTabs
       activeId={active}
-      items={SETTINGS_TABS.map((tab) => ({
+      items={SETTINGS_TABS.map(tab => ({
         id: tab.id,
         labelKey: tab.labelKey,
         to: tab.path,

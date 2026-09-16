@@ -65,10 +65,7 @@ export function useUpdateSiteAuthorProfileMutation() {
 export function useTenantDomainsQuery() {
   return useQuery({
     queryKey: TENANT_DOMAINS_QUERY_KEY,
-    queryFn: async () => {
-      const { domains } = await listTenantDomains()
-      return domains
-    },
+    queryFn: listTenantDomains,
   })
 }
 
@@ -101,8 +98,13 @@ export function useVerifyTenantDomainMutation() {
       const { domain } = await verifyTenantDomain(domainId)
       return domain satisfies TenantDomain
     },
-    onSuccess: () => {
-      toast.success(t('settings.domain.toast.verify-success'))
+    onSuccess: (domain) => {
+      if (domain.status === 'verified') {
+        toast.success(t('settings.domain.toast.verify-success'))
+      }
+      else {
+        toast.info(t('settings.domain.toast.verify-pending'))
+      }
       void queryClient.invalidateQueries({ queryKey: TENANT_DOMAINS_QUERY_KEY })
     },
     onError: (error) => {

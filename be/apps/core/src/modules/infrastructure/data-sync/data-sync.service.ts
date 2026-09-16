@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer'
 import { createHash } from 'node:crypto'
 
 import type { BuilderConfig, PhotoManifestItem, StorageConfig, StorageManager, StorageObject } from '@afilmory/builder'
@@ -5,12 +6,16 @@ import type { PhotoAssetConflictPayload, PhotoAssetConflictSnapshot, PhotoAssetM
 import { CURRENT_PHOTO_MANIFEST_VERSION, DATABASE_ONLY_PROVIDER, photoAssets, photoSyncRuns } from '@afilmory/db'
 import { DbAccessor } from '@core/database/database.provider'
 import { BizException, ErrorCode } from '@core/errors'
-import { formatBytesToMb } from '@core/modules/content/photo/access/storage-access.utils'
+import { ManifestSyncService } from '@core/modules/content/manifest-sync/manifest-sync.service'
 import { PhotoBuilderService } from '@core/modules/content/photo/builder/photo-builder.service'
 import { PhotoStorageService } from '@core/modules/content/photo/storage/photo-storage.service'
-import { BILLING_USAGE_EVENT } from '@core/modules/platform/billing/billing.constants'
-import { BillingPlanService } from '@core/modules/platform/billing/billing-plan.service'
-import { BillingUsageService } from '@core/modules/platform/billing/billing-usage.service'
+import { formatBytesToMb } from '@core/modules/content/photo/storage/storage.utils'
+import { BillingPlanService } from '@core/modules/platform/billing/plan/billing-plan.service'
+import { quotaExceeded } from '@core/modules/platform/billing/quota/billing-quota.error'
+import { BILLING_USAGE_EVENT } from '@core/modules/platform/billing/usage/billing-usage.constants'
+import { BillingUsageService } from '@core/modules/platform/billing/usage/billing-usage.service'
+import { selectGalleryPushPreview } from '@core/modules/platform/push-notifications/gallery-push.payload'
+import { GalleryPushQueue } from '@core/modules/platform/push-notifications/gallery-push.queue'
 import { requireTenantContext } from '@core/modules/platform/tenant/tenant.context'
 import { createLogger } from '@tsuki-hono/common'
 import { EventEmitterService } from '@tsuki-hono/event-emitter'
@@ -83,6 +88,8 @@ export class DataSyncService {
     private readonly photoStorageService: PhotoStorageService,
     private readonly billingPlanService: BillingPlanService,
     private readonly billingUsageService: BillingUsageService,
+    private readonly galleryPushQueue: GalleryPushQueue,
+    private readonly manifestSyncService: ManifestSyncService,
   ) {}
 
   private async emitManifestChanged(tenantId: string): Promise<void> {
@@ -196,9 +203,26 @@ export class DataSyncService {
     await this.emitComplete(onProgress, result)
 
     if (!options.dryRun) {
-      const mutated = actions.some((action) => action.applied)
+      const mutated = actions.some(action => action.applied)
       if (mutated) {
-        await this.emitManifestChanged(tenant.tenant.id)
+        await this.manifestSyncService.recordAppliedActions(tenant.tenant.id, actions)
+      }
+      const inserted = actions.filter(action => action.type === 'insert' && action.applied)
+      if (inserted.length > 0) {
+        await this.galleryPushQueue
+          .enqueueGalleryPublished(
+            tenant.tenant.id,
+            inserted.length,
+            selectGalleryPushPreview(
+              inserted.map(action => ({
+                photoId: action.photoId,
+                thumbnailUrl: action.manifestAfter?.thumbnailUrl,
+              })),
+            ),
+          )
+          .catch((error) => {
+            this.logger.error('Failed to queue gallery update notifications', error)
+          })
       }
     }
 
@@ -248,7 +272,7 @@ export class DataSyncService {
       .from(photoAssets)
       .where(and(eq(photoAssets.tenantId, tenant.tenant.id), eq(photoAssets.syncStatus, 'conflict')))
 
-    return records.map((record) => this.mapRecordToConflict(record))
+    return records.map(record => this.mapRecordToConflict(record))
   }
 
   async resolveConflict(id: string, options: ResolveConflictOptions): Promise<DataSyncAction> {
@@ -279,14 +303,14 @@ export class DataSyncService {
     if (options.strategy === ConflictResolutionStrategy.PREFER_STORAGE) {
       const action = await this.resolveByStorage(record, conflictPayload, options, dryRun, tenant.tenant.id, db)
       if (!dryRun && action.applied) {
-        await this.emitManifestChanged(tenant.tenant.id)
+        await this.manifestSyncService.recordAppliedActions(tenant.tenant.id, [action])
       }
       return action
     }
 
     const action = await this.resolveByDatabase(record, conflictPayload, dryRun, tenant.tenant.id, db)
     if (!dryRun && action.applied) {
-      await this.emitManifestChanged(tenant.tenant.id)
+      await this.manifestSyncService.recordAppliedActions(tenant.tenant.id, [action])
     }
     return action
   }
@@ -351,12 +375,12 @@ export class DataSyncService {
     const db = this.dbAccessor.get()
     const records = await db.select().from(photoAssets).where(eq(photoAssets.tenantId, tenantId))
 
-    const storageByKey = new Map(storageObjects.map((object) => [object.key, object]))
-    const recordByKey = new Map(records.map((record) => [record.storageKey, record]))
+    const storageByKey = new Map(storageObjects.map(object => [object.key, object]))
+    const recordByKey = new Map(records.map(record => [record.storageKey, record]))
 
-    const missingInDb = storageObjects.filter((object) => !recordByKey.has(object.key))
+    const missingInDb = storageObjects.filter(object => !recordByKey.has(object.key))
     const orphanInDb = records.filter(
-      (record) => record.storageProvider !== DATABASE_ONLY_PROVIDER && !storageByKey.has(record.storageKey),
+      record => record.storageProvider !== DATABASE_ONLY_PROVIDER && !storageByKey.has(record.storageKey),
     )
 
     const conflictCandidates: ConflictCandidate[] = []
@@ -401,7 +425,7 @@ export class DataSyncService {
   private async resolveBuilderConfigForTenant(
     tenantId: string,
     overrides: Pick<DataSyncOptions, 'builderConfig' | 'storageConfig'>,
-  ): Promise<{ builderConfig: BuilderConfig; storageConfig: StorageConfig }> {
+  ): Promise<{ builderConfig: BuilderConfig, storageConfig: StorageConfig }> {
     return await this.photoStorageService.resolveConfigForTenant(tenantId, overrides)
   }
 
@@ -554,7 +578,8 @@ export class DataSyncService {
           action,
           summary,
         })
-      } catch (error) {
+      }
+      catch (error) {
         const constraintError = this.extractConstraintViolation(error)
         if (constraintError && this.isUniqueConstraintViolation(constraintError)) {
           if (this.isPhotoIdConstraintViolation(constraintError)) {
@@ -947,7 +972,8 @@ export class DataSyncService {
     let buffer: Buffer | null = null
     try {
       buffer = await context.storageManager.getFile(candidate.storageObject.key)
-    } catch (error) {
+    }
+    catch (error) {
       this.logger.warn('Failed to download object for digest comparison', {
         key: candidate.storageObject.key,
         error,
@@ -1178,7 +1204,7 @@ export class DataSyncService {
       type: 'complete',
       payload: {
         summary: this.cloneSummary(result.summary),
-        actions: result.actions.map((action) => this.cloneAction(action)),
+        actions: result.actions.map(action => this.cloneAction(action)),
       },
     })
   }
@@ -1303,7 +1329,8 @@ export class DataSyncService {
             resultType: result.type ?? null,
           },
         })
-      } else {
+      }
+      else {
         await this.emitLog(emitter, {
           level: 'warn',
           message: '生成 manifest 未返回照片数据',
@@ -1316,7 +1343,8 @@ export class DataSyncService {
       }
 
       return result
-    } catch (err) {
+    }
+    catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error'
       await this.emitLog(emitter, {
         level: 'error',
@@ -1349,13 +1377,13 @@ export class DataSyncService {
   }
 
   private createRecordSnapshot(record: PhotoAssetRecord): SyncObjectSnapshot {
-    const metadataHash =
-      record.metadataHash ??
-      this.computeMetadataHash({
-        size: record.size ?? null,
-        etag: record.etag ?? null,
-        lastModified: record.lastModified ?? null,
-      })
+    const metadataHash
+      = record.metadataHash
+        ?? this.computeMetadataHash({
+          size: record.size ?? null,
+          etag: record.etag ?? null,
+          lastModified: record.lastModified ?? null,
+        })
 
     return {
       size: record.size ?? null,
@@ -1391,7 +1419,7 @@ export class DataSyncService {
     return value * 1024 * 1024
   }
 
-  private ensureLibraryCapacityLimit(payload: { current: number; incoming: number; limit: number | null }): void {
+  private ensureLibraryCapacityLimit(payload: { current: number, incoming: number, limit: number | null }): void {
     if (payload.limit === null || payload.incoming === 0) {
       return
     }
@@ -1406,7 +1434,7 @@ export class DataSyncService {
   private ensureStorageObjectSizeWithinLimit(
     storageObject: StorageObject,
     size: number | null,
-    limits?: { maxObjectBytes: number | null; maxObjectSizeMb: number | null },
+    limits?: { maxObjectBytes: number | null, maxObjectSizeMb: number | null },
   ): void {
     const maxBytes = limits?.maxObjectBytes ?? null
     if (maxBytes === null || size === null) {
@@ -1420,8 +1448,10 @@ export class DataSyncService {
     const readableLimit = limits?.maxObjectSizeMb ?? formatBytesToMb(maxBytes)
     const actualSize = formatBytesToMb(size)
 
-    throw new BizException(ErrorCode.COMMON_BAD_REQUEST, {
+    throw quotaExceeded({
+      reason: 'sync_object_size',
       message: `存储对象 ${storageObject.key} (${actualSize} MB) 超出允许的同步大小 ${readableLimit} MB`,
+      details: { limitMb: maxBytes / 1024 / 1024, actualMb: size / 1024 / 1024 },
     })
   }
 
@@ -1469,7 +1499,7 @@ export class DataSyncService {
     }
   }
 
-  private extractConstraintViolation(error: unknown): { code?: string; constraint?: string; message?: string } | null {
+  private extractConstraintViolation(error: unknown): { code?: string, constraint?: string, message?: string } | null {
     if (!error) {
       return null
     }
@@ -1491,8 +1521,8 @@ export class DataSyncService {
     }
 
     const code = typeof candidate.code === 'string' ? candidate.code : undefined
-    const constraint =
-      typeof candidate.constraint === 'string'
+    const constraint
+      = typeof candidate.constraint === 'string'
         ? candidate.constraint
         : typeof candidate.constraint_name === 'string'
           ? candidate.constraint_name
@@ -1517,7 +1547,7 @@ export class DataSyncService {
     return null
   }
 
-  private isUniqueConstraintViolation(error: { code?: string; message?: string }): boolean {
+  private isUniqueConstraintViolation(error: { code?: string, message?: string }): boolean {
     if (error.code === UNIQUE_VIOLATION_CODE) {
       return true
     }
@@ -1529,7 +1559,7 @@ export class DataSyncService {
     return false
   }
 
-  private isPhotoIdConstraintViolation(error: { constraint?: string; message?: string }): boolean {
+  private isPhotoIdConstraintViolation(error: { constraint?: string, message?: string }): boolean {
     if (error.constraint === UNIQUE_CONSTRAINT_PHOTO_ID) {
       return true
     }
@@ -1541,7 +1571,7 @@ export class DataSyncService {
     return false
   }
 
-  private isStorageKeyConstraintViolation(error: { constraint?: string; message?: string }): boolean {
+  private isStorageKeyConstraintViolation(error: { constraint?: string, message?: string }): boolean {
     if (error.constraint === UNIQUE_CONSTRAINT_STORAGE_KEY) {
       return true
     }
@@ -1655,7 +1685,7 @@ export class DataSyncService {
       }
 
       const storageObjects = await storageManager.listImages()
-      const storageObject = storageObjects.find((object) => object.key === targetStorageKey)
+      const storageObject = storageObjects.find(object => object.key === targetStorageKey)
 
       if (!storageObject) {
         throw new BizException(ErrorCode.IMAGE_PROCESSING_FAILED, {
@@ -1715,7 +1745,7 @@ export class DataSyncService {
     }
 
     const storageObjects = await storageManager.listImages()
-    const storageObject = storageObjects.find((object) => object.key === record.storageKey)
+    const storageObject = storageObjects.find(object => object.key === record.storageKey)
 
     if (!storageObject) {
       throw new BizException(ErrorCode.IMAGE_PROCESSING_FAILED, {

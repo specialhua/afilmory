@@ -126,6 +126,8 @@ export async function runAsWorker() {
         isForceMode: process.env.FORCE_MODE === 'true',
         isForceManifest: process.env.FORCE_MANIFEST === 'true',
         isForceThumbnails: process.env.FORCE_THUMBNAILS === 'true',
+        xmpKeywordsEnabled: process.env.XMP_KEYWORDS === 'true',
+        xmpRegionsEnabled: process.env.XMP_REGIONS === 'true',
       }
 
       const builderOptions: BuilderOptions = {
@@ -185,6 +187,8 @@ export async function runAsWorker() {
         isForceMode: process.env.FORCE_MODE === 'true',
         isForceManifest: process.env.FORCE_MANIFEST === 'true',
         isForceThumbnails: process.env.FORCE_THUMBNAILS === 'true',
+        xmpKeywordsEnabled: process.env.XMP_KEYWORDS === 'true',
+        xmpRegionsEnabled: process.env.XMP_REGIONS === 'true',
       }
       const batchBuilderOptions: BuilderOptions = {
         isForceMode: batchProcessorOptions.isForceMode,

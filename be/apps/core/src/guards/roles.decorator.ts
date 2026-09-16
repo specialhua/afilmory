@@ -1,63 +1,58 @@
 import { applyDecorators } from '@tsuki-hono/common'
 
-export const ROLES_METADATA = Symbol.for('core.auth.allowed_roles')
+import type { WorkspaceMembershipRole } from '../modules/platform/auth/workspace-membership.service'
 
-export enum RoleBit {
-  GUEST = 1 << 0,
-  USER = 1 << 1,
-  ADMIN = 1 << 2,
-  SUPERADMIN = 1 << 3,
-}
+export const AUTH_REQUIRED_METADATA = Symbol.for('core.auth.required')
+export const PLATFORM_ROLES_METADATA = Symbol.for('core.auth.platform_roles')
+export const TENANT_ROLES_METADATA = Symbol.for('core.auth.tenant_roles')
 
-export type RoleName = 'user' | 'admin' | 'superadmin' | (string & {})
+export type PlatformRole = 'user' | 'superadmin'
 
-export function roleNameToBit(name?: RoleName): RoleBit {
-  switch (name) {
-    case 'superadmin': {
-      return RoleBit.SUPERADMIN
-    }
-
-    case 'admin': {
-      return RoleBit.ADMIN
-    }
-
-    case 'user': {
-      return RoleBit.USER
-    }
-
-    default: {
-      return RoleBit.GUEST
-    }
-  }
-}
-
-export function roleBitWithInheritance(bit: RoleBit): number {
-  switch (bit) {
-    case RoleBit.SUPERADMIN: {
-      return RoleBit.SUPERADMIN | RoleBit.ADMIN | RoleBit.USER | RoleBit.GUEST
-    }
-    case RoleBit.ADMIN: {
-      return RoleBit.ADMIN | RoleBit.USER | RoleBit.GUEST
-    }
-    case RoleBit.USER: {
-      return RoleBit.USER | RoleBit.GUEST
-    }
-
-    default: {
-      return RoleBit.GUEST
-    }
-  }
-}
-
-export function Roles(...roles: Array<RoleBit | RoleName>): MethodDecorator & ClassDecorator {
-  const mask = roles.map((r) => (typeof r === 'string' ? roleNameToBit(r) : r)).reduce((m, r) => m | r, 0)
-
-  return applyDecorators((target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
+function defineMetadataDecorator<T>(key: symbol, value: T): MethodDecorator & ClassDecorator {
+  return applyDecorators((target: object, _propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
     const targetForMetadata = descriptor?.value && typeof descriptor.value === 'function' ? descriptor.value : target
-    Reflect.defineMetadata(ROLES_METADATA, mask, targetForMetadata)
+    Reflect.defineMetadata(key, value, targetForMetadata)
   })
 }
 
-export function getAllowedRoleMask(target: object): number {
-  return (Reflect.getMetadata(ROLES_METADATA, target) || 0) as number
+export function RequireAuth(): MethodDecorator & ClassDecorator {
+  return defineMetadataDecorator(AUTH_REQUIRED_METADATA, true)
+}
+
+export function PlatformRoles(...roles: PlatformRole[]): MethodDecorator & ClassDecorator {
+  return defineMetadataDecorator(PLATFORM_ROLES_METADATA, roles)
+}
+
+export function TenantRoles(...roles: WorkspaceMembershipRole[]): MethodDecorator & ClassDecorator {
+  return defineMetadataDecorator(TENANT_ROLES_METADATA, roles)
+}
+
+export function isAuthRequired(target: object): boolean {
+  return Reflect.getMetadata(AUTH_REQUIRED_METADATA, target) === true
+}
+
+export function getPlatformRoles(target: object): PlatformRole[] {
+  return (Reflect.getMetadata(PLATFORM_ROLES_METADATA, target) ?? []) as PlatformRole[]
+}
+
+export function getTenantRoles(target: object): WorkspaceMembershipRole[] {
+  return (Reflect.getMetadata(TENANT_ROLES_METADATA, target) ?? []) as WorkspaceMembershipRole[]
+}
+
+const TENANT_ROLE_RANK: Record<WorkspaceMembershipRole, number> = {
+  member: 1,
+  admin: 2,
+  owner: 3,
+}
+
+export function tenantRoleSatisfies(
+  actualRole: WorkspaceMembershipRole,
+  requiredRoles: WorkspaceMembershipRole[],
+): boolean {
+  if (requiredRoles.length === 0) {
+    return true
+  }
+
+  const actualRank = TENANT_ROLE_RANK[actualRole]
+  return requiredRoles.some((requiredRole) => actualRank >= TENANT_ROLE_RANK[requiredRole])
 }

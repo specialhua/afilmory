@@ -42,10 +42,14 @@ export function useLogin() {
         rememberMe,
       })
 
-      return await queryClient.fetchQuery({
+      const session = await queryClient.fetchQuery({
         queryKey: AUTH_SESSION_QUERY_KEY,
         queryFn: fetchSession,
       })
+      if (!session) {
+        throw new Error('Sign-in completed without an active session.')
+      }
+      return session
     },
     onSuccess: (session) => {
       // Update cache and atom
@@ -53,34 +57,48 @@ export function useLogin() {
       setAuthUser(session.user)
       setErrorMessage(null)
 
-      const { tenant } = session
       const isSuperAdmin = session.user.role === 'superadmin'
 
-      if (tenant?.isPlaceholder) {
+      if (isSuperAdmin) {
+        navigate('/superadmin/settings', { replace: true })
+        return
+      }
+
+      const { activeWorkspace, requestedMembership, requestedWorkspace } = session
+      if (requestedWorkspace?.isPlaceholder) {
         navigate(ROUTE_PATHS.WELCOME, { replace: true })
         return
       }
 
-      if (tenant && tenant.slug) {
-        const currentSlug = getTenantSlugFromHost(window.location.hostname)
-        if (!isSuperAdmin && tenant.slug !== currentSlug) {
-          try {
-            const targetUrl = buildTenantUrl(tenant.slug, '/')
-            window.location.replace(targetUrl)
-            return
-          } catch (redirectError) {
-            console.error('Failed to redirect to tenant workspace after login:', redirectError)
-          }
+      const canManageRequestedWorkspace
+        = requestedMembership?.status === 'active'
+          && (requestedMembership.role === 'admin' || requestedMembership.role === 'owner')
+      if (requestedWorkspace && !canManageRequestedWorkspace) {
+        navigate(ROUTE_PATHS.NO_ACCESS, { replace: true })
+        return
+      }
+
+      if (requestedWorkspace) {
+        navigate('/', { replace: true })
+        return
+      }
+
+      if (activeWorkspace?.slug) {
+        try {
+          window.location.replace(buildTenantUrl(activeWorkspace.slug, '/'))
+          return
+        }
+        catch (redirectError) {
+          console.error('Failed to redirect to the active workspace after login:', redirectError)
         }
       }
 
-      const destination = isSuperAdmin ? '/superadmin/settings' : '/'
-      navigate(destination, { replace: true })
+      navigate(ROUTE_PATHS.WELCOME, { replace: true })
     },
     onError: (error: Error) => {
       if (error instanceof FetchError) {
         const status = error.statusCode ?? error.response?.status
-        const serverMessage = (error.data as any)?.message
+        const serverMessage = (error.data as { message?: string } | undefined)?.message
         switch (status) {
           case 401: {
             setErrorMessage(serverMessage || 'Invalid email or password')
@@ -98,7 +116,8 @@ export function useLogin() {
             setErrorMessage(serverMessage || error.message || 'Login failed. Please try again')
           }
         }
-      } else {
+      }
+      else {
         console.error('error', error)
         setErrorMessage('An unexpected error occurred. Please try again')
       }

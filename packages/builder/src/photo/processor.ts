@@ -13,6 +13,9 @@ export interface PhotoProcessorOptions {
   isForceMode: boolean
   isForceManifest: boolean
   isForceThumbnails: boolean
+  xmpKeywordsEnabled: boolean
+  xmpRegionsEnabled: boolean
+  dryRun?: boolean
 }
 
 // 处理单张照片

@@ -23,10 +23,9 @@ RUN pnpm fetch --filter '@afilmory/dashboard...'
 COPY . .
 
 RUN pnpm install --filter core... --filter '@afilmory/web...' --filter '@afilmory/dashboard...' --frozen-lockfile
-RUN pnpm --filter @afilmory/web build:serve & \
-    pnpm --filter @afilmory/dashboard build:prod:saas & \
-    pnpm --filter core build & \
-    wait
+RUN pnpm --filter @afilmory/web build:serve \
+  && pnpm --filter @afilmory/dashboard build:prod:saas \
+  && pnpm --filter core build
 RUN mkdir -p be/apps/core/dist/static/web && cp -r apps/web/dist/* be/apps/core/dist/static/web/
 RUN mkdir -p be/apps/core/dist/static/dashboard && cp -r be/apps/dashboard/dist/* be/apps/core/dist/static/dashboard/
 

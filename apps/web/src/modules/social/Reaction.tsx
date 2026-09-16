@@ -59,7 +59,9 @@ export const ReactionRail = ({ className, disabled = false, photoId, style }: Re
     (reaction: (typeof reactions)[number], delta: number) => {
       mutate(
         (current) => {
-          if (!current) return current
+          if (!current) {
+            return current
+          }
 
           return produce(current, (draft) => {
             const next = Math.max(0, (draft.data.reactions[reaction] || 0) + delta)
@@ -80,11 +82,13 @@ export const ReactionRail = ({ className, disabled = false, photoId, style }: Re
     async (reaction: (typeof reactions)[number]) => {
       try {
         await client.actReaction({
+          count: 1,
           refKey: photoId,
           reaction,
         })
         toast.success(t('photo.reaction.success'))
-      } catch (error) {
+      }
+      catch (error) {
         console.error('Failed to send reaction', error)
         toast.error('Failed to send reaction')
         applyDelta(reaction, -1)
@@ -107,7 +111,8 @@ export const ReactionRail = ({ className, disabled = false, photoId, style }: Re
         const next = new Set(prev)
         if (isActive) {
           next.delete(reaction)
-        } else {
+        }
+        else {
           next.add(reaction)
         }
         return next

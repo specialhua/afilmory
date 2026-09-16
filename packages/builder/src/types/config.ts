@@ -15,9 +15,15 @@ export interface WorkerPerformanceConfig {
   workerCount: number
 }
 
+export interface XmpProcessingSettings {
+  keywords: boolean
+  regions: boolean
+}
+
 export interface SystemProcessingSettings {
   defaultConcurrency: number
   enableLivePhotoDetection: boolean
+  xmp?: XmpProcessingSettings
   supportedFormats?: Set<string>
   digestSuffixLength?: number
   /**
@@ -56,8 +62,8 @@ export interface BuilderConfig {
 
 type DeepPartial<T> = T extends object
   ? {
-      [P in keyof T]?: DeepPartial<T[P]>
-    }
+    [P in keyof T]?: DeepPartial<T[P]>
+  }
   : T
 
 export type BuilderConfigInput = {

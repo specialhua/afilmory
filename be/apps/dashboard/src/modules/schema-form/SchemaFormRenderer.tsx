@@ -1,5 +1,6 @@
 import {
   Button,
+  Checkbox,
   FormHelperText,
   Input,
   Label,
@@ -28,6 +29,7 @@ import type {
   UiSchema,
   UiSlotComponent,
 } from './types'
+import { normalizeColorPickerValue, parseMultiSelectValue, updateMultiSelectValue } from './utils'
 
 function FieldDescription({ description }: { description?: string | null }) {
   if (!description) {
@@ -37,7 +39,7 @@ function FieldDescription({ description }: { description?: string | null }) {
   return <p className="text-text-tertiary mt-1 text-xs">{description}</p>
 }
 
-function SchemaIcon({ name, className }: { name?: string | null; className?: string }) {
+function SchemaIcon({ name, className }: { name?: string | null, className?: string }) {
   if (!name) {
     return null
   }
@@ -64,7 +66,7 @@ function SecretFieldInput<Key extends string>({
       <Input
         type={revealed ? 'text' : 'password'}
         value={value}
-        onInput={(event) => onChange(fieldKey, event.currentTarget.value)}
+        onInput={event => onChange(fieldKey, event.currentTarget.value)}
         placeholder={component.placeholder ?? ''}
         autoComplete={component.autoComplete}
         className="border-fill-tertiary/50 bg-background flex-1 focus:border-accent/40"
@@ -72,7 +74,7 @@ function SecretFieldInput<Key extends string>({
       {component.revealable ? (
         <Button
           type="button"
-          onClick={() => setRevealed((prev) => !prev)}
+          onClick={() => setRevealed(prev => !prev)}
           variant="ghost"
           size="sm"
           className="border-fill-tertiary/50 text-text-secondary hover:bg-fill/30 hover:text-text border"
@@ -108,12 +110,59 @@ function FieldRenderer<Key extends string>({ field, value, onChange, renderSlot,
       : null
   }
 
+  if (component.type === 'color') {
+    const stringValue = typeof value === 'string' ? value : ''
+    const pickerValue = normalizeColorPickerValue(stringValue)
+    return (
+      <div className="flex items-center gap-3">
+        <label className="border-fill-tertiary/50 relative size-10 shrink-0 cursor-pointer overflow-hidden rounded-full border">
+          <span className="absolute inset-1 rounded-full" style={{ backgroundColor: pickerValue }} />
+          <input
+            type="color"
+            value={pickerValue}
+            aria-label={field.title}
+            className="absolute inset-0 cursor-pointer opacity-0"
+            onInput={event => onChange(field.key, event.currentTarget.value.toUpperCase())}
+          />
+        </label>
+        <Input
+          value={stringValue}
+          onInput={event => onChange(field.key, event.currentTarget.value)}
+          placeholder="#007BFF"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          className="border-fill-tertiary/50 bg-background flex-1 font-mono uppercase focus:border-accent/40"
+        />
+      </div>
+    )
+  }
+
+  if (component.type === 'multiSelect') {
+    const selected = new Set(parseMultiSelectValue(value))
+    return (
+      <div className="border-fill-tertiary/50 bg-background divide-fill-tertiary/40 divide-y rounded-lg border">
+        {component.options.map(option => (
+          <label key={option} className="flex cursor-pointer items-center gap-3 px-3 py-2.5 text-sm">
+            <Checkbox
+              checked={selected.has(option)}
+              aria-label={option}
+              onCheckedChange={checked =>
+                onChange(field.key, updateMultiSelectValue(value, option, checked === true))}
+            />
+            <span>{formatOptionLabel(option)}</span>
+          </label>
+        ))}
+      </div>
+    )
+  }
+
   if (component.type === 'textarea') {
     const stringValue = typeof value === 'string' ? value : value == null ? '' : String(value)
     return (
       <Textarea
         value={stringValue}
-        onInput={(event) => onChange(field.key, event.currentTarget.value)}
+        onInput={event => onChange(field.key, event.currentTarget.value)}
         placeholder={component.placeholder ?? ''}
         rows={component.minRows ?? 3}
         className="border-fill-tertiary/50 bg-background focus:border-accent/40"
@@ -124,14 +173,14 @@ function FieldRenderer<Key extends string>({ field, value, onChange, renderSlot,
   if (component.type === 'select') {
     const stringValue = typeof value === 'string' ? value : value == null ? '' : String(value)
     return (
-      <Select value={stringValue} onValueChange={(nextValue) => onChange(field.key, nextValue)}>
+      <Select value={stringValue} onValueChange={nextValue => onChange(field.key, nextValue)}>
         <SelectTrigger className="border-fill-tertiary/50 bg-background focus:border-accent/40">
           <SelectValue placeholder={component.placeholder ?? t('schema-form.select.placeholder')} />
         </SelectTrigger>
         <SelectContent className="border-fill-tertiary bg-background">
-          {component.options?.map((option) => (
+          {component.options?.map(option => (
             <SelectItem key={option} value={option}>
-              {option}
+              {formatOptionLabel(option)}
             </SelectItem>
           ))}
         </SelectContent>
@@ -149,7 +198,7 @@ function FieldRenderer<Key extends string>({ field, value, onChange, renderSlot,
     const label = checked ? component.trueLabel : component.falseLabel
     return (
       <div className="flex items-center gap-2">
-        <Switch checked={checked} onCheckedChange={(next) => onChange(field.key, next)} />
+        <Switch checked={checked} onCheckedChange={next => onChange(field.key, next)} />
         {label ? <span className="text-text-secondary text-xs">{label}</span> : null}
       </div>
     )
@@ -162,12 +211,21 @@ function FieldRenderer<Key extends string>({ field, value, onChange, renderSlot,
     <Input
       type={inputType}
       value={stringValue}
-      onInput={(event) => onChange(field.key, event.currentTarget.value)}
+      onInput={event => onChange(field.key, event.currentTarget.value)}
       placeholder={component.placeholder ?? ''}
       autoComplete={component.autoComplete}
+      autoCapitalize={component.autoCapitalize}
+      autoCorrect={component.autoCorrect === undefined ? undefined : component.autoCorrect ? 'on' : 'off'}
       className="border-fill-tertiary/50 bg-background focus:border-accent/40"
     />
   )
+}
+
+function formatOptionLabel(option: string): string {
+  if (option === 'maplibre') {
+    return 'MapLibre'
+  }
+  return option.length === 0 ? option : `${option[0].toUpperCase()}${option.slice(1)}`
 }
 
 function renderGroup<Key extends string>(
@@ -179,7 +237,7 @@ function renderGroup<Key extends string>(
   renderSlot?: SlotRenderer<Key>,
 ) {
   const renderedChildren = node.children
-    .map((child) => renderNode(child, context, formState, handleChange, shouldRenderNode, renderSlot))
+    .map(child => renderNode(child, context, formState, handleChange, shouldRenderNode, renderSlot))
     .filter(Boolean)
 
   if (renderedChildren.length === 0) {
@@ -299,7 +357,7 @@ function renderNode<Key extends string>(
   }
 
   const renderedChildren = node.children
-    .map((child) => renderNode(child, context, formState, handleChange, shouldRenderNode, renderSlot))
+    .map(child => renderNode(child, context, formState, handleChange, shouldRenderNode, renderSlot))
     .filter(Boolean)
 
   if (renderedChildren.length === 0) {
@@ -368,7 +426,7 @@ export function SchemaFormRenderer<Key extends string>({
         }
 
         const renderedChildren = section.children
-          .map((child) => renderNode(child, context, values, onChange, shouldRenderNode, renderSlot))
+          .map(child => renderNode(child, context, values, onChange, shouldRenderNode, renderSlot))
           .filter(Boolean)
 
         if (renderedChildren.length === 0) {

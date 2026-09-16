@@ -65,6 +65,7 @@ export async function processThumbnailAndBlurhash(
     imageBuffer,
     photoId,
     options.isForceMode || options.isForceThumbnails,
+    !options.dryRun,
     limitInputPixels,
   )
 

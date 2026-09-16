@@ -2,12 +2,12 @@ import type {
   BillingPlanOverrides,
   BillingPlanPricingConfigs,
   BillingPlanProductConfigs,
-} from '@core/modules/platform/billing/billing-plan.types'
+} from '@core/modules/platform/billing/plan/billing-plan.types'
 import type {
   StoragePlanCatalog,
   StoragePlanPricingConfigs,
   StoragePlanProductConfigs,
-} from '@core/modules/platform/billing/storage-plan.types'
+} from '@core/modules/platform/billing/plan/storage-plan.types'
 import type { UiSchema } from '@core/modules/ui/ui-schema/ui-schema.type'
 
 import type { BuilderStorageProvider } from '../setting/storage-provider.utils'
@@ -31,6 +31,10 @@ export interface SystemSettings {
   oauthGoogleClientSecret: string | null
   oauthGithubClientId: string | null
   oauthGithubClientSecret: string | null
+  oauthAppleWebClientId: string | null
+  oauthAppleAppBundleId: string
+  oauthAppleTeamId: string | null
+  oauthAppleKeyId: string | null
   billingPlanOverrides: BillingPlanOverrides
   billingPlanProducts: BillingPlanProductConfigs
   billingPlanPricing: BillingPlanPricingConfigs
@@ -39,7 +43,6 @@ export interface SystemSettings {
   storagePlanPricing: StoragePlanPricingConfigs
   managedStorageProvider: string | null
   managedStorageProviders: BuilderStorageProvider[]
-  managedStorageSecureAccess: boolean
 }
 
 export type SystemSettingValueMap = {
@@ -57,13 +60,13 @@ export interface SystemSettingOverview {
   stats: SystemSettingStats
 }
 
-export type UpdateSystemSettingsInput = Partial<SystemSettings> &
-  Partial<Record<BillingPlanSettingField, string | number | boolean | null | undefined>>
+export type UpdateSystemSettingsInput = Partial<SystemSettings>
+  & Partial<Record<BillingPlanSettingField, string | number | boolean | null | undefined>>
 
 export { type SystemSettingField } from './system-setting.constants'
 
 declare module '@tsuki-hono/event-emitter' {
   interface Events {
-    'system.setting.updated': { key: SystemSettingKey; value: unknown }
+    'system.setting.updated': { key: SystemSettingKey, value: unknown }
   }
 }

@@ -1,5 +1,5 @@
 import type { PickedExif } from '@afilmory/builder'
-import { MobileTabGroup, MobileTabItem, SegmentGroup, SegmentItem } from '@afilmory/ui'
+import { ActionButton, MobileTabGroup, MobileTabItem, SegmentGroup, SegmentItem } from '@afilmory/ui'
 import { Spring } from '@afilmory/utils'
 import { useQuery } from '@tanstack/react-query'
 import clsx from 'clsx'
@@ -20,9 +20,11 @@ type Tab = 'info' | 'comments'
 export const InspectorPanel: FC<{
   currentPhoto: PhotoManifest
   exifData: PickedExif | null
+  activeRegionId?: string | null
   onClose?: () => void
   visible?: boolean
-}> = ({ currentPhoto, exifData, onClose, visible = true }) => {
+  onActiveRegionChange?: (regionId: string | null) => void
+}> = ({ currentPhoto, exifData, activeRegionId, onClose, visible = true, onActiveRegionChange }) => {
   const { t } = useTranslation()
   const isMobile = useMobile()
   const [activeTab, setActiveTab] = useState<Tab>('info')
@@ -146,14 +148,9 @@ export const InspectorPanel: FC<{
               )}
             </SegmentGroup>
             {onClose && (
-              <button
-                type="button"
-                className="bg-material-ultra-thick pointer-events-auto flex size-8 items-center justify-center rounded-full text-white backdrop-blur-2xl duration-200 hover:bg-black/40"
-                onClick={onClose}
-                aria-label="Collapse inspector panel"
-              >
+              <ActionButton onClick={onClose} aria-label="Collapse inspector panel">
                 <PanelRightClose className="size-4" />
-              </button>
+              </ActionButton>
             )}
           </div>
         )}
@@ -162,7 +159,12 @@ export const InspectorPanel: FC<{
       {/* Content area */}
       <div className="relative z-10 flex min-h-0 flex-1">
         {activeTab === 'info' ? (
-          <ExifPanelContent currentPhoto={currentPhoto} exifData={exifData} />
+          <ExifPanelContent
+            currentPhoto={currentPhoto}
+            exifData={exifData}
+            activeRegionId={activeRegionId}
+            onActiveRegionChange={onActiveRegionChange}
+          />
         ) : (
           <CommentsPanel photoId={currentPhoto.id} visible={visible} />
         )}

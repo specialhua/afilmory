@@ -1,11 +1,10 @@
-export type BetterAuthUserRole = 'guest' | 'user' | 'admin' | 'superadmin'
+export type BetterAuthUserRole = 'user' | 'superadmin'
 
 export interface BetterAuthUser {
   id: string
   email: string
   name: string | null
   image: string | null
-  tenantId: string | null
   role: BetterAuthUserRole
   creemCustomerId?: string | null
 }
@@ -15,9 +14,9 @@ export interface BetterAuthSession {
   expiresAt: string
   token: string
   userId: string
-  tenantId: string | null
+  activeTenantId: string | null
   createdAt: string
-  refreshedAt: string
+  updatedAt: string
 }
 
 export interface AuthState {

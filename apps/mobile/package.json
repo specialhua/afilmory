@@ -1,0 +1,14 @@
+{
+  "name": "@afilmory/mobile",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "ios": "pnpm ios:local",
+    "ios:local": "pnpm native:generate && xcodebuild -project Afilmory.xcodeproj -scheme 'Afilmory Local' -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build",
+    "ios:production": "pnpm native:generate && xcodebuild -project Afilmory.xcodeproj -scheme Afilmory -configuration Release -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build",
+    "ios:install": "bash scripts/install-simulator.sh",
+    "native:generate": "xcodegen generate --spec project.yml",
+    "native:memory-guard": "bash scripts/simulator-memory-guard.sh",
+    "native:test": "pnpm native:generate && xcodebuild test -project Afilmory.xcodeproj -scheme 'Afilmory Local' -destination 'platform=iOS Simulator,name=iPhone 17 Pro'"
+  }
+}

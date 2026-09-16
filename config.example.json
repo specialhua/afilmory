@@ -4,6 +4,12 @@
   "description": "Capturing beautiful moments in life, documenting daily warmth and emotions through my lens.",
   "url": "https://afilmory.innei.in/",
   "accentColor": "#007bff",
+  "viewer": {
+    "regions": {
+      "accentSource": "system",
+      "labelPlacement": "edge"
+    }
+  },
   "author": {
     "name": "Innei",
     "url": "https://innei.in/",
@@ -43,5 +49,8 @@
       "code": "xxxxxxxxxxxxxx",
       "icon": "https://example.com/beian.png"
     }
+  },
+  "telemetry": {
+    "vibeloft": false
   }
 }

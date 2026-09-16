@@ -1,0 +1,27 @@
+{
+  "name": "@afilmory/site",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "node ./scripts/check-env.mjs && astro build",
+    "dev": "astro dev --host 127.0.0.1 --port 4325",
+    "preview": "astro preview --host 127.0.0.1 --port 4325",
+    "type-check": "astro check && tsc --noEmit"
+  },
+  "dependencies": {
+    "@astrojs/react": "^6.0.4",
+    "astro": "^7.2.4",
+    "clsx": "2.1.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "tailwind-merge": "^3.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.1",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:"
+  }
+}

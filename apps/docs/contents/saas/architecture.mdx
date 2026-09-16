@@ -2,7 +2,7 @@
 title: SaaS Architecture
 description: Tenant model, domain routing, OAuth flow, and data injection paths.
 createdAt: 2025-11-23T20:20:00+08:00
-lastModified: 2025-11-30T14:03:05+08:00
+lastModified: 2026-08-06T20:44:28+08:00
 order: 36
 ---
 
@@ -17,7 +17,7 @@ order: 36
 ## Domains
 
 - **Base domain** (default `afilmory.art`, editable in System Settings): tenants available at `<slug>.<baseDomain>`.
-- **Custom domains**: tenant can request a domain; verification passes if CNAME points to `<baseDomain>` or TXT contains the issued token (handled by `TenantDomainService`).
+- **Custom domains**: Pro tenants can bind one branded hostname with managed HTTPS. `TenantDomainService` enforces the plan quota, registers the hostname through Cloudflare for SaaS, persists hostname and SSL provisioning states, and activates the domain only when both Cloudflare states are `active`.
 - **Placeholder tenant**: used when slug is missing to render onboarding instead of erroring.
 
 ## Tenant resolution (core)

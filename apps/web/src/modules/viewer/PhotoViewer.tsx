@@ -3,7 +3,7 @@ import './PhotoViewer.css'
 import 'swiper/css'
 import 'swiper/css/navigation'
 
-import { Thumbhash } from '@afilmory/ui'
+import { ActionButton, Thumbhash } from '@afilmory/ui'
 import { Spring } from '@afilmory/utils'
 import type { AnimationFrameRect, MobileViewerDismissSnapshot } from '@afilmory/viewer-motion'
 import {
@@ -17,14 +17,16 @@ import {
 } from '@afilmory/viewer-motion'
 import { PanelRightOpen } from 'lucide-react'
 import { AnimatePresence, m } from 'motion/react'
-import { Fragment, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Swiper as SwiperType } from 'swiper'
 import { Navigation, Virtual } from 'swiper/modules'
 import { Swiper, SwiperSlide } from 'swiper/react'
+import { useMediaQuery } from 'usehooks-ts'
 
-import { injectConfig } from '~/config'
+import { injectConfig, siteConfig } from '~/config'
 import { useMobile } from '~/hooks/useMobile'
+import { deriveAccentFromSources } from '~/lib/color'
 import type { LoadingIndicatorRef } from '~/modules/inspector/LoadingIndicator'
 import { LoadingIndicator } from '~/modules/inspector/LoadingIndicator'
 import { PhotoInspector } from '~/modules/inspector/PhotoInspector'
@@ -36,6 +38,7 @@ import { canUsePhotoReactions } from '../social/reaction-availability'
 import { resolvePhotoViewerEntryState, shouldHideCurrentViewerImage } from './entry-animation-state'
 import { GalleryThumbnail } from './GalleryThumbnail'
 import { MobilePhotoInspectorSheet } from './MobilePhotoInspectorSheet'
+import { getRenderablePhotoRegions } from './photo-region-bounds'
 import { ProgressiveImage } from './ProgressiveImage'
 
 interface PhotoViewerProps {
@@ -69,6 +72,7 @@ export const PhotoViewer = ({
 }: PhotoViewerProps) => {
   const { t } = useTranslation()
   const isMobile = useMobile()
+  const canHoverRegions = useMediaQuery('(hover: hover) and (pointer: fine)')
   const showPhotoReactions = canUsePhotoReactions(injectConfig)
   const swiperRef = useRef<SwiperType | null>(null)
   const [isImageZoomed, setIsImageZoomed] = useState(false)
@@ -77,8 +81,31 @@ export const PhotoViewer = ({
   const [currentBlobSrc, setCurrentBlobSrc] = useState<string | null>(null)
   const [dragDismissExitFrame, setDragDismissExitFrame] = useState<AnimationFrameRect | null>(null)
   const [entrySuppressedPhotoId] = useState(() => (disableEntryTransition ? (photos[currentIndex]?.id ?? null) : null))
+  const [regionAccentColor, setRegionAccentColor] = useState(siteConfig.accentColor)
 
   const currentPhoto = photos[currentIndex]
+  const [showAllRegions, setShowAllRegions] = useState(false)
+  const [activeRegionId, setActiveRegionId] = useState<string | null>(null)
+  const currentRegions = useMemo(
+    () =>
+      currentPhoto
+        ? getRenderablePhotoRegions(
+            currentPhoto.regions ?? [],
+            currentPhoto.width,
+            currentPhoto.height,
+            currentPhoto.exif?.Orientation,
+            currentPhoto.exif?.RegionInfo,
+          )
+        : [],
+    [currentPhoto],
+  )
+  const hasRegions = currentRegions.length > 0
+  const regionAccentSource = siteConfig.viewer?.regions?.accentSource ?? 'system'
+  const regionLabelPlacement = siteConfig.viewer?.regions?.labelPlacement ?? 'edge'
+
+  useEffect(() => {
+    setActiveRegionId(null)
+  }, [currentPhoto?.id])
   const {
     containerRef,
     entryTransition,
@@ -181,6 +208,37 @@ export const PhotoViewer = ({
   }, [isOpen])
 
   useEffect(() => {
+    if (regionAccentSource !== 'photo' || !currentPhoto) {
+      setRegionAccentColor(siteConfig.accentColor)
+      return
+    }
+
+    let isCancelled = false
+
+    ;(async () => {
+      try {
+        const color = await deriveAccentFromSources({
+          thumbHash: currentPhoto.thumbHash,
+          thumbnailUrl: currentPhoto.thumbnailUrl,
+        })
+
+        if (!isCancelled) {
+          setRegionAccentColor(color ?? siteConfig.accentColor)
+        }
+      }
+      catch {
+        if (!isCancelled) {
+          setRegionAccentColor(siteConfig.accentColor)
+        }
+      }
+    })()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [currentPhoto, regionAccentSource])
+
+  useEffect(() => {
     if (!isOpen) {
       setIsCurrentImageVisualReady(false)
       return
@@ -205,8 +263,13 @@ export const PhotoViewer = ({
       if (!dragDismissExitFrame) {
         resetMobileInteractions()
       }
+      setShowAllRegions(false)
     }
   }, [dragDismissExitFrame, isMobile, isOpen, resetMobileInteractions])
+
+  useEffect(() => {
+    setShowAllRegions(false)
+  }, [currentPhoto?.id])
 
   const handlePrevious = useCallback(() => {
     if (currentIndex > 0) {
@@ -403,56 +466,75 @@ export const PhotoViewer = ({
                       <div className="flex items-center gap-2">
                         {/* 信息按钮 - 在移动设备上显示 */}
                         {isMobile && (
-                          <button
-                            type="button"
+                          <ActionButton
                             disabled={!isMobileChromeInteractive}
-                            className={`bg-material-ultra-thick ${mobileChromeButtonClassName} flex size-8 items-center justify-center rounded-full text-white backdrop-blur-2xl duration-200 hover:bg-black/40 disabled:cursor-default ${isInspectorVisible ? 'bg-accent' : ''}`}
+                            className={mobileChromeButtonClassName}
+                            active={isInspectorVisible}
                             onClick={toggleInspector}
                           >
                             <i className="i-mingcute-information-line" />
-                          </button>
+                          </ActionButton>
                         )}
                       </div>
 
                       {/* 右侧按钮组 */}
                       <div className="flex items-center gap-2">
+                        {hasRegions && (
+                          <ActionButton
+                            disabled={!isMobileChromeInteractive}
+                            style={{ '--color-accent': regionAccentColor } as React.CSSProperties}
+                            className={mobileChromeButtonClassName}
+                            pill={!isMobile}
+                            active={showAllRegions}
+                            onClick={() => setShowAllRegions(visible => !visible)}
+                            title={showAllRegions ? t('photo.regions.hide') : t('photo.regions.show')}
+                            aria-label={showAllRegions ? t('photo.regions.hide') : t('photo.regions.show')}
+                            aria-pressed={showAllRegions}
+                          >
+                            <i className="i-mingcute-frame-line text-base" aria-hidden="true" />
+                            {!isMobile && (
+                              <span className="text-[11px] font-medium tabular-nums text-white/82">
+                                {currentRegions.length}
+                              </span>
+                            )}
+                          </ActionButton>
+                        )}
+
                         {/* 分享按钮 */}
                         <ShareModal
                           photo={currentPhoto}
                           blobSrc={currentBlobSrc || undefined}
                           trigger={(
-                            <button
-                              type="button"
+                            <ActionButton
                               disabled={!isMobileChromeInteractive}
-                              className={`bg-material-ultra-thick ${mobileChromeButtonClassName} flex size-8 items-center justify-center rounded-full text-white backdrop-blur-2xl duration-200 hover:bg-black/40 disabled:cursor-default`}
+                              className={mobileChromeButtonClassName}
                               title={t('photo.share.title')}
                             >
                               <i className="i-mingcute-share-2-line" />
-                            </button>
+                            </ActionButton>
                           )}
                         />
 
                         {/* 展开信息面板（桌面端在折叠时显示） */}
                         {!isMobile && !isInspectorVisible && (
-                          <button
-                            type="button"
-                            className="bg-material-ultra-thick pointer-events-auto flex size-8 items-center justify-center rounded-full text-white backdrop-blur-2xl duration-200 hover:bg-black/40"
+                          <ActionButton
+                            disabled={!isMobileChromeInteractive}
+                            className={mobileChromeButtonClassName}
                             onClick={() => setIsDesktopInspectorVisible(true)}
                             title={t('inspector.tab.info')}
                           >
                             <PanelRightOpen className="size-4" />
-                          </button>
+                          </ActionButton>
                         )}
 
                         {/* 关闭按钮 */}
-                        <button
-                          type="button"
+                        <ActionButton
                           disabled={!isMobileChromeInteractive}
-                          className={`bg-material-ultra-thick ${mobileChromeButtonClassName} flex size-8 items-center justify-center rounded-full text-white backdrop-blur-2xl duration-200 hover:bg-black/40 disabled:cursor-default`}
+                          className={mobileChromeButtonClassName}
                           onClick={handleCloseRequest}
                         >
                           <i className="i-mingcute-close-line" />
-                        </button>
+                        </ActionButton>
                       </div>
                     </m.div>
 
@@ -565,6 +647,20 @@ export const PhotoViewer = ({
                                           : { type: 'none' }
                                     }
                                     shouldAutoPlayVideoOnce={isCurrentImage}
+                                    regions={getRenderablePhotoRegions(
+                                      photo.regions,
+                                      photo.width,
+                                      photo.height,
+                                      photo.exif?.Orientation,
+                                      photo.exif?.RegionInfo,
+                                    )}
+                                    regionOrientation={photo.exif?.Orientation}
+                                    regionAccentColor={regionAccentColor}
+                                    regionLabelPlacement={regionLabelPlacement}
+                                    activeRegionId={isCurrentImage ? activeRegionId : null}
+                                    showAllRegions={isCurrentImage ? showAllRegions : false}
+                                    enableRegionHover={isCurrentImage && canHoverRegions}
+                                    onActiveRegionChange={isCurrentImage ? setActiveRegionId : undefined}
                                     isHDR={photo.isHDR}
                                   />
                                 </m.div>
@@ -593,23 +689,21 @@ export const PhotoViewer = ({
                       {!isMobile && (
                         <Fragment>
                           {currentIndex > 0 && (
-                            <button
-                              type="button"
-                              className="bg-material-medium absolute top-1/2 left-4 z-20 flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-white opacity-0 backdrop-blur-sm duration-200 group-hover/photo-viewer:opacity-100 hover:bg-black/40"
+                            <ActionButton
+                              className="absolute top-1/2 left-4 z-20 -translate-y-1/2 opacity-0 group-hover/photo-viewer:opacity-100"
                               onClick={handlePrevious}
                             >
                               <i className="i-mingcute-left-line text-xl" />
-                            </button>
+                            </ActionButton>
                           )}
 
                           {currentIndex < photos.length - 1 && (
-                            <button
-                              type="button"
-                              className="bg-material-medium absolute top-1/2 right-4 z-20 flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-white opacity-0 backdrop-blur-sm duration-200 group-hover/photo-viewer:opacity-100 hover:bg-black/40"
+                            <ActionButton
+                              className="absolute top-1/2 right-4 z-20 -translate-y-1/2 opacity-0 group-hover/photo-viewer:opacity-100"
                               onClick={handleNext}
                             >
                               <i className="i-mingcute-right-line text-xl" />
-                            </button>
+                            </ActionButton>
                           )}
                         </Fragment>
                       )}
@@ -640,18 +734,22 @@ export const PhotoViewer = ({
                     createPresentation={createInspectorSheetPresentation}
                     currentPhoto={currentPhoto}
                     exifData={currentPhoto.exif}
+                    activeRegionId={activeRegionId}
                     isInteractive={isMobileInspectorVisible}
                     progress={inspectorProgress}
                     resolveHeight={resolveInspectorSheetHeight}
                     onClose={closeInspector}
+                    onActiveRegionChange={setActiveRegionId}
                   />
                 ) : (
                   isInspectorVisible && (
                     <PhotoInspector
                       currentPhoto={currentPhoto}
                       exifData={currentPhoto.exif}
+                      activeRegionId={activeRegionId}
                       visible={isInspectorVisible && isViewerContentVisible}
                       onClose={() => setIsDesktopInspectorVisible(false)}
+                      onActiveRegionChange={setActiveRegionId}
                     />
                   )
                 )}

@@ -1,5 +1,6 @@
 import type { BuilderConfig, PhotoManifestItem, StorageConfig } from '@afilmory/builder'
 import type { PhotoAssetConflictPayload, PhotoAssetManifest } from '@afilmory/db'
+import type { PhotoChange } from '@core/modules/content/manifest-sync/manifest-sync.types'
 
 export enum ConflictResolutionStrategy {
   PREFER_STORAGE = 'prefer-storage',
@@ -37,6 +38,7 @@ export interface DataSyncAction {
   }
   manifestBefore?: PhotoManifestItem | null
   manifestAfter?: PhotoManifestItem | null
+  change?: PhotoChange | null
 }
 
 export interface DataSyncResultSummary {
@@ -114,48 +116,61 @@ export interface DataSyncLogPayload {
   details?: Record<string, unknown> | null
 }
 
-export type DataSyncProgressEvent =
-  | {
-      type: 'start'
-      payload: {
-        summary: DataSyncResultSummary
-        totals: DataSyncStageTotals
-        options: Pick<DataSyncOptions, 'dryRun'>
-      }
-    }
-  | {
-      type: 'stage'
-      payload: {
-        stage: DataSyncProgressStage
-        status: 'start' | 'complete'
-        processed: number
-        total: number
-        summary: DataSyncResultSummary
-      }
-    }
-  | {
-      type: 'action'
-      payload: {
-        stage: DataSyncProgressStage
-        index: number
-        total: number
-        action: DataSyncAction
-        summary: DataSyncResultSummary
-      }
-    }
-  | {
-      type: 'complete'
-      payload: DataSyncResult
-    }
-  | {
-      type: 'error'
-      payload: {
-        message: string
-      }
-    }
-  | {
-      type: 'log'
-      payload: DataSyncLogPayload
-    }
+export interface DataSyncStartEvent {
+  type: 'start'
+  payload: {
+    summary: DataSyncResultSummary
+    totals: DataSyncStageTotals
+    options: Pick<DataSyncOptions, 'dryRun'>
+  }
+}
+
+export interface DataSyncStageEvent {
+  type: 'stage'
+  payload: {
+    stage: DataSyncProgressStage
+    status: 'start' | 'complete'
+    processed: number
+    total: number
+    summary: DataSyncResultSummary
+  }
+}
+
+export interface DataSyncActionEvent {
+  type: 'action'
+  payload: {
+    stage: DataSyncProgressStage
+    index: number
+    total: number
+    action: DataSyncAction
+    change?: PhotoChange | null
+    summary: DataSyncResultSummary
+  }
+}
+
+export interface DataSyncCompleteEvent {
+  type: 'complete'
+  payload: DataSyncResult
+}
+
+export interface DataSyncErrorEvent {
+  type: 'error'
+  payload: {
+    message: string
+  }
+}
+
+export interface DataSyncLogEvent {
+  type: 'log'
+  payload: DataSyncLogPayload
+}
+
+export type DataSyncProgressEvent
+  = | DataSyncStartEvent
+    | DataSyncStageEvent
+    | DataSyncActionEvent
+    | DataSyncCompleteEvent
+    | DataSyncErrorEvent
+    | DataSyncLogEvent
 
 export type DataSyncProgressEmitter = (event: DataSyncProgressEvent) => Promise<void> | void

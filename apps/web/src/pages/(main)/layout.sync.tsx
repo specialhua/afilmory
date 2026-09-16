@@ -225,7 +225,7 @@ const useSyncGallerySettingsWithUrl = () => {
  * Sync viewer state with URL.
  * URL is the source of truth:
  * - /photos/:photoId -> viewer is open
- * - / or /explory -> viewer is closed
+ * - / or /map -> viewer is closed
  *
  * This handles browser back/forward by reacting to location changes.
  */

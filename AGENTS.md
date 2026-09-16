@@ -63,7 +63,7 @@ The project is divided into four main applications:
 
 1.  **`apps/web` - Standalone Frontend SPA**
     *   **Description**: A pure client-side application built with React, Vite, and TypeScript. It can be deployed independently as a static website and is fully functional on its own.
-    *   **UI/Design**: Features a modern, interactive, and user-centric UI. It utilizes a "Glassmorphic Depth Design System" for components like modals, toasts, and floating panels, creating a sense of visual hierarchy through layered transparency and subtle color accents. The design is geared towards a rich end-user experience for photo browsing and visualization.
+    *   **UI/Design**: Dark-only, content-first gallery UI built on Apple's platform language — UIKit semantic colour tokens, translucent `bg-material-*` surfaces over backdrop blur, and SwiftUI-style spring motion. Depth comes from stacked translucency rather than drop shadows, and the accent colour is derived from the photo being viewed. **`DESIGN.md` at the repo root is the normative spec**; read it before non-trivial UI work.
     *   **Server Integration**: It can operate in two modes:
         *   **Standalone**: Functions without a server, using a pre-built `photos-manifest.json` file.
         *   **Server-Connected**: When a global variable like `window.__MANIFEST__` is detected, it unlocks enhanced features. This injection is handled by either `apps/ssr` (from a static file) or `be/apps/core` (from the database).
@@ -216,10 +216,10 @@ class PhotoLoader {
 
 ## Design System
 
-This project contains multiple web applications with distinct design systems. For specific UI and design guidelines, please refer to the `AGENTS.md` file within each application's directory:
+This project contains multiple web applications with distinct design systems.
 
-- **`apps/web`**: Contains the "Glassmorphic Depth Design System" for the main user-facing photo gallery. See `apps/web/AGENTS.md` for details.
-- **`be/apps/dashboard`**: Contains guidelines for the functional, data-driven UI of the administration panel (linear, data-first aesthetic). See `be/apps/dashboard/AGENTS.md` for details.
+- **`apps/web` + `packages/ui`**: The user-facing photo gallery. **`DESIGN.md` at the repo root is the normative spec** — dark-only, UIKit semantic colour tokens, `bg-material-*` surfaces over role-matched backdrop blur, spring motion, and a fixed z-index tier table. It also lists the files that violate the system and must not be copied (§13). `apps/web/AGENTS.md` is a short pointer to it. The `afilmory-web-design` skill carries the same rules in lookup-table form.
+- **`be/apps/dashboard`**: Guidelines for the functional, data-driven UI of the administration panel (linear, data-first aesthetic). See `be/apps/dashboard/AGENTS.md` for details.
 
 ## IMPORTANT
 

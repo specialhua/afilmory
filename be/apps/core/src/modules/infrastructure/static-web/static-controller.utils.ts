@@ -40,11 +40,10 @@ export const StaticControllerUtils = {
       return isTenantSlugReserved(candidate)
     }
 
-    if (!tenantSlug) {
-      return false
-    }
-
-    return isTenantSlugReserved(tenantSlug)
+    // Reserved slugs are a public-registration and auto-provisioning boundary.
+    // An active tenant with one of these slugs can only have been provisioned
+    // through a trusted administrative path, so it remains routable.
+    return false
   },
 
   shouldRenderTenantRestrictedPage(): boolean {

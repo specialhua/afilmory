@@ -4,6 +4,7 @@ export const SUPPORTED_FORMATS = new Set([
   '.jpeg',
   '.png',
   '.webp',
+  '.avif',
   '.bmp',
   '.tiff',
   '.heic',

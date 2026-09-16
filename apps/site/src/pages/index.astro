@@ -1,0 +1,13 @@
+---
+import Base from '../layouts/Base.astro'
+import { LandingApp } from '../components/LandingApp'
+import { resolveLocale, t } from '../i18n'
+
+const param = Astro.url.searchParams.get('lang')
+const locale = resolveLocale(param)
+const copy = t(locale)
+---
+
+<Base title={copy.meta.title} description={copy.meta.description} lang={locale === 'zh' ? 'zh-CN' : 'en'}>
+  <LandingApp client:load initialLocale={locale} />
+</Base>

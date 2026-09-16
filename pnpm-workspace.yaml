@@ -11,12 +11,23 @@ minimumReleaseAge: 0
 overrides:
   motion: 12.38.0
   motion-dom: 12.38.0
-  'hono@<4.12.21': ^4.12.21
-  'shell-quote@<1.8.4': ^1.8.4
+  'hono@<4.12.34': ^4.12.34
+  'shell-quote@<1.9.0': ^1.9.0
   'qs@<6.15.2': ^6.15.2
   'serialize-javascript@<7.0.5': ^7.0.5
   'react-use>js-cookie': ^3.0.7
-  'next>postcss': ^8.5.10
+  'next>postcss': ^8.5.23
+  'postcss@<8.5.23': ^8.5.23
+  'brace-expansion@<1.1.16': ^1.1.16
+  'brace-expansion@>=2.0.0 <2.1.4': ^2.1.4
+  'brace-expansion@>=3.0.0 <5.0.7': ^5.0.7
+  'sharp@<0.35.0': ^0.35.0
+  'fast-uri@<3.1.5': ^3.1.5
+  'ip-address@<10.3.1': ^10.3.1
+  'js-yaml@>=4.0.0 <4.3.1': ^4.3.1
+  'body-parser@>=2.0.0 <2.3.0': ^2.3.0
+  '@hono/node-server@<1.19.15': ^1.19.15
+  'valibot@<=1.4.1': ^1.4.2
   'esbuild@<0.28.1': ^0.28.1
   'vite@<8.0.16': ^8.0.16
   '@babel/core@<7.29.6': ^7.29.6
@@ -47,3 +58,9 @@ allowBuilds:
   libpq: false
   sharp: true
   simple-git-hooks: true
+
+packageExtensions:
+  'swiper@12.2.0':
+    peerDependencies:
+      react: '*'
+      react-dom: '*'

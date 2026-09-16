@@ -1,4 +1,4 @@
-import { clsxm, Spring } from '@afilmory/utils'
+import { clsxm } from '@afilmory/utils'
 import { useAtomValue } from 'jotai'
 import { AnimatePresence } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
@@ -16,7 +16,7 @@ export function ModalContainer() {
   return (
     <div id="global-modal-container">
       <AnimatePresence initial={false}>
-        {items.map((item) => (
+        {items.map(item => (
           <ModalWrapper key={item.id} item={item} />
         ))}
       </AnimatePresence>
@@ -51,7 +51,7 @@ function ModalWrapper({ item }: { item: ModalItem }) {
       const items = modalStore.get(modalItemsAtom)
       modalStore.set(
         modalItemsAtom,
-        items.filter((m) => m.id !== item.id),
+        items.filter(m => m.id !== item.id),
       )
     }
   })
@@ -71,7 +71,6 @@ function ModalWrapper({ item }: { item: ModalItem }) {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className={clsxm('w-full max-w-md', contentClassName)}
-        transition={Spring.presets.smooth}
         onAnimationComplete={handleAnimationComplete}
         dismissOnOutsideClick={item.dismissOnOutsideClick ?? dismissOnOutsideClick}
         {...restContentConfig}

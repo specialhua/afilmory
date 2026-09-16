@@ -15,7 +15,7 @@ export interface SocialAuthButtonsProps {
   layout?: 'grid' | 'row'
 }
 
-export const SocialAuthButtons = memo(function SocialAuthButtons({
+export const SocialAuthButtons = memo(({
   className,
   title = 'Or continue with',
   requestSignUp = false,
@@ -24,7 +24,7 @@ export const SocialAuthButtons = memo(function SocialAuthButtons({
   newUserCallbackURL,
   disableRedirect,
   layout = 'grid',
-}: SocialAuthButtonsProps) {
+}: SocialAuthButtonsProps) => {
   const { data, isLoading } = useSocialProviders()
 
   const providers = data?.providers ?? []
@@ -48,7 +48,8 @@ export const SocialAuthButtons = memo(function SocialAuthButtons({
           newUserCallbackURL,
           disableRedirect,
         })
-      } catch (error) {
+      }
+      catch (error) {
         console.error('Failed to initiate social sign-in', error)
       }
     },
@@ -65,16 +66,15 @@ export const SocialAuthButtons = memo(function SocialAuthButtons({
 
   const containerClass = layout === 'row' ? 'flex flex-wrap gap-3' : 'grid gap-2 sm:grid-cols-2'
 
-  const providerIconColors: Record<string, string> = {
-    github: 'text-[#181717] dark:text-white',
-    google: 'text-[#4285F4]',
+  const providerIconBackgrounds: Record<string, string> = {
+    github: 'bg-white',
   }
 
   return (
     <div className={cx('space-y-3', className)}>
       {title ? <p className="text-text-tertiary text-xs tracking-wide uppercase">{title}</p> : null}
       <div className={containerClass}>
-        {providers.map((provider) => (
+        {providers.map(provider => (
           <button
             key={provider.id}
             type="button"
@@ -87,12 +87,13 @@ export const SocialAuthButtons = memo(function SocialAuthButtons({
               'active:scale-95',
               'focus:outline-none focus:ring-2 focus:ring-accent/40',
               'disabled:opacity-50 disabled:cursor-not-allowed',
+              providerIconBackgrounds[provider.id],
             )}
             onClick={() => handleSocialClick(provider.id)}
             title={`Continue with ${provider.name}`}
             aria-label={`Continue with ${provider.name}`}
           >
-            <i className={cx('text-xl', provider.icon, providerIconColors[provider.id] || 'text-text')} aria-hidden />
+            <i className={cx('text-xl', provider.icon)} aria-hidden />
           </button>
         ))}
       </div>

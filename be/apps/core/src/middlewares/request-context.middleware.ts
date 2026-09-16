@@ -1,4 +1,6 @@
 import { logger } from '@core/helpers/logger.helper'
+import type { ActivitySurface } from '@core/modules/platform/activity/activity.service'
+import { ActivityService } from '@core/modules/platform/activity/activity.service'
 import type { AuthSession } from '@core/modules/platform/auth/auth.provider'
 import { AuthProvider } from '@core/modules/platform/auth/auth.provider'
 import { getTenantContext } from '@core/modules/platform/tenant/tenant.context'
@@ -18,6 +20,7 @@ export class RequestContextMiddleware implements HttpMiddleware {
   constructor(
     private readonly tenantContextResolver: TenantContextResolver,
     private readonly authProvider: AuthProvider,
+    private readonly activityService: ActivityService,
   ) {}
 
   async use(context: Context, next: Next): Promise<Response | void> {
@@ -55,7 +58,8 @@ export class RequestContextMiddleware implements HttpMiddleware {
       if (tenantContext) {
         HttpContext.setValue('tenant', tenantContext)
       }
-    } catch (error) {
+    }
+    catch (error) {
       this.log.error(`Failed to resolve tenant context for ${context.req.method} ${context.req.path}`, error)
     }
   }
@@ -72,6 +76,30 @@ export class RequestContextMiddleware implements HttpMiddleware {
         session: authSession.session,
       },
     })
+
+    try {
+      const session = authSession.session as typeof authSession.session & { activeTenantId?: string | null }
+      await this.activityService.touch({
+        userId: authSession.user.id,
+        tenantId: session.activeTenantId ?? getTenantContext()?.tenant.id ?? null,
+        sessionId: session.id,
+        surface: this.resolveActivitySurface(context),
+        appVersion: context.req.header('x-afilmory-app-version') ?? null,
+      })
+    }
+    catch (error) {
+      this.log.error('Failed to record authenticated activity', error)
+    }
+  }
+
+  private resolveActivitySurface(context: Context): ActivitySurface {
+    const explicit = context.req.header('x-afilmory-surface')
+    if (explicit === 'mobile' || explicit === 'dashboard' || explicit === 'web') {
+      return explicit
+    }
+    return context.req.path.startsWith('/api/super-admin') || context.req.path.startsWith('/super-admin')
+      ? 'dashboard'
+      : 'web'
   }
 
   private async resolveAuthSession(context: Context): Promise<AuthSession | null> {
@@ -84,12 +112,14 @@ export class RequestContextMiddleware implements HttpMiddleware {
         this.log.verbose(
           `Session detected for user ${(authSession.user as { id?: string }).id ?? 'unknown'} on ${context.req.method} ${context.req.path}`,
         )
-      } else {
+      }
+      else {
         this.log.verbose(`No active session for ${context.req.method} ${context.req.path}`)
       }
 
       return authSession
-    } catch (error) {
+    }
+    catch (error) {
       this.log.error('Failed to resolve auth session from middleware', error)
       return null
     }

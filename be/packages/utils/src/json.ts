@@ -31,7 +31,7 @@ function normalizeValue(value: unknown): unknown {
       return null
     }
     case VALUE_TYPE_ARRAY: {
-      return (value as unknown[]).map((item) => normalizeValue(item))
+      return (value as unknown[]).map(item => normalizeValue(item))
     }
     case VALUE_TYPE_OBJECT: {
       if (!isPlainObject(value)) {
@@ -57,8 +57,4 @@ function normalizeValue(value: unknown): unknown {
 export function stableSerialize(value: unknown, space?: number): string {
   const normalized = normalizeValue(value)
   return JSON.stringify(normalized, null, space)
-}
-
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return isPlainObject(value)
 }

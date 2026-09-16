@@ -1,16 +1,23 @@
-import { Button, Label, Modal, Switch } from '@afilmory/ui'
+import { Button, Label, Modal } from '@afilmory/ui'
 import { nanoid } from 'nanoid'
-import { useEffect, useMemo, useState } from 'react'
+import type { ChangeEventHandler } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 import { LinearBorderPanel } from '~/components/common/LinearBorderPanel'
+import { getRequestErrorMessage } from '~/lib/errors'
 import type { StorageProvider } from '~/modules/storage-providers'
 import { useStorageProviderSchemaQuery } from '~/modules/storage-providers'
 import { ProviderEditModal } from '~/modules/storage-providers/components/ProviderEditModal'
 import { storageProvidersI18nKeys } from '~/modules/storage-providers/constants'
 import { createEmptyProvider, normalizeStorageProviderConfig } from '~/modules/storage-providers/utils'
 
-import { useSuperAdminSettingsQuery, useUpdateSuperAdminSettingsMutation } from '../hooks'
+import {
+  useManagedStorageProbeMutation,
+  useSuperAdminSettingsQuery,
+  useUpdateSuperAdminSettingsMutation,
+} from '../hooks'
 import type { UpdateSuperAdminSettingsPayload } from '../types'
 
 function coerceManagedProviders(input: unknown): StorageProvider[] {
@@ -47,16 +54,19 @@ export function ManagedStorageSettings() {
   const schemaQuery = useStorageProviderSchemaQuery()
   const settingsQuery = useSuperAdminSettingsQuery()
   const updateSettings = useUpdateSuperAdminSettingsMutation()
+  const testUpload = useManagedStorageProbeMutation()
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const providerUnderTestRef = useRef<StorageProvider | null>(null)
 
   const [providers, setProviders] = useState<StorageProvider[]>([])
   const [baselineProviders, setBaselineProviders] = useState<StorageProvider[]>([])
   const [managedId, setManagedId] = useState<string | null>(null)
-  const [managedSecureAccessEnabled, setManagedSecureAccessEnabled] = useState(false)
-  const [baselineManagedSecureAccessEnabled, setBaselineManagedSecureAccessEnabled] = useState(false)
 
   const settingsSource = useMemo(() => {
     const payload = settingsQuery.data
-    if (!payload) return null
+    if (!payload) {
+      return null
+    }
     return 'values' in payload ? payload.values : payload.settings
   }, [settingsQuery.data])
 
@@ -75,17 +85,13 @@ export function ManagedStorageSettings() {
     setBaselineProviders(nextProviders)
     const fallbackId = baselineManagedId ?? normalizeProviderId(nextProviders[0]?.id) ?? null
     setManagedId(fallbackId)
-    const secureAccessFlag =
-      typeof settingsSource.managedStorageSecureAccess === 'boolean' ? settingsSource.managedStorageSecureAccess : false
-    setManagedSecureAccessEnabled(secureAccessFlag)
-    setBaselineManagedSecureAccessEnabled(secureAccessFlag)
   }, [settingsSource, baselineManagedId])
 
   useEffect(() => {
     if (!managedId) {
       return
     }
-    const exists = providers.some((provider) => normalizeProviderId(provider.id) === managedId)
+    const exists = providers.some(provider => normalizeProviderId(provider.id) === managedId)
     if (!exists) {
       setManagedId(null)
     }
@@ -97,12 +103,13 @@ export function ManagedStorageSettings() {
   )
   const normalizedManagedId = normalizeProviderId(managedId)
   const managedChanged = normalizedManagedId !== baselineManagedId
-  const secureAccessChanged = managedSecureAccessEnabled !== baselineManagedSecureAccessEnabled
-  const canSave = (providersChanged || managedChanged || secureAccessChanged) && !updateSettings.isPending
+  const canSave = (providersChanged || managedChanged) && !updateSettings.isPending
 
   const handleEdit = (provider: StorageProvider | null) => {
     const providerForm = schemaQuery.data
-    if (!providerForm) return
+    if (!providerForm) {
+      return
+    }
 
     const seed = provider ?? createEmptyProvider(providerForm.types[0]?.value ?? 's3')
     Modal.present(
@@ -115,13 +122,13 @@ export function ManagedStorageSettings() {
           const normalized = normalizeStorageProviderConfig(next)
           const providerWithId: StorageProvider = { ...normalized, id: ensureLocalProviderId(normalized.id) }
           setProviders((prev) => {
-            const exists = prev.some((item) => item.id === providerWithId.id)
+            const exists = prev.some(item => item.id === providerWithId.id)
             if (exists) {
-              return prev.map((item) => (item.id === providerWithId.id ? providerWithId : item))
+              return prev.map(item => (item.id === providerWithId.id ? providerWithId : item))
             }
             return [...prev, providerWithId]
           })
-          setManagedId((prev) => prev ?? providerWithId.id)
+          setManagedId(prev => prev ?? providerWithId.id)
         },
         onSetActive: () => {},
       },
@@ -130,7 +137,7 @@ export function ManagedStorageSettings() {
   }
 
   const handleSave = () => {
-    if (!providersChanged && !managedChanged && !secureAccessChanged) {
+    if (!providersChanged && !managedChanged) {
       return
     }
 
@@ -141,10 +148,56 @@ export function ManagedStorageSettings() {
     if (managedChanged) {
       payload.managedStorageProvider = normalizedManagedId
     }
-    if (secureAccessChanged) {
-      payload.managedStorageSecureAccess = managedSecureAccessEnabled
-    }
     updateSettings.mutate(payload)
+  }
+
+  const handleTestUpload = (provider: StorageProvider) => {
+    providerUnderTestRef.current = provider
+    fileInputRef.current?.click()
+  }
+
+  const handleTestFileChange: ChangeEventHandler<HTMLInputElement> = (event) => {
+    const file = event.currentTarget.files?.[0]
+    const provider = providerUnderTestRef.current
+    providerUnderTestRef.current = null
+    event.currentTarget.value = ''
+
+    if (!file || !provider) {
+      return
+    }
+
+    testUpload.mutate(
+      { provider, file },
+      {
+        onSuccess: (result) => {
+          const duration = result.uploadDurationMs + result.readDurationMs
+          if (result.cleanupSucceeded) {
+            toast.success(
+              t('superadmin.settings.managed-storage.test-upload.success', {
+                duration,
+                file: result.fileName,
+                size: result.size,
+              }),
+            )
+            return
+          }
+
+          toast.warning(
+            t('superadmin.settings.managed-storage.test-upload.cleanup-failed', {
+              key: result.objectKey,
+              reason: result.cleanupError ?? t('common.unknown-error'),
+            }),
+          )
+        },
+        onError: (error) => {
+          toast.error(
+            t('superadmin.settings.managed-storage.test-upload.error', {
+              reason: getRequestErrorMessage(error, t('errors.request.generic')),
+            }),
+          )
+        },
+      },
+    )
   }
 
   if (schemaQuery.isLoading || settingsQuery.isLoading) {
@@ -152,7 +205,7 @@ export function ManagedStorageSettings() {
       <LinearBorderPanel className="space-y-3 p-6">
         <div className="bg-fill/30 h-6 w-32 animate-pulse rounded" />
         <div className="space-y-2">
-          {[1, 2, 3].map((i) => (
+          {[1, 2, 3].map(i => (
             <div key={i} className="bg-fill/20 h-16 animate-pulse rounded-lg" />
           ))}
         </div>
@@ -167,9 +220,9 @@ export function ManagedStorageSettings() {
         <p className="text-red text-sm">
           {t('superadmin.settings.managed-storage.error', {
             reason:
-              (settingsQuery.error as Error | undefined)?.message ||
-              (schemaQuery.error as Error | undefined)?.message ||
-              t('common.unknown-error'),
+              (settingsQuery.error as Error | undefined)?.message
+              || (schemaQuery.error as Error | undefined)?.message
+              || t('common.unknown-error'),
           })}
         </p>
       </LinearBorderPanel>
@@ -178,6 +231,7 @@ export function ManagedStorageSettings() {
 
   return (
     <LinearBorderPanel className="space-y-4 p-6">
+      <input ref={fileInputRef} type="file" className="hidden" onChange={handleTestFileChange} />
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-text text-lg font-semibold">{t('superadmin.settings.managed-storage.title')}</h2>
@@ -192,7 +246,7 @@ export function ManagedStorageSettings() {
         <p className="text-text-secondary text-sm mt-4">{t('superadmin.settings.managed-storage.empty')}</p>
       ) : (
         <div className="space-y-3 mt-4">
-          {providers.map((provider) => (
+          {providers.map(provider => (
             <div
               key={provider.id}
               className={[
@@ -215,6 +269,16 @@ export function ManagedStorageSettings() {
               </div>
 
               <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  disabled={testUpload.isPending}
+                  isLoading={testUpload.isPending && testUpload.variables?.provider.id === provider.id}
+                  onClick={() => handleTestUpload(provider)}
+                >
+                  {testUpload.isPending && testUpload.variables?.provider.id === provider.id
+                    ? t('superadmin.settings.managed-storage.actions.testing-upload')
+                    : t('superadmin.settings.managed-storage.actions.test-upload')}
+                </Button>
                 <Button variant="ghost" onClick={() => handleEdit(provider)}>
                   {t('superadmin.settings.managed-storage.actions.edit')}
                 </Button>
@@ -231,27 +295,6 @@ export function ManagedStorageSettings() {
           ))}
         </div>
       )}
-
-      <div className="border-fill/60 bg-fill/5 mt-6 rounded-lg border p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="space-y-1">
-            <p className="text-text text-sm font-semibold">
-              {t('superadmin.settings.managed-storage.secure-access.title')}
-            </p>
-            <p className="text-text-secondary text-xs">
-              {t('superadmin.settings.managed-storage.secure-access.description')}
-            </p>
-          </div>
-          <Switch
-            checked={managedSecureAccessEnabled}
-            onCheckedChange={(next) => setManagedSecureAccessEnabled(next)}
-            disabled={updateSettings.isPending}
-          />
-        </div>
-        <p className="text-text-tertiary text-[11px] mt-2">
-          {t('superadmin.settings.managed-storage.secure-access.helper')}
-        </p>
-      </div>
 
       <div className="flex items-center justify-end gap-3 my-4">
         <Button variant="secondary" disabled={!canSave} isLoading={updateSettings.isPending} onClick={handleSave}>

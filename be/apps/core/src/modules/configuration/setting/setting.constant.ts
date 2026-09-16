@@ -38,7 +38,8 @@ function createJsonStringArraySchema(options: {
         return z.NEVER
       }
       return JSON.stringify(parsed)
-    } catch {
+    }
+    catch {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: options.errorMessage,
@@ -70,15 +71,7 @@ export const DEFAULT_SETTING_DEFINITIONS = {
   },
   'builder.storage.activeProvider': {
     isSensitive: false,
-    schema: z.string().transform((value) => value.trim()),
-  },
-  'photo.storage.secureAccess': {
-    isSensitive: false,
-    schema: z
-      .string()
-      .trim()
-      .transform((value) => (value.length === 0 ? 'false' : value.toLowerCase()))
-      .pipe(z.enum(['true', 'false'])),
+    schema: z.string().transform(value => value.trim()),
   },
   [BUILDER_SYSTEM_CONFIG_SETTING_KEY]: {
     isSensitive: false,
@@ -124,6 +117,22 @@ export const DEFAULT_SETTING_DEFINITIONS = {
             message: 'Accent color must be a valid hex color',
           })
         }
+      }),
+  },
+  'site.viewer.regions.labelPlacement': {
+    isSensitive: false,
+    schema: z
+      .string()
+      .trim()
+      .superRefine((value, ctx) => {
+        if (value.length === 0 || value === 'edge' || value === 'floating') {
+          return
+        }
+
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Region label placement must be either edge or floating',
+        })
       }),
   },
   'site.social.twitter': {

@@ -1,4 +1,5 @@
 export interface BillingPlanQuota {
+  customDomainLimit: number | null
   monthlyAssetProcessLimit: number | null
   libraryItemLimit: number | null
   maxUploadSizeMb: number | null
@@ -15,6 +16,7 @@ export interface BillingPlanSummary {
     currency: string | null
   }
   payment?: {
+    appStoreProductId?: string | null
     creemProductId?: string | null
   }
 }

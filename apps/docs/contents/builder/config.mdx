@@ -1,8 +1,8 @@
 ---
 title: Configuration
-description: How to declare storage, system defaults, and plugins in builder.config.ts.
+description: How to declare storage, system defaults, XMP toggles, and plugins in builder.config.ts.
 createdAt: 2025-11-23T19:00:00+08:00
-lastModified: 2025-11-23T19:40:52+08:00
+lastModified: 2026-08-13T23:55:00+08:00
 order: 3
 ---
 
@@ -27,6 +27,10 @@ export default defineBuilderConfig(() => ({
       defaultConcurrency: 10,
       enableLivePhotoDetection: true,
       digestSuffixLength: 0,
+      xmp: {
+        keywords: true,
+        regions: true,
+      },
     },
     observability: {
       showProgress: true,
@@ -57,10 +61,39 @@ export default defineBuilderConfig(() => ({
 ## System settings
 
 - **processing**: `defaultConcurrency`, `enableLivePhotoDetection`, `digestSuffixLength`, optional `supportedFormats` (Set).
+- **processing.xmp**:
+  - `keywords`: enable or disable XMP keyword extraction.
+  - `regions`: enable or disable XMP region extraction.
+  - Both default to `true`.
 - **observability**:
   - `showProgress`, `showDetailedStats`.
   - `logging`: `verbose`, `level` (`info | warn | error | debug`), `outputToFile`, optional `logFilePath`.
   - `performance.worker`: `workerCount`, `workerConcurrency`, `timeout`, `useClusterMode`.
+
+## XMP extraction control
+
+XMP keyword and region extraction is controlled through `system.processing.xmp`, not through the `plugins` array.
+
+Example:
+
+```typescript
+export default defineBuilderConfig(() => ({
+  system: {
+    processing: {
+      xmp: {
+        keywords: true,
+        regions: false,
+      },
+    },
+  },
+}))
+```
+
+Behavior:
+
+- `keywords: false`: do not write `keywords[]` and do not merge XMP keywords into `tags[]`.
+- `regions: false`: do not write `regions[]` into manifest items.
+- The web viewer is data-driven, so disabling `regions` also removes region overlays from the UI.
 
 ## Plugins array
 

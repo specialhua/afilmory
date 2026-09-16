@@ -1,6 +1,6 @@
 'use client'
 
-import { clsxm } from '@afilmory/utils'
+import { clsxm, Spring } from '@afilmory/utils'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import type { HTMLMotionProps, Transition } from 'motion/react'
 import { AnimatePresence, m as motion } from 'motion/react'
@@ -26,7 +26,9 @@ function Dialog({ children, ...props }: DialogProps) {
   const [isOpen, setIsOpen] = React.useState(props?.open ?? props?.defaultOpen ?? false)
 
   React.useEffect(() => {
-    if (props?.open !== undefined) setIsOpen(props.open)
+    if (props?.open !== undefined) {
+      setIsOpen(props.open)
+    }
   }, [props?.open])
 
   const handleOpenChange = React.useCallback(
@@ -79,38 +81,24 @@ function DialogOverlay({ className, ...props }: DialogOverlayProps) {
   )
 }
 
-type FlipDirection = 'top' | 'bottom' | 'left' | 'right'
-
-export type DialogContentProps = React.ComponentProps<typeof DialogPrimitive.Content> &
-  HTMLMotionProps<'div'> & {
-    from?: FlipDirection
+export type DialogContentProps = React.ComponentProps<typeof DialogPrimitive.Content>
+  & HTMLMotionProps<'div'> & {
     transition?: Transition
-    /**
-     * Whether the dialog can be dismissed by clicking outside (on the overlay).
-     * Defaults to `true`.
-     */
     dismissOnOutsideClick?: boolean
   }
 
-const contentTransition: Transition = {
-  type: 'spring',
-  stiffness: 150,
-  damping: 25,
-}
+const overlayTransition: Transition = { duration: 0.18, ease: 'easeOut' }
+const focusTransition = Spring.smooth(0.32)
+
 function DialogContent({
   className,
   children,
-  from = 'top',
-  transition = contentTransition,
+  transition = focusTransition,
   dismissOnOutsideClick = true,
   onInteractOutside,
   ...props
 }: DialogContentProps) {
   const { isOpen } = useDialog()
-
-  const initialRotation = from === 'top' || from === 'left' ? '20deg' : '-20deg'
-  const isVertical = from === 'top' || from === 'bottom'
-  const rotateAxis = isVertical ? 'rotateX' : 'rotateY'
 
   return (
     <AnimatePresence>
@@ -119,10 +107,10 @@ function DialogContent({
           <DialogOverlay asChild forceMount>
             <motion.div
               key="dialog-overlay"
-              initial={{ opacity: 0, filter: 'blur(4px)' }}
-              animate={{ opacity: 1, filter: 'blur(0px)' }}
-              exit={{ opacity: 0, filter: 'blur(4px)' }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={overlayTransition}
             />
           </DialogOverlay>
           <DialogPrimitive.Content
@@ -139,21 +127,9 @@ function DialogContent({
             <motion.div
               key="dialog-content"
               data-slot="dialog-content"
-              initial={{
-                opacity: 0,
-                filter: 'blur(4px)',
-                transform: `perspective(500px) ${rotateAxis}(${initialRotation}) scale(0.8)`,
-              }}
-              animate={{
-                opacity: 1,
-                filter: 'blur(0px)',
-                transform: `perspective(500px) ${rotateAxis}(0deg) scale(1)`,
-              }}
-              exit={{
-                opacity: 0,
-                filter: 'blur(4px)',
-                transform: `perspective(500px) ${rotateAxis}(${initialRotation}) scale(0.8)`,
-              }}
+              initial={{ opacity: 0, scale: 1.04, filter: 'blur(8px)' }}
+              animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, scale: 0.98, filter: 'blur(6px)' }}
               transition={transition}
               className={clsxm(
                 'fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-background px-3 pt-4 pb-3 rounded-lg shape-squircle',

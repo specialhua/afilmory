@@ -1,3 +1,5 @@
+import { camelCaseKeys } from '../case'
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -20,7 +22,9 @@ export async function apiFetch<T = unknown>(path: string, init?: RequestInit): P
     throw new ApiError(`Request failed: ${response.status}`, response.status, body)
   }
 
-  const payload =
-    body && typeof body === 'object' && 'data' in (body as Record<string, unknown>) ? (body as any).data : body
-  return (payload ?? null) as T
+  const payload
+    = body && typeof body === 'object' && 'data' in (body as Record<string, unknown>)
+      ? (body as { data: unknown }).data
+      : body
+  return camelCaseKeys<T>(payload ?? null)
 }

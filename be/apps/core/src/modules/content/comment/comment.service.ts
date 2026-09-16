@@ -1,4 +1,12 @@
-import { authAccounts, authUsers, commentReactions, comments, photoAssets, tenantDomains, tenants } from '@afilmory/db'
+import {
+  authUsers,
+  commentReactions,
+  comments,
+  photoAssets,
+  tenantDomains,
+  tenantMemberships,
+  tenants,
+} from '@afilmory/db'
 import { DEFAULT_BASE_DOMAIN } from '@afilmory/utils'
 import { getClientIp } from '@core/context/http-context.helper'
 import { DbAccessor } from '@core/database/database.provider'
@@ -6,10 +14,12 @@ import { BizException, ErrorCode } from '@core/errors'
 import { logger } from '@core/helpers/logger.helper'
 import { SystemSettingService } from '@core/modules/configuration/system-setting/system-setting.service'
 import { CommentCreatedEvent } from '@core/modules/content/comment/events/comment-created.event'
+import { WorkspaceMembershipService } from '@core/modules/platform/auth/workspace-membership.service'
 import { requireTenantContext } from '@core/modules/platform/tenant/tenant.context'
+import { UserSafetyService } from '@core/modules/platform/user-safety/user-safety.service'
 import { HttpContext } from '@tsuki-hono/common'
 import { EventEmitterService } from '@tsuki-hono/event-emitter'
-import { and, eq, gt, inArray, isNull, or, sql } from 'drizzle-orm'
+import { and, asc, eq, gt, inArray, isNull, notInArray, or, sql } from 'drizzle-orm'
 import type { Context } from 'hono'
 import { inject, injectable } from 'tsyringe'
 
@@ -37,7 +47,6 @@ export interface UserViewModel {
 
 interface AuthUser {
   id?: string
-  role?: string
 }
 
 interface CommentResponseItem extends CommentViewModel {
@@ -45,11 +54,11 @@ interface CommentResponseItem extends CommentViewModel {
   viewerReactions: string[]
 }
 
-type AuthContextValue =
-  | {
-      user?: AuthUser
-      session?: unknown
-    }
+type AuthContextValue
+  = | {
+    user?: AuthUser
+    session?: unknown
+  }
   | undefined
 
 @injectable()
@@ -59,6 +68,8 @@ export class CommentService {
     @inject(COMMENT_MODERATION_HOOK) private readonly moderationHook: CommentModerationHook,
     private readonly eventEmitter: EventEmitterService,
     private readonly systemSettings: SystemSettingService,
+    private readonly memberships: WorkspaceMembershipService,
+    private readonly userSafety: UserSafetyService,
   ) {}
 
   async createComment(
@@ -148,7 +159,7 @@ export class CommentService {
     }
 
     // Fetch user info
-    const userIds = [userId, ...Object.values(relations).map((r) => r.userId)].filter(Boolean)
+    const userIds = [userId, ...Object.values(relations).map(r => r.userId)].filter(Boolean)
     const users = await this.fetchUsersWithProfiles(userIds)
 
     // Emit event asynchronously
@@ -181,8 +192,8 @@ export class CommentService {
     const tenant = requireTenantContext()
     const authUser = this.getAuthUser()
     const viewerUserId = authUser?.id ?? null
-    const role = authUser?.role
-    const isAdmin = role === 'admin' || role === 'superadmin'
+    const isAdmin = viewerUserId ? await this.memberships.isWorkspaceAdmin(viewerUserId, tenant.tenant.id) : false
+    const blockedUserIds = viewerUserId ? await this.userSafety.blockedUserIds(viewerUserId) : []
     const db = this.dbAccessor.get()
 
     const filters = [
@@ -190,16 +201,21 @@ export class CommentService {
       eq(comments.photoId, query.photoId),
       isNull(comments.deletedAt),
     ]
+    if (blockedUserIds.length > 0) {
+      filters.push(notInArray(comments.userId, blockedUserIds))
+    }
 
     let statusCondition
     if (isAdmin) {
       statusCondition = inArray(comments.status, ['approved', 'pending'])
-    } else if (viewerUserId) {
+    }
+    else if (viewerUserId) {
       statusCondition = or(
         eq(comments.status, 'approved'),
         and(eq(comments.status, 'pending'), eq(comments.userId, viewerUserId)),
       )
-    } else {
+    }
+    else {
       statusCondition = eq(comments.status, 'approved')
     }
     filters.push(statusCondition)
@@ -233,23 +249,22 @@ export class CommentService {
 
     const hasMore = rows.length > query.limit
     const items = rows.slice(0, query.limit)
-    const commentIds = items.map((item) => item.id)
+    const commentIds = items.map(item => item.id)
 
     const reactions = await this.fetchReactionAggregations(tenant.tenant.id, commentIds, viewerUserId)
 
     const nextCursor = hasMore && items.length > 0 ? items.at(-1)!.id : null
 
-    const commentItems = items.map((item) =>
+    const commentItems = items.map(item =>
       this.toResponse({
         ...item,
         reactionCounts: reactions.counts.get(item.id) ?? {},
         viewerReactions: reactions.viewer.get(item.id) ?? [],
-      }),
-    )
+      }))
 
     // Build relations map (parentId -> parent comment)
     const relations: Record<string, CommentResponseItem> = {}
-    const parentIds = [...new Set(items.filter((item) => item.parentId).map((item) => item.parentId!))]
+    const parentIds = [...new Set(items.filter(item => item.parentId).map(item => item.parentId!))]
 
     if (parentIds.length > 0) {
       const parentRows = await db
@@ -265,12 +280,17 @@ export class CommentService {
         })
         .from(comments)
         .where(
-          and(eq(comments.tenantId, tenant.tenant.id), inArray(comments.id, parentIds), isNull(comments.deletedAt)),
+          and(
+            eq(comments.tenantId, tenant.tenant.id),
+            inArray(comments.id, parentIds),
+            isNull(comments.deletedAt),
+            blockedUserIds.length > 0 ? notInArray(comments.userId, blockedUserIds) : undefined,
+          ),
         )
 
       const parentReactions = await this.fetchReactionAggregations(
         tenant.tenant.id,
-        parentRows.map((p) => p.id),
+        parentRows.map(p => p.id),
         viewerUserId,
       )
 
@@ -285,7 +305,7 @@ export class CommentService {
 
     // Build users map (userId -> user)
     const allUserIds = [
-      ...new Set([...items.map((item) => item.userId), ...Object.values(relations).map((r) => r.userId)]),
+      ...new Set([...items.map(item => item.userId), ...Object.values(relations).map(r => r.userId)]),
     ]
 
     const users = await this.fetchUsersWithProfiles(allUserIds)
@@ -350,23 +370,22 @@ export class CommentService {
 
     const hasMore = rows.length > query.limit
     const items = rows.slice(0, query.limit)
-    const commentIds = items.map((item) => item.id)
+    const commentIds = items.map(item => item.id)
 
     const reactions = await this.fetchReactionAggregations(tenant.tenant.id, commentIds, viewerUserId)
 
     const nextCursor = hasMore && items.length > 0 ? items.at(-1)!.id : null
 
-    const commentItems = items.map((item) =>
+    const commentItems = items.map(item =>
       this.toResponse({
         ...item,
         reactionCounts: reactions.counts.get(item.id) ?? {},
         viewerReactions: reactions.viewer.get(item.id) ?? [],
-      }),
-    )
+      }))
 
     // Build relations map (parentId -> parent comment)
     const relations: Record<string, CommentResponseItem> = {}
-    const parentIds = [...new Set(items.filter((item) => item.parentId).map((item) => item.parentId!))]
+    const parentIds = [...new Set(items.filter(item => item.parentId).map(item => item.parentId!))]
 
     if (parentIds.length > 0) {
       const parentRows = await db
@@ -387,7 +406,7 @@ export class CommentService {
 
       const parentReactions = await this.fetchReactionAggregations(
         tenant.tenant.id,
-        parentRows.map((p) => p.id),
+        parentRows.map(p => p.id),
         viewerUserId,
       )
 
@@ -402,7 +421,7 @@ export class CommentService {
 
     // Build users map (userId -> user)
     const allUserIds = [
-      ...new Set([...items.map((item) => item.userId), ...Object.values(relations).map((r) => r.userId)]),
+      ...new Set([...items.map(item => item.userId), ...Object.values(relations).map(r => r.userId)]),
     ]
 
     const users = await this.fetchUsersWithProfiles(allUserIds)
@@ -441,7 +460,8 @@ export class CommentService {
 
     if (existing) {
       await db.delete(commentReactions).where(eq(commentReactions.id, existing.id))
-    } else {
+    }
+    else {
       await db.insert(commentReactions).values({
         tenantId: tenant.tenant.id,
         commentId: comment.id,
@@ -466,8 +486,7 @@ export class CommentService {
     if (!userId) {
       throw new BizException(ErrorCode.AUTH_UNAUTHORIZED)
     }
-    const { role } = authUser!
-    const isAdmin = role === 'admin' || role === 'superadmin'
+    const isAdmin = await this.memberships.isWorkspaceAdmin(userId, tenant.tenant.id)
     const db = this.dbAccessor.get()
 
     const [record] = await db
@@ -504,8 +523,8 @@ export class CommentService {
     const tenant = requireTenantContext()
     const authUser = this.getAuthUser()
     const viewerUserId = authUser?.id ?? null
-    const role = authUser?.role
-    const isAdmin = role === 'admin' || role === 'superadmin'
+    const isAdmin = viewerUserId ? await this.memberships.isWorkspaceAdmin(viewerUserId, tenant.tenant.id) : false
+    const blockedUserIds = viewerUserId ? await this.userSafety.blockedUserIds(viewerUserId) : []
     const db = this.dbAccessor.get()
 
     const filters = [
@@ -513,16 +532,21 @@ export class CommentService {
       eq(comments.photoId, query.photoId),
       isNull(comments.deletedAt),
     ]
+    if (blockedUserIds.length > 0) {
+      filters.push(notInArray(comments.userId, blockedUserIds))
+    }
 
     let statusCondition
     if (isAdmin) {
       statusCondition = inArray(comments.status, ['approved', 'pending'])
-    } else if (viewerUserId) {
+    }
+    else if (viewerUserId) {
       statusCondition = or(
         eq(comments.status, 'approved'),
         and(eq(comments.status, 'pending'), eq(comments.userId, viewerUserId)),
       )
-    } else {
+    }
+    else {
       statusCondition = eq(comments.status, 'approved')
     }
     filters.push(statusCondition)
@@ -691,7 +715,7 @@ export class CommentService {
     return comment
   }
 
-  private toResponse(model: CommentViewModel & { reactionCounts: Record<string, number>; viewerReactions: string[] }) {
+  private toResponse(model: CommentViewModel & { reactionCounts: Record<string, number>, viewerReactions: string[] }) {
     return {
       id: model.id,
       photoId: model.photoId,
@@ -733,45 +757,34 @@ export class CommentService {
       }
     }
 
-    const accounts = await db
+    const ownedWorkspaces = await db
       .select({
-        userId: authAccounts.userId,
-        providerId: authAccounts.providerId,
-        accountId: authAccounts.accountId,
+        userId: tenantMemberships.userId,
+        slug: tenants.slug,
+        customDomain: tenantDomains.domain,
       })
-      .from(authAccounts)
-      .where(inArray(authAccounts.userId, uniqueUserIds))
-
-    if (accounts.length > 0) {
-      const conditions = accounts.map((acc) =>
-        and(eq(authAccounts.providerId, acc.providerId), eq(authAccounts.accountId, acc.accountId)),
+      .from(tenantMemberships)
+      .innerJoin(tenants, eq(tenantMemberships.tenantId, tenants.id))
+      .leftJoin(tenantDomains, and(eq(tenantDomains.tenantId, tenants.id), eq(tenantDomains.status, 'verified')))
+      .where(
+        and(
+          inArray(tenantMemberships.userId, uniqueUserIds),
+          eq(tenantMemberships.role, 'owner'),
+          eq(tenantMemberships.status, 'active'),
+        ),
       )
+      .orderBy(asc(tenantMemberships.createdAt), asc(tenants.id), asc(tenantDomains.createdAt))
 
-      const matchedTenants = await db
-        .select({
-          providerId: authAccounts.providerId,
-          accountId: authAccounts.accountId,
-          slug: tenants.slug,
-          customDomain: tenantDomains.domain,
-        })
-        .from(authAccounts)
-        .innerJoin(authUsers, eq(authAccounts.userId, authUsers.id))
-        .innerJoin(tenants, eq(authUsers.tenantId, tenants.id))
-        .leftJoin(tenantDomains, and(eq(tenantDomains.tenantId, tenants.id), eq(tenantDomains.status, 'verified')))
-        .where(and(or(...conditions), eq(authUsers.role, 'admin')))
-
+    if (ownedWorkspaces.length > 0) {
       const baseDomain = (await this.systemSettings.getSettings()).baseDomain || DEFAULT_BASE_DOMAIN
-
-      for (const acc of accounts) {
-        const match = matchedTenants.find((t) => t.providerId === acc.providerId && t.accountId === acc.accountId)
-
-        if (match && result[acc.userId]) {
-          if (match.customDomain) {
-            result[acc.userId].website = `https://${match.customDomain}`
-          } else {
-            result[acc.userId].website = `https://${match.slug}.${baseDomain}`
-          }
+      for (const workspace of ownedWorkspaces) {
+        const user = result[workspace.userId]
+        if (!user || user.website) {
+          continue
         }
+        user.website = workspace.customDomain
+          ? `https://${workspace.customDomain}`
+          : `https://${workspace.slug}.${baseDomain}`
       }
     }
 

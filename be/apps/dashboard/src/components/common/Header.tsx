@@ -6,6 +6,7 @@ import { useAuthUserValue } from '~/atoms/auth'
 import { useTenantPlanQuery } from '~/modules/billing'
 
 import { UserMenu } from './UserMenu'
+import { WorkspaceSwitcher } from './WorkspaceSwitcher'
 
 const navigationTabs = [
   { labelKey: 'nav.overview', path: '/' },
@@ -13,7 +14,7 @@ const navigationTabs = [
   { labelKey: 'nav.comments', path: '/comments' },
   { labelKey: 'nav.analytics', path: '/analytics' },
   { labelKey: 'nav.settings', path: '/settings' },
-] as const satisfies readonly { labelKey: I18nKeys; path: string }[]
+] as const satisfies readonly { labelKey: I18nKeys, path: string }[]
 
 export function Header() {
   const user = useAuthUserValue()
@@ -32,7 +33,7 @@ export function Header() {
 
         {/* Navigation Tabs */}
         <nav className="flex flex-1 items-center gap-0.5 sm:gap-1 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {navigationTabs.map((tab) => (
+          {navigationTabs.map(tab => (
             <NavLink key={tab.path} to={tab.path} end={tab.path === '/'}>
               {({ isActive }) => (
                 <div
@@ -52,6 +53,7 @@ export function Header() {
         {/* Right side - User Menu */}
         {user && (
           <div className="border-fill-tertiary/50 ml-2 sm:ml-auto flex items-center gap-3 border-l pl-2 sm:pl-4">
+            <WorkspaceSwitcher />
             <div className="hidden md:block">
               <PlanBadge
                 label={planLabel}

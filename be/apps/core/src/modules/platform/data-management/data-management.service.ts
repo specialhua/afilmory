@@ -2,24 +2,24 @@ import type { ManagedStorageConfig, RemoteStorageConfig } from '@afilmory/builde
 import { StorageManager } from '@afilmory/builder/storage/index.js'
 import {
   authSessions,
-  authUsers,
   commentReactions,
   comments,
   photoAssets,
   reactions,
   settings,
   tenantDomains,
+  tenantMemberships,
   tenants,
 } from '@afilmory/db'
 import { DbAccessor } from '@core/database/database.provider'
 import { BizException, ErrorCode } from '@core/errors'
 import { SystemSettingService } from '@core/modules/configuration/system-setting/system-setting.service'
+import { ManifestSyncService } from '@core/modules/content/manifest-sync/manifest-sync.service'
 import { PhotoStorageService } from '@core/modules/content/photo/storage/photo-storage.service'
-import { BILLING_USAGE_EVENT } from '@core/modules/platform/billing/billing.constants'
-import { BillingUsageService } from '@core/modules/platform/billing/billing-usage.service'
+import { BILLING_USAGE_EVENT } from '@core/modules/platform/billing/usage/billing-usage.constants'
+import { BillingUsageService } from '@core/modules/platform/billing/usage/billing-usage.service'
 import { ROOT_TENANT_SLUG } from '@core/modules/platform/tenant/tenant.constants'
 import { requireTenantContext } from '@core/modules/platform/tenant/tenant.context'
-import { EventEmitterService } from '@tsuki-hono/event-emitter'
 import { eq } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 
@@ -27,10 +27,10 @@ import { injectable } from 'tsyringe'
 export class DataManagementService {
   constructor(
     private readonly dbAccessor: DbAccessor,
-    private readonly eventEmitter: EventEmitterService,
     private readonly billingUsageService: BillingUsageService,
     private readonly systemSettingService: SystemSettingService,
     private readonly photoStorageService: PhotoStorageService,
+    private readonly manifestSyncService: ManifestSyncService,
   ) {}
 
   async clearPhotoAssetRecords(): Promise<{ deleted: number }> {
@@ -40,10 +40,10 @@ export class DataManagementService {
     const deletedRecords = await db
       .delete(photoAssets)
       .where(eq(photoAssets.tenantId, tenant.tenant.id))
-      .returning({ id: photoAssets.id })
+      .returning({ id: photoAssets.id, photoId: photoAssets.photoId })
 
     if (deletedRecords.length > 0) {
-      await this.eventEmitter.emit('photo.manifest.changed', { tenantId: tenant.tenant.id })
+      await this.manifestSyncService.recordDeletes(tenant.tenant.id, deletedRecords)
       await this.billingUsageService.recordEvent({
         eventType: BILLING_USAGE_EVENT.PHOTO_ASSET_DELETED,
         quantity: -deletedRecords.length,
@@ -89,7 +89,7 @@ export class DataManagementService {
     return { deletedTenantId: tenantId }
   }
 
-  private async deleteManagedStorageSpace(tenantId: string): Promise<void> {
+  async deleteManagedStorageForTenantId(tenantId: string): Promise<void> {
     const managedConfig = await this.buildManagedStorageConfig(tenantId)
 
     if (!managedConfig) {
@@ -131,10 +131,10 @@ export class DataManagementService {
     }
   }
 
-  private async deleteTenantWithMetadata(options: { tenantId: string; tenantSlug: string | null; status: string }) {
+  private async deleteTenantWithMetadata(options: { tenantId: string, tenantSlug: string | null, status: string }) {
     this.assertTenantDeletable(options.tenantSlug, options.status)
 
-    await this.deleteManagedStorageSpace(options.tenantId)
+    await this.deleteManagedStorageForTenantId(options.tenantId)
 
     const db = this.dbAccessor.get()
 
@@ -147,8 +147,11 @@ export class DataManagementService {
       await tx.delete(comments).where(eq(comments.tenantId, options.tenantId))
       await tx.delete(commentReactions).where(eq(commentReactions.tenantId, options.tenantId))
 
-      await tx.delete(authSessions).where(eq(authSessions.tenantId, options.tenantId))
-      await tx.delete(authUsers).where(eq(authUsers.tenantId, options.tenantId))
+      await tx
+        .update(authSessions)
+        .set({ activeTenantId: null, updatedAt: new Date().toISOString() })
+        .where(eq(authSessions.activeTenantId, options.tenantId))
+      await tx.delete(tenantMemberships).where(eq(tenantMemberships.tenantId, options.tenantId))
       await tx.delete(tenants).where(eq(tenants.id, options.tenantId))
     })
   }

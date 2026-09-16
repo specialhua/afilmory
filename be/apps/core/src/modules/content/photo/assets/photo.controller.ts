@@ -1,9 +1,10 @@
 import { getOptionalDbContext } from '@core/database/database.provider'
 import { BizException, ErrorCode } from '@core/errors'
-import { Roles } from '@core/guards/roles.decorator'
+import { TenantRoles } from '@core/guards/roles.decorator'
 import { BypassResponseTransform } from '@core/interceptors/response-transform.decorator'
 import type { DataSyncProgressEvent } from '@core/modules/infrastructure/data-sync/data-sync.types'
 import { createProgressSseResponse } from '@core/modules/shared/http/sse'
+import { describeStreamError } from '@core/modules/shared/http/sse-error'
 import {
   Body,
   ContextParam,
@@ -20,7 +21,6 @@ import {
 import type { Context } from 'hono'
 import { inject } from 'tsyringe'
 
-import { StorageAccessService } from '../access/storage-access.service'
 import { UpdatePhotoTagsDto } from './photo-asset.dto'
 import { PhotoAssetService } from './photo-asset.service'
 import type { PhotoAssetListItem, PhotoAssetSummary } from './photo-asset.types'
@@ -33,12 +33,10 @@ type DeleteAssetsDto = {
 }
 
 @Controller('photos')
-@Roles('admin')
+@TenantRoles('admin')
 export class PhotoController {
-  constructor(
-    @inject(PhotoAssetService) private readonly photoAssetService: PhotoAssetService,
-    @inject(StorageAccessService) private readonly storageAccessService: StorageAccessService,
-  ) {}
+  constructor(@inject(PhotoAssetService) private readonly photoAssetService: PhotoAssetService) {}
+
   private readonly logger = createLogger(this.constructor.name)
 
   @Get('assets')
@@ -60,8 +58,8 @@ export class PhotoController {
     // managed storage always delete from storage
     const deleteFromStorage = isManagedStorage ? true : deleteFromStorageRequested
 
-    await this.photoAssetService.deleteAssets(ids, { deleteFromStorage })
-    return { ids, deleted: true, deleteFromStorage }
+    const changes = await this.photoAssetService.deleteAssets(ids, { deleteFromStorage })
+    return { ids, deleted: true, deleteFromStorage, changes }
   }
 
   @UseInterceptors(PhotoUploadLimitInterceptor)
@@ -87,36 +85,24 @@ export class PhotoController {
             },
             abortSignal,
           })
-        } catch (error) {
-          const message = error instanceof Error ? error.message : '上传失败'
-
+        }
+        catch (error) {
           this.logger.error(error)
-          await sendEvent({ type: 'error', payload: { message } })
+          await sendEvent({ type: 'error', payload: describeStreamError(error) })
         }
       },
     })
   }
 
   @Get('storage-url')
-  async getStorageUrl(@Query() query: { key?: string; ttl?: string; intent?: string }) {
+  async getStorageUrl(@Query() query: { key?: string }) {
     const key = query?.key?.trim()
     if (!key) {
       throw new BizException(ErrorCode.COMMON_BAD_REQUEST, { message: '缺少 storage key 参数' })
     }
 
-    const secureAccessEnabled = await this.storageAccessService.isSecureAccessEnabled()
-    if (!secureAccessEnabled) {
-      const url = await this.photoAssetService.generatePublicUrl(key)
-      return { url, expiresAt: null }
-    }
-
-    const ttlSeconds = Number.parseInt(query?.ttl ?? '', 10)
-    const { url, expiresAt } = await this.storageAccessService.issueSignedUrl({
-      storageKey: key,
-      intent: query?.intent?.trim() || 'dashboard',
-      ttlSeconds: Number.isFinite(ttlSeconds) ? ttlSeconds : undefined,
-    })
-    return { url, expiresAt }
+    const url = await this.photoAssetService.generatePublicUrl(key)
+    return { url }
   }
 
   @Patch('assets/:id/tags')

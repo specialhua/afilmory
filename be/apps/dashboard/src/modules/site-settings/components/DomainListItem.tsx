@@ -9,17 +9,22 @@ import { DomainBadge } from './DomainBadge'
 
 interface DomainListItemProps {
   domain: TenantDomain
+  cnameTarget: string
   onVerify: (id: string) => void
   onDelete: (id: string) => void
   isVerifying: boolean
   isDeleting: boolean
 }
 
-export function DomainListItem({ domain, onVerify, onDelete, isVerifying, isDeleting }: DomainListItemProps) {
+export function DomainListItem({
+  domain,
+  cnameTarget,
+  onVerify,
+  onDelete,
+  isVerifying,
+  isDeleting,
+}: DomainListItemProps) {
   const { t } = useTranslation()
-
-  const txtName = `_afilmory-verification.${domain.domain}`
-  const verificationToken = domain.verificationToken ?? '—'
 
   return (
     <LinearBorderPanel className="bg-background p-4 transition-all duration-200 hover:bg-fill/30">
@@ -50,39 +55,53 @@ export function DomainListItem({ domain, onVerify, onDelete, isVerifying, isDele
             </div>
           </div>
         </div>
-        {domain.status === 'pending' ? (
+        {domain.status !== 'verified' ? (
           <LinearBorderPanel className="bg-fill/50 p-3">
             <div className="space-y-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-text-secondary">
-                {t('settings.domain.dns.txt.title')}
-              </p>
-              <div className="space-y-2 rounded-lg border border-fill bg-background p-3">
-                <KeyValueRow label={t('settings.domain.dns.type')} value="TXT" />
-                <KeyValueRow label={t('settings.domain.dns.name')} value={txtName} copyable monospace />
-                <KeyValueRow
-                  label={t('settings.domain.dns.value')}
-                  value={verificationToken}
-                  monospace
-                  copyable
-                  copyLabel={t('settings.domain.actions.copy')}
-                />
-                <KeyValueRow label={t('settings.domain.dns.ttl')} value={t('settings.domain.dns.hint.ttl')} />
-              </div>
-              <FormHelperText className="text-xs text-text-tertiary">
-                {t('settings.domain.token.helper')}
-              </FormHelperText>
-
               <p className="text-xs font-medium uppercase tracking-wide text-text-secondary">
                 {t('settings.domain.dns.cname.title')}
               </p>
               <div className="space-y-2 rounded-lg border border-fill bg-background p-3">
                 <KeyValueRow label={t('settings.domain.dns.type')} value="CNAME" />
                 <KeyValueRow label={t('settings.domain.dns.name')} value={domain.domain} copyable monospace />
-                <KeyValueRow label={t('settings.domain.dns.value')} value={window.location.host} copyable monospace />
+                <KeyValueRow
+                  label={t('settings.domain.dns.value')}
+                  value={cnameTarget}
+                  copyable
+                  monospace
+                  copyLabel={t('settings.domain.actions.copy')}
+                />
+                <KeyValueRow label={t('settings.domain.dns.ttl')} value={t('settings.domain.dns.hint.ttl')} />
                 <FormHelperText className="text-xs text-text-tertiary">
                   {t('settings.domain.dns.cname.helper')}
                 </FormHelperText>
               </div>
+
+              <div className="space-y-2 rounded-lg border border-fill bg-background p-3">
+                <KeyValueRow
+                  label={t('settings.domain.provider.hostname')}
+                  value={domain.hostnameStatus ?? 'unknown'}
+                  monospace
+                />
+                <KeyValueRow
+                  label={t('settings.domain.provider.ssl')}
+                  value={domain.sslStatus ?? 'unknown'}
+                  monospace
+                />
+              </div>
+
+              {domain.verificationErrors.length > 0 ? (
+                <div className="rounded-lg border border-red/30 bg-red/10 p-3">
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-red">
+                    {t('settings.domain.provider.errors')}
+                  </p>
+                  <ul className="space-y-1 text-xs text-text-secondary">
+                    {domain.verificationErrors.map(error => (
+                      <li key={error}>{error}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </div>
           </LinearBorderPanel>
         ) : null}
@@ -116,7 +135,7 @@ function KeyValueRow({
   )
 }
 
-function CopyButton({ value, label = 'Copy' }: { value: string; label?: string }) {
+function CopyButton({ value, label = 'Copy' }: { value: string, label?: string }) {
   return (
     <Button
       variant="text"

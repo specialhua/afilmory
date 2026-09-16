@@ -1,10 +1,10 @@
-import { Roles } from '@core/guards/roles.decorator'
+import { TenantRoles } from '@core/guards/roles.decorator'
 import { Controller, Get } from '@tsuki-hono/common'
 
 import { DashboardService } from './dashboard.service'
 
 @Controller('dashboard')
-@Roles('admin')
+@TenantRoles('admin')
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 

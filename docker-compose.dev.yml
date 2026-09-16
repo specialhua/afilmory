@@ -1,0 +1,36 @@
+# Object storage for local development. Postgres and Redis are NOT redefined
+# here — they already exist in docker-compose.yml and this file must never
+# shadow them: an unnamed project resolves both files to the same project, so
+# reusing the `db` / `redis` service keys silently recreates those containers
+# against different volumes.
+name: afilmory-dev
+
+services:
+  # A named volume, not a bind mount: the image runs as UID/GID 10001 and a
+  # host directory would need matching ownership.
+  rustfs:
+    image: rustfs/rustfs:latest
+    container_name: afilmory_dev_rustfs
+    environment:
+      RUSTFS_VOLUMES: /data
+      RUSTFS_ADDRESS: '0.0.0.0:9000'
+      RUSTFS_CONSOLE_ADDRESS: '0.0.0.0:9001'
+      RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY:-rustfsadmin}
+      RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY:-rustfsadmin}
+    ports:
+      - '9300:9000'
+      - '9301:9001'
+    volumes:
+      - rustfsdata:/data
+    restart: unless-stopped
+    healthcheck:
+      # An unauthenticated GET on the S3 root answers 403, so `curl -f` would
+      # never pass. Reaching the port at all is the liveness signal.
+      test: ['CMD-SHELL', 'curl -sS http://127.0.0.1:9000 -o /dev/null']
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+
+volumes:
+  rustfsdata:

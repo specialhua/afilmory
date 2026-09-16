@@ -1,4 +1,4 @@
-import { Roles } from '@core/guards/roles.decorator'
+import { TenantRoles } from '@core/guards/roles.decorator'
 import { BypassResponseTransform } from '@core/interceptors/response-transform.decorator'
 import { Body, Controller, Get, Post } from '@tsuki-hono/common'
 
@@ -6,7 +6,7 @@ import { UpdateSiteAuthorDto, UpdateSiteSettingsDto } from './site-setting.dto'
 import { SiteSettingService } from './site-setting.service'
 
 @Controller('site/settings')
-@Roles('admin')
+@TenantRoles('admin')
 export class SiteSettingController {
   constructor(private readonly siteSettingService: SiteSettingService) {}
 

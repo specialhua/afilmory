@@ -64,6 +64,8 @@ export type {
   FujiRecipe,
   LensInfo,
   PhotoManifestItem,
+  PhotoRegion,
+  PhotoXmpMetadata,
   PickedExif,
   RicohRecipe,
   ToneAnalysis,

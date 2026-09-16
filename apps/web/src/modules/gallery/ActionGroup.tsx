@@ -18,11 +18,11 @@ export const ActionGroup = () => {
   const hasViewCustomization = gallerySetting.columns !== 'auto' || gallerySetting.sortOrder !== 'desc'
 
   // 计算过滤器数量
-  const filterCount =
-    gallerySetting.selectedTags.length +
-    gallerySetting.selectedCameras.length +
-    gallerySetting.selectedLenses.length +
-    (gallerySetting.selectedRatings !== null ? 1 : 0)
+  const filterCount
+    = gallerySetting.selectedTags.length
+      + gallerySetting.selectedCameras.length
+      + gallerySetting.selectedLenses.length
+      + (gallerySetting.selectedRatings !== null ? 1 : 0)
 
   return (
     <div className="flex items-center justify-center gap-3">
@@ -49,7 +49,7 @@ export const ActionGroup = () => {
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => navigate('/explory')}
+        onClick={() => navigate('/map')}
         className="h-10 w-10 rounded-full border-0 bg-gray-100 transition-colors duration-200 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
         title={t('action.map.explore')}
         aria-label={t('action.map.explore')}

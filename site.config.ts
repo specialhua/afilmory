@@ -8,6 +8,7 @@ export interface SiteConfig {
   description: string
   url: string
   accentColor: string
+  viewer?: ViewerConfig
   author: Author
   social?: Social
   comments?: CommentsConfig
@@ -16,6 +17,9 @@ export interface SiteConfig {
   mapStyle?: string
   mapProjection?: 'globe' | 'mercator'
   beian?: BeianConfig
+  telemetry?: {
+    vibeloft?: boolean
+  }
 }
 
 /**
@@ -89,18 +93,35 @@ interface CommentsConfig {
   waline?: WalineConfig
 }
 
+interface ViewerConfig {
+  regions?: {
+    accentSource?: 'system' | 'photo'
+    labelPlacement?: 'edge' | 'floating'
+  }
+}
+
 const defaultConfig: SiteConfig = {
   name: 'New Afilmory',
   title: 'New Afilmory',
   description: 'A modern photo gallery website.',
   url: 'https://afilmory.art',
   accentColor: '#007bff',
+  viewer: {
+    regions: {
+      accentSource: 'system',
+      labelPlacement: 'edge',
+    },
+  },
   author: {
     name: 'Afilmory',
     url: 'https://afilmory.art/',
     avatar: 'https://cdn.jsdelivr.net/gh/Afilmory/Afilmory@main/logo.jpg',
   },
+  // 私有部署默认关闭上游的 VibeLoft 遥测脚本
+  telemetry: {
+    vibeloft: false,
+  },
 }
-export const siteConfig: SiteConfig = merge(defaultConfig, userConfig) as any
+export const siteConfig = merge(defaultConfig, userConfig) as SiteConfig
 
 export default siteConfig

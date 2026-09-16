@@ -22,7 +22,7 @@ import type { StorageProvider } from '../types'
 type ProviderIcon = ComponentType<{ className?: string }>
 
 const GithubIcon: ProviderIcon = ({ className }) => (
-  <i className={clsxm('i-simple-icons-github', className)} aria-hidden />
+  <i className={clsxm('i-logos-github-icon', className)} aria-hidden />
 )
 
 const providerTypeConfig: Record<
@@ -56,7 +56,7 @@ const providerTypeConfig: Record<
   github: {
     Icon: GithubIcon,
     color: 'text-purple-500',
-    bgColor: 'bg-purple-500/10',
+    bgColor: 'bg-white',
   },
   local: {
     Icon: Folder,

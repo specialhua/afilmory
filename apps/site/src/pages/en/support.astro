@@ -1,0 +1,53 @@
+---
+import Base from '../../layouts/Base.astro'
+import LegalPage from '../../components/LegalPage.astro'
+---
+
+<Base title="Support · Afilmory" description="Get help with Afilmory accounts, photo uploads, notifications, purchases, and privacy.">
+  <LegalPage
+    eyebrow="Support"
+    title="Afilmory Support"
+    description="Find help with accounts, galleries, photo uploads, Live Photos, notifications, sponsorships, and privacy."
+    updatedAt="September 3, 2026"
+    locale="en"
+    alternateHref="/support/"
+  >
+    <div class="notice">
+      When submitting a support request, please include your app version, device model, OS version, and reproduction steps. Never include passwords, access tokens, or unreleased private photos.
+    </div>
+
+    <section>
+      <h2>Contact Support</h2>
+      <p>
+        Please submit inquiries through <a href="https://github.com/Afilmory/afilmory/issues/new">Afilmory GitHub Issues</a>.
+        Public issues are ideal for bug reports and general inquiries. For sensitive topics involving accounts or privacy, please describe the general category first and we will provide private follow-up channels.
+      </p>
+      <p>We make reasonable efforts to address inquiries, but do not guarantee fixed response times.</p>
+    </section>
+
+    <section>
+      <h2>Frequently Asked Questions</h2>
+      <h3>Cannot Sign In or Workspace Unavailable</h3>
+      <p>Ensure your internet connection is active and your sign-in method matches the provider originally used during registration. If your Workspace requires custom storage, the owner should configure storage settings in the web admin console first.</p>
+
+      <h3>Photo or Live Photo Upload Failed</h3>
+      <p>Keep the app in the foreground until upload tasks enter the queue, and verify that photo library access permissions have been granted. Live Photos require both the still image and paired video components.</p>
+
+      <h3>Did Not Receive Gallery Update Notifications</h3>
+      <p>Notification permissions are requested only after you actively subscribe to a public gallery. Ensure system notifications are enabled in device settings, then reopen the gallery to verify subscription status.</p>
+
+      <h3>Sponsorship Purchase Did Not Complete</h3>
+      <p>Sponsorship transactions are processed by Apple StoreKit. Ensure your App Store account allows in-app purchases and retry shortly. For billing, refund, or transaction history questions, please contact Apple Support.</p>
+
+      <h3>How to Delete Your Account</h3>
+      <p>In the app, navigate to <strong>Profile → Delete Account</strong> and follow the prompts. Deletion will clean up Workspace ownership, hosted media, third-party authentications, and statutory retention records.</p>
+    </section>
+
+    <section>
+      <h2>Privacy & Copyright Infringement Notices</h2>
+      <p>
+        For personal data handling practices, please see our <a href="/en/privacy/">Privacy Policy</a>. To report copyright infringement, unauthorized public gallery content, abusive comments, or illegal materials, please refer to Section 4 (Intellectual Property Protection & Infringement Takedown) of the <a href="/en/terms/">Terms of Service</a>, and provide proof of ownership, the infringing public URL, and relevant details in your report.
+      </p>
+    </section>
+  </LegalPage>
+</Base>

@@ -1,3 +1,5 @@
+import type { PhotoRegion } from '@afilmory/builder'
+
 import type { ImageLoaderManager } from '~/lib/image-loader-manager'
 
 import type { LoadingIndicatorRef } from '../inspector'
@@ -6,10 +8,16 @@ import type { LivePhotoVideoHandle } from '../media'
 export const SHOW_SCALE_INDICATOR_DURATION = 1000
 
 // Video source 的 sum type：Live Photo 或 Motion Photo
-export type VideoSource =
-  | { type: 'live-photo'; videoUrl: string }
-  | { type: 'motion-photo'; imageUrl: string; offset: number; size?: number; presentationTimestamp?: number }
-  | { type: 'none' }
+export type VideoSource
+  = | { type: 'live-photo', videoUrl: string }
+    | {
+      type: 'motion-photo'
+      imageUrl: string
+      offset: number
+      size?: number
+      presentationTimestamp?: number
+    }
+    | { type: 'none' }
 
 export interface ProgressiveImageProps {
   src: string
@@ -37,32 +45,19 @@ export interface ProgressiveImageProps {
   // Video source (Live Photo or Motion Photo)
   videoSource?: VideoSource
   shouldAutoPlayVideoOnce?: boolean
+  regions?: PhotoRegion[]
+  regionOrientation?: number
+  regionAccentColor?: string
+  regionLabelPlacement?: 'edge' | 'floating'
+  activeRegionId?: string | null
+  showAllRegions?: boolean
+  enableRegionHover?: boolean
+  onActiveRegionChange?: (regionId: string | null) => void
 
   // HDR 相关 props
   isHDR?: boolean
 
   loadingIndicatorRef: React.RefObject<LoadingIndicatorRef | null>
-}
-
-export interface WebGLImageViewerRef {
-  zoomIn: (animated?: boolean) => void
-  zoomOut: (animated?: boolean) => void
-  resetView: () => void
-  getScale: () => number
-}
-
-export interface DOMImageViewerProps {
-  ref?: React.RefObject<import('react-zoom-pan-pinch').ReactZoomPanPinchRef | null>
-  onZoomChange?: (isZoomed: boolean, scale: number) => any
-  minZoom: number
-  maxZoom: number
-  enableZoom?: boolean
-  enablePan?: boolean
-  src: string
-  alt: string
-  highResLoaded: boolean
-  onLoad?: () => void
-  children?: React.ReactNode
 }
 
 export interface LivePhotoBadgeProps {

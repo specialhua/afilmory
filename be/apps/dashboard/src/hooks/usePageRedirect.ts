@@ -19,6 +19,7 @@ const {
   ROOT_LOGIN: ROOT_LOGIN_PATH,
   WELCOME: WELCOME_PATH,
   TENANT_MISSING: TENANT_MISSING_PATH,
+  NO_ACCESS: NO_ACCESS_PATH,
   DEFAULT_AUTHENTICATED: DEFAULT_AUTHENTICATED_PATH,
   SUPERADMIN_ROOT: SUPERADMIN_ROOT_PATH,
   SUPERADMIN_DEFAULT: SUPERADMIN_DEFAULT_PATH,
@@ -63,7 +64,8 @@ export function usePageRedirect() {
     queryFn: async () => {
       try {
         return await fetchSession()
-      } catch (error) {
+      }
+      catch (error) {
         if (error instanceof FetchError) {
           const status = error.statusCode ?? error.response?.status ?? null
           if (status && AUTH_FAILURE_STATUSES.has(status)) {
@@ -80,9 +82,11 @@ export function usePageRedirect() {
   const logout = useCallback(async () => {
     try {
       await signOutBySource()
-    } catch (error) {
+    }
+    catch (error) {
       console.error('Logout error:', error)
-    } finally {
+    }
+    finally {
       queryClient.setQueryData(AUTH_SESSION_QUERY_KEY, null)
       queryClient.invalidateQueries({ queryKey: AUTH_SESSION_QUERY_KEY })
       setAuthUser(null)
@@ -127,8 +131,12 @@ export function usePageRedirect() {
     const isSuperAdmin = session?.user.role === 'superadmin'
     const isOnSuperAdminPage = pathname.startsWith(SUPERADMIN_ROOT_PATH)
     const isOnRootLoginPage = pathname === ROOT_LOGIN_PATH
-    const tenant = session?.tenant ?? null
-    const isTenantPending = Boolean(session && tenant?.isPlaceholder)
+    const requestedWorkspace = session?.requestedWorkspace ?? null
+    const requestedMembership = session?.requestedMembership ?? null
+    const isTenantPending = Boolean(session && requestedWorkspace?.isPlaceholder)
+    const canManageRequestedWorkspace
+      = requestedMembership?.status === 'active'
+        && (requestedMembership.role === 'admin' || requestedMembership.role === 'owner')
     const isOnWelcomePage = pathname === WELCOME_PATH
 
     if (session && isSuperAdmin) {
@@ -142,6 +150,17 @@ export function usePageRedirect() {
       if (!isOnWelcomePage) {
         navigate(WELCOME_PATH, { replace: true })
       }
+      return
+    }
+
+    if (
+      session
+      && requestedWorkspace
+      && !requestedWorkspace.isPlaceholder
+      && !canManageRequestedWorkspace
+      && !PUBLIC_ROUTES.has(pathname)
+    ) {
+      navigate(NO_ACCESS_PATH, { replace: true })
       return
     }
 
@@ -161,7 +180,12 @@ export function usePageRedirect() {
     }
 
     if (session && (pathname === DEFAULT_LOGIN_PATH || pathname === ROOT_LOGIN_PATH)) {
-      const destination = isTenantPending ? WELCOME_PATH : DEFAULT_AUTHENTICATED_PATH
+      const destination
+        = isTenantPending || (!requestedWorkspace && !session.activeWorkspace)
+          ? WELCOME_PATH
+          : requestedWorkspace && !canManageRequestedWorkspace
+            ? NO_ACCESS_PATH
+            : DEFAULT_AUTHENTICATED_PATH
       navigate(destination, { replace: true })
     }
   }, [location, location.pathname, navigate, sessionQuery.data, sessionQuery.isError, sessionQuery.isPending])
@@ -176,28 +200,24 @@ export function usePageRedirect() {
       return
     }
 
-    const { tenant } = session
-    if (!tenant || tenant.isPlaceholder || !tenant.slug) {
+    if (session.requestedWorkspace) {
+      return
+    }
+
+    const activeWorkspace = session.activeWorkspace
+    if (!activeWorkspace?.slug) {
       return
     }
 
     const currentSlug = getTenantSlugFromHost(window.location.hostname)
-    if (currentSlug && currentSlug === tenant.slug) {
+    if (currentSlug === activeWorkspace.slug) {
       return
     }
 
     try {
-      const targetUrl = buildTenantUrl(tenant.slug, '/')
-      ;(async () => {
-        try {
-          await signOutBySource()
-        } catch (error) {
-          console.error('Failed to clear placeholder session before redirect', error)
-        } finally {
-          window.location.replace(targetUrl)
-        }
-      })()
-    } catch (error) {
+      window.location.replace(buildTenantUrl(activeWorkspace.slug, '/'))
+    }
+    catch (error) {
       console.error('Failed to redirect to tenant workspace', error)
     }
   }, [sessionQuery.data, sessionQuery.isPending])

@@ -19,16 +19,19 @@ export function Component() {
   return <RegistrationWizard />
 }
 
+// React Router requires route loaders to be exported from the route module.
+// eslint-disable-next-line react-refresh/only-export-components
 export async function loader() {
   try {
     const session = await fetchSession()
-    if (session?.tenant && !session.tenant.isPlaceholder) {
+    if (session?.requestedWorkspace && !session.requestedWorkspace.isPlaceholder) {
       return {
         isTenantRegistered: true,
-        tenantSlug: session.tenant.slug ?? null,
+        tenantSlug: session.requestedWorkspace.slug ?? null,
       }
     }
-  } catch {
+  }
+  catch {
     // Ignore session fetch failures and allow onboarding flow to continue; page logic handles unauthenticated cases.
   }
 

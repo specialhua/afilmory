@@ -1,15 +1,99 @@
-import { authUsers, photoAssets, settings, tenantDomains, tenants } from '@afilmory/db'
+import {
+  authUsers,
+  gallerySubscriptions,
+  photoAssets,
+  settings,
+  tenantDomains,
+  tenantMemberships,
+  tenants,
+} from '@afilmory/db'
+import { RESERVED_TENANT_SLUGS } from '@afilmory/utils'
 import { DbAccessor } from '@core/database/database.provider'
 import { normalizeDate } from '@core/helpers/normalize.helper'
-import { and, asc, eq, inArray, sql } from 'drizzle-orm'
+import { UserSafetyService } from '@core/modules/platform/user-safety/user-safety.service'
+import { and, asc, eq, ilike, inArray, notInArray, or, sql } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
+
+import { galleryDirectoryMatchRank } from './gallery-directory-ranking'
+
+const DIRECTORY_LIKE_META_PATTERN = /[%_\\]/g
 
 @injectable()
 export class FeaturedGalleriesService {
-  constructor(private readonly dbAccessor: DbAccessor) {}
+  constructor(
+    private readonly dbAccessor: DbAccessor,
+    private readonly userSafety: UserSafetyService,
+  ) {}
 
-  async listFeaturedGalleries() {
+  async listFeaturedGalleries(userId?: string, options: { query?: string, limit?: number } = {}) {
     const db = this.dbAccessor.get()
+    const query = options.query?.trim()
+    const limit = Math.min(Math.max(options.limit ?? 20, 1), 40)
+    const blockedTenantIds = userId ? await this.userSafety.blockedOwnerTenantIds(userId) : []
+    const visibilityConditions = [
+      eq(tenants.banned, false),
+      eq(tenants.status, 'active'),
+      notInArray(tenants.slug, RESERVED_TENANT_SLUGS),
+      blockedTenantIds.length > 0 ? notInArray(tenants.id, blockedTenantIds) : undefined,
+    ]
+    const escapedQuery = query?.replaceAll(DIRECTORY_LIKE_META_PATTERN, '\\$&')
+    const searchPattern = escapedQuery ? `%${escapedQuery}%` : undefined
+    const directoryRows = await db
+      .select({
+        id: tenants.id,
+        tenantName: tenants.name,
+        slug: tenants.slug,
+        siteName: settings.value,
+        authorName: authUsers.name,
+      })
+      .from(tenants)
+      .leftJoin(settings, and(eq(settings.tenantId, tenants.id), eq(settings.key, 'site.name')))
+      .leftJoin(
+        tenantMemberships,
+        and(
+          eq(tenantMemberships.tenantId, tenants.id),
+          eq(tenantMemberships.status, 'active'),
+          eq(tenantMemberships.role, 'owner'),
+        ),
+      )
+      .leftJoin(authUsers, eq(authUsers.id, tenantMemberships.userId))
+      .where(
+        and(
+          ...visibilityConditions,
+          searchPattern
+            ? or(
+                ilike(tenants.name, searchPattern),
+                ilike(tenants.slug, searchPattern),
+                ilike(settings.value, searchPattern),
+                ilike(authUsers.name, searchPattern),
+              )
+            : undefined,
+        ),
+      )
+
+    const directoryCandidates = new Map<
+      string,
+      { tenantName: string, slug: string, siteName: string | null, authorName: string | null }
+    >()
+    for (const row of directoryRows) {
+      const current = directoryCandidates.get(row.id)
+      directoryCandidates.set(row.id, {
+        tenantName: current?.tenantName ?? row.tenantName,
+        slug: current?.slug ?? row.slug,
+        siteName: current?.siteName ?? row.siteName,
+        authorName: current?.authorName ?? row.authorName,
+      })
+    }
+
+    if (directoryCandidates.size === 0) {
+      return { galleries: [] }
+    }
+
+    const candidateTenantIds = [...directoryCandidates.keys()]
+    const candidateTenantList = sql.join(
+      candidateTenantIds.map(tenantId => sql`${tenantId}`),
+      sql`, `,
+    )
 
     // Step 1: Calculate quality scores for all valid tenants with photos
     // Quality score formula:
@@ -38,6 +122,7 @@ export class FeaturedGalleriesService {
                      or ${photoAssets.manifest}->'data'->'exif'->'GPSLongitude' is not null then 1 end)::int as gps_count
         from ${photoAssets}
         where ${photoAssets.syncStatus} in ('synced', 'conflict')
+          and ${photoAssets.tenantId} in (${candidateTenantList})
         group by ${photoAssets.tenantId}
       ),
       tenant_tags as (
@@ -47,6 +132,7 @@ export class FeaturedGalleriesService {
         from ${photoAssets},
         lateral jsonb_array_elements_text(${photoAssets.manifest}->'data'->'tags') as tag
         where ${photoAssets.syncStatus} in ('synced', 'conflict')
+          and ${photoAssets.tenantId} in (${candidateTenantList})
           and nullif(trim(tag), '') is not null
         group by ${photoAssets.tenantId}
       ),
@@ -69,17 +155,39 @@ export class FeaturedGalleriesService {
         where tq.photo_count > 0
       )
       select * from tenant_scores
-      order by quality_score desc
-      limit 20
     `)
 
     if (qualityScores.rows.length === 0) {
       return { galleries: [] }
     }
 
-    const topTenantIds = qualityScores.rows.map((row) => row.tenant_id)
+    const selectedScores = [...qualityScores.rows]
+      .sort((a, b) => {
+        if (query) {
+          const aDirectory = directoryCandidates.get(a.tenant_id)
+          const bDirectory = directoryCandidates.get(b.tenant_id)
+          const rankA = galleryDirectoryMatchRank(query, [
+            aDirectory?.siteName,
+            aDirectory?.tenantName,
+            aDirectory?.slug,
+            aDirectory?.authorName,
+          ])
+          const rankB = galleryDirectoryMatchRank(query, [
+            bDirectory?.siteName,
+            bDirectory?.tenantName,
+            bDirectory?.slug,
+            bDirectory?.authorName,
+          ])
+          if (rankA !== rankB)
+            return rankA - rankB
+        }
+        return Number(b.quality_score) - Number(a.quality_score)
+      })
+      .slice(0, limit)
+
+    const topTenantIds = selectedScores.map(row => row.tenant_id)
     const scoreMap = new Map(
-      qualityScores.rows.map((row) => [
+      selectedScores.map(row => [
         row.tenant_id,
         {
           photoCount: row.photo_count,
@@ -98,17 +206,16 @@ export class FeaturedGalleriesService {
       .from(tenants)
       .where(and(inArray(tenants.id, topTenantIds), eq(tenants.banned, false), eq(tenants.status, 'active')))
 
-    // Filter out root and placeholder
-    const validTenants = tenantRecords.filter((t) => t.slug !== 'root' && t.slug !== 'placeholder')
+    const validTenants = tenantRecords
 
     if (validTenants.length === 0) {
       return { galleries: [] }
     }
 
-    const finalTenantIds = validTenants.map((t) => t.id)
+    const finalTenantIds = validTenants.map(t => t.id)
 
     // Step 3: Fetch all related data in parallel
-    const [siteSettings, authors, domains, lastUpdatedRows] = await Promise.all([
+    const [siteSettings, authors, domains, lastUpdatedRows, subscriptions, ownMemberships] = await Promise.all([
       // Site settings
       db
         .select()
@@ -119,14 +226,15 @@ export class FeaturedGalleriesService {
       // Primary authors
       db
         .select({
-          tenantId: authUsers.tenantId,
+          tenantId: tenantMemberships.tenantId,
           name: authUsers.name,
           image: authUsers.image,
         })
         .from(authUsers)
-        .where(inArray(authUsers.tenantId, finalTenantIds))
+        .innerJoin(tenantMemberships, eq(tenantMemberships.userId, authUsers.id))
+        .where(and(inArray(tenantMemberships.tenantId, finalTenantIds), eq(tenantMemberships.status, 'active')))
         .orderBy(
-          sql`case when ${authUsers.role} = 'admin' then 0 when ${authUsers.role} = 'superadmin' then 1 else 2 end`,
+          sql`case when ${tenantMemberships.role} = 'owner' then 0 when ${tenantMemberships.role} = 'admin' then 1 else 2 end`,
           asc(authUsers.createdAt),
         ),
       // Verified domains
@@ -148,12 +256,35 @@ export class FeaturedGalleriesService {
           and(inArray(photoAssets.tenantId, finalTenantIds), inArray(photoAssets.syncStatus, ['synced', 'conflict'])),
         )
         .groupBy(photoAssets.tenantId),
+      userId
+        ? db
+            .select({ tenantId: gallerySubscriptions.targetTenantId })
+            .from(gallerySubscriptions)
+            .where(
+              and(
+                eq(gallerySubscriptions.subscriberUserId, userId),
+                inArray(gallerySubscriptions.targetTenantId, finalTenantIds),
+              ),
+            )
+        : Promise.resolve([]),
+      userId
+        ? db
+            .select({ tenantId: tenantMemberships.tenantId })
+            .from(tenantMemberships)
+            .where(
+              and(
+                eq(tenantMemberships.userId, userId),
+                eq(tenantMemberships.status, 'active'),
+                inArray(tenantMemberships.tenantId, finalTenantIds),
+              ),
+            )
+        : Promise.resolve([]),
     ])
 
     // Step 4: Fetch popular tags for top tenants (batch query)
     const tagMap = new Map<string, string[]>()
     for (const tenantId of finalTenantIds) {
-      const tagsResult = await db.execute<{ tag: string | null; count: number | null }>(sql`
+      const tagsResult = await db.execute<{ tag: string | null, count: number | null }>(sql`
         select tag, count(*)::int as count
         from (
           select nullif(trim(jsonb_array_elements_text(${photoAssets.manifest}->'data'->'tags')), '') as tag
@@ -188,10 +319,10 @@ export class FeaturedGalleriesService {
       settingsMap.get(setting.tenantId)!.set(setting.key, setting.value)
     }
 
-    const authorMap = new Map<string, { name: string; avatar: string | null }>()
+    const authorMap = new Map<string, { name: string, avatar: string | null }>()
     for (const author of authors) {
-      if (!authorMap.has(author.tenantId!)) {
-        authorMap.set(author.tenantId!, {
+      if (!authorMap.has(author.tenantId)) {
+        authorMap.set(author.tenantId, {
           name: author.name,
           avatar: author.image ?? null,
         })
@@ -200,6 +331,8 @@ export class FeaturedGalleriesService {
 
     const domainMap = new Map<string, string>()
     const lastUpdatedMap = new Map<string, Date | null>()
+    const subscriptionTenantIds = new Set(subscriptions.map(({ tenantId }) => tenantId))
+    const ownTenantIds = new Set(ownMemberships.map(({ tenantId }) => tenantId))
     for (const domain of domains) {
       if (!domainMap.has(domain.tenantId)) {
         domainMap.set(domain.tenantId, domain.domain)
@@ -232,16 +365,26 @@ export class FeaturedGalleriesService {
               }
             : null,
           photoCount: score?.photoCount ?? 0,
+          isSubscribed: subscriptionTenantIds.has(tenant.id),
+          isOwnGallery: ownTenantIds.has(tenant.id),
           tags,
           createdAt: normalizeDate(tenant.createdAt),
           lastUpload:
-            normalizeDate(lastUpdatedMap.get(tenant.id) ?? undefined) ??
-            lastUpdatedMap.get(tenant.id) ??
-            normalizeDate(tenant.createdAt),
+            normalizeDate(lastUpdatedMap.get(tenant.id) ?? undefined)
+            ?? lastUpdatedMap.get(tenant.id)
+            ?? normalizeDate(tenant.createdAt),
         }
       })
-      .filter((gallery) => gallery.photoCount > 0)
+      .filter(gallery => gallery.photoCount > 0)
       .sort((a, b) => {
+        if (query) {
+          const aDirectory = directoryCandidates.get(a.id)
+          const bDirectory = directoryCandidates.get(b.id)
+          const rankA = galleryDirectoryMatchRank(query, [a.name, a.slug, a.author?.name, aDirectory?.tenantName])
+          const rankB = galleryDirectoryMatchRank(query, [b.name, b.slug, b.author?.name, bDirectory?.tenantName])
+          if (rankA !== rankB)
+            return rankA - rankB
+        }
         const scoreA = scoreMap.get(a.id)?.qualityScore ?? 0
         const scoreB = scoreMap.get(b.id)?.qualityScore ?? 0
         return scoreB - scoreA

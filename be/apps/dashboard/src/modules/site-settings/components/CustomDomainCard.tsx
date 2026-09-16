@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { LinearBorderPanel } from '~/components/common/LinearBorderPanel'
+import { presentBillingUpgradeModal } from '~/modules/billing'
 
 import {
   useDeleteTenantDomainMutation,
@@ -16,17 +17,8 @@ import {
 } from '../hooks'
 import { DomainListItem } from './DomainListItem'
 
-function normalizeHostname(): string {
-  const { hostname } = window.location
-  return hostname ?? ''
-}
-
 function buildVerificationInstructions() {
   return [
-    {
-      titleKey: 'settings.domain.steps.txt.title',
-      descriptionKey: 'settings.domain.steps.txt.desc',
-    },
     {
       titleKey: 'settings.domain.steps.cname.title',
       descriptionKey: 'settings.domain.steps.cname.desc',
@@ -44,30 +36,49 @@ function buildVerificationInstructions() {
 export function CustomDomainCard() {
   const { t } = useTranslation()
   const [domainInput, setDomainInput] = useState('')
-  const { data: domains = [], isLoading, isFetching } = useTenantDomainsQuery()
+  const { data, isLoading, isFetching } = useTenantDomainsQuery()
   const requestDomainMutation = useRequestTenantDomainMutation()
   const verifyMutation = useVerifyTenantDomainMutation()
   const deleteMutation = useDeleteTenantDomainMutation()
 
-  const baseDomain = useMemo(normalizeHostname, [])
+  const domains = data?.domains ?? []
+  const cnameTarget = data?.cnameTarget ?? '—'
+  const customDomainLimit = data?.customDomainLimit
   const steps = useMemo(() => buildVerificationInstructions(), [])
 
   const handleRequest = async () => {
-    if (!domainInput.trim()) {
+    const normalizedDomain = domainInput.trim().toLowerCase()
+    if (!normalizedDomain) {
       toast.error(t('settings.domain.toast.input-required'))
       return
     }
-    requestDomainMutation.mutate(domainInput.trim())
+    if (customDomainLimit === 0) {
+      presentBillingUpgradeModal('plan', 'custom-domain')
+      return
+    }
+    const alreadyBound = domains.some(domain => domain.domain.toLowerCase() === normalizedDomain)
+    if (!alreadyBound && customDomainLimit != null && domains.length >= customDomainLimit) {
+      toast.error(t('settings.domain.toast.limit-reached', { limit: customDomainLimit }))
+      return
+    }
+    requestDomainMutation.mutate(normalizedDomain)
   }
 
-  const pendingDomain = domains.find((item) => item.status === 'pending')
+  const pendingDomain = domains.find(item => item.status === 'pending')
+  const handleVerify = (domainId: string) => {
+    if (customDomainLimit === 0) {
+      presentBillingUpgradeModal('plan', 'custom-domain')
+      return
+    }
+    verifyMutation.mutate(domainId)
+  }
 
   return (
     <LinearBorderPanel>
       <div className="flex flex-col gap-6 p-6">
         <div className="flex flex-col gap-2">
           <p className="text-sm font-semibold text-text">{t('settings.domain.title')}</p>
-          <p className="text-text-secondary text-sm">{t('settings.domain.description', { base: baseDomain })}</p>
+          <p className="text-text-secondary text-sm">{t('settings.domain.description')}</p>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-3">
@@ -76,7 +87,7 @@ export function CustomDomainCard() {
               <label className="text-sm font-medium text-text">{t('settings.domain.input.label')}</label>
               <Input
                 value={domainInput}
-                onChange={(event) => setDomainInput(event.target.value)}
+                onChange={event => setDomainInput(event.target.value)}
                 placeholder={t('settings.domain.input.placeholder')}
                 disabled={requestDomainMutation.isPending}
               />
@@ -87,11 +98,9 @@ export function CustomDomainCard() {
                   isLoading={requestDomainMutation.isPending}
                   disabled={!domainInput.trim()}
                 >
-                  {t('settings.domain.input.cta')}
+                  {t(customDomainLimit === 0 ? 'settings.domain.input.upgrade-cta' : 'settings.domain.input.cta')}
                 </Button>
-                <FormHelperText className="text-text-tertiary">
-                  {t('settings.domain.input.helper', { base: baseDomain })}
-                </FormHelperText>
+                <FormHelperText className="text-text-tertiary">{t('settings.domain.input.helper')}</FormHelperText>
               </div>
             </div>
 
@@ -112,7 +121,7 @@ export function CustomDomainCard() {
                   </span>
                   <div className="flex-1 space-y-1">
                     <p className="text-sm font-semibold text-text">{t(step.titleKey)}</p>
-                    <p className="text-text-secondary text-sm">{t(step.descriptionKey, { base: baseDomain })}</p>
+                    <p className="text-text-secondary text-sm">{t(step.descriptionKey, { target: cnameTarget })}</p>
                   </div>
                 </m.div>
               ))}
@@ -130,11 +139,12 @@ export function CustomDomainCard() {
               <p className="text-sm text-text-tertiary">{t('settings.domain.bound-list.empty')}</p>
             ) : (
               <div className="space-y-3">
-                {domains.map((domain) => (
+                {domains.map(domain => (
                   <DomainListItem
                     key={domain.id}
                     domain={domain}
-                    onVerify={verifyMutation.mutate}
+                    cnameTarget={cnameTarget}
+                    onVerify={handleVerify}
                     onDelete={deleteMutation.mutate}
                     isVerifying={verifyMutation.isPending}
                     isDeleting={deleteMutation.isPending}

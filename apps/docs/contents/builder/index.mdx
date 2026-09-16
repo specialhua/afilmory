@@ -1,8 +1,8 @@
 ---
 title: Builder
-description: Overview of the photo pipeline and how to choose the right entrypoint for your run.
+description: Overview of the photo pipeline, XMP support, and how to choose the right entrypoint for your run.
 createdAt: 2025-11-14T22:10:00+08:00
-lastModified: 2025-11-23T20:44:02+08:00
+lastModified: 2026-08-08T03:38:03+08:00
 order: 40
 ---
 
@@ -14,8 +14,25 @@ Builder is the unified pipeline (in `packages/builder`) that turns raw assets in
 
 - 600 px JPEG thumbnail per photo + ThumbHash (`thumbHash`).
 - `photos-manifest.json` sorted by capture time, plus `cameras[]`/`lenses[]` dictionaries.
-- EXIF (incl. Fujifilm/Sony recipes), GPS, tone analysis, HDR, Motion Photo, and Live Photo markers.
+- EXIF (incl. Fujifilm/Sony recipes), GPS, tone analysis, HDR, Motion Photo, Live Photo markers, and embedded XMP keywords/regions.
 - Optional plugins to sync or rewrite outputs (e.g., upload thumbnails, repo cache).
+
+## XMP regions
+
+When photos contain embedded XMP packets, Builder now extracts:
+
+- `keywords[]` from `dc:subject`, `lr:hierarchicalSubject`, and `lr:weightedFlatSubject`
+- `regions[]` from Lightroom/MWG region metadata (`mwg-rs:Regions`)
+
+Those values are written into each manifest item and consumed by the web viewer. The viewer can show region boxes immediately on the thumbnail placeholder, then keep them aligned after the full-resolution image loads.
+
+XMP extraction is configured through `system.processing.xmp` in `builder.config.ts`, with separate `keywords` and `regions` booleans. Both default to `true`.
+
+Current expectations and caveats:
+
+- Only **embedded XMP inside the image file** is parsed. Standalone `.xmp` sidecars are not read.
+- Region coordinates are normalized into manifest output, but front-end alignment still depends on EXIF orientation handling for the source image.
+- The viewer currently supports the common rotation orientations (`3`, `6`, `8`). Mirrored EXIF orientations are not handled yet.
 
 ## How to run it
 

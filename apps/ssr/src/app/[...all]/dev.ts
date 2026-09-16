@@ -1,4 +1,5 @@
 import { extname } from 'node:path'
+import process from 'node:process'
 
 import { DOMParser } from 'linkedom'
 import type { NextRequest } from 'next/server'
@@ -14,20 +15,21 @@ export const handler = async (req: NextRequest) => {
 
   const { pathname } = req.nextUrl
   const wantsHtml = req.headers.get('accept')?.includes('text/html')
+  const hasExtension = Boolean(extname(pathname))
 
   if (pathname.startsWith('/thumbnails')) {
     return proxyAssets(req)
   }
 
   if (pathname.startsWith('/photos')) {
-    const hasExtension = Boolean(extname(pathname))
-
-    // When the browser requests a photo detail route (no file extension, accepts HTML),
-    // serve the SPA shell instead of proxying to the static photo server.
     if (!hasExtension && wantsHtml) {
       return proxyIndexHtml()
     }
 
+    return proxyAssets(req)
+  }
+
+  if (hasExtension || pathname.startsWith('/@') || pathname.startsWith('/node_modules')) {
     return proxyAssets(req)
   }
 
@@ -46,7 +48,7 @@ async function proxyAssets(req: NextRequest) {
 }
 
 async function proxyIndexHtml() {
-  const htmlText = await fetch(host).then((res) => res.text())
+  const htmlText = await fetch(host).then(res => res.text())
 
   const parser = new DOMParser()
   const document = parser.parseFromString(htmlText, 'text/html')

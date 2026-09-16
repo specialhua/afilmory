@@ -17,6 +17,8 @@ import { useManagedStoragePlansQuery } from '~/modules/storage-plans'
 const managedStorageI18nKeys = {
   title: 'photos.storage.managed.title',
   description: 'photos.storage.managed.description',
+  quotaTitle: 'photos.storage.managed.quota.title',
+  quotaDescription: 'photos.storage.managed.quota.description',
   unavailable: 'photos.storage.managed.unavailable',
   empty: 'photos.storage.managed.empty',
   capacityLabel: 'photos.storage.managed.capacity.label',
@@ -40,14 +42,18 @@ const managedStorageI18nKeys = {
   toastCheckoutUnavailable: 'photos.storage.managed.toast.checkout-unavailable',
 } as const
 
-export const ManagedStoragePlansModal: ModalComponent = () => {
+export interface ManagedStoragePlansModalProps {
+  reason?: 'quota-exceeded'
+}
+
+export const ManagedStoragePlansModal: ModalComponent<ManagedStoragePlansModalProps> = ({ reason }) => {
   const { t } = useTranslation()
   const plansQuery = useManagedStoragePlansQuery()
   const queryClient = useQueryClient()
-  const session = (queryClient.getQueryData<SessionResponse | null>(AUTH_SESSION_QUERY_KEY) ??
-    null) as SessionResponse | null
-  const tenantId = session?.tenant?.id ?? null
-  const tenantSlug = session?.tenant?.slug ?? null
+  const session = (queryClient.getQueryData<SessionResponse | null>(AUTH_SESSION_QUERY_KEY)
+    ?? null) as SessionResponse | null
+  const tenantId = session?.requestedWorkspace?.id ?? null
+  const tenantSlug = session?.requestedWorkspace?.slug ?? null
   const creemCustomerId = session?.user?.creemCustomerId ?? null
   const [activeAction, setActiveAction] = useState<string | null>(null)
 
@@ -78,9 +84,11 @@ export const ManagedStoragePlansModal: ModalComponent = () => {
         return
       }
       toast.error(t(managedStorageI18nKeys.toastMissingCheckoutUrl))
-    } catch (error) {
+    }
+    catch (error) {
       toast.error(error instanceof Error ? error.message : t(managedStorageI18nKeys.toastCheckoutFailure))
-    } finally {
+    }
+    finally {
       setActiveAction(null)
     }
   }
@@ -101,9 +109,11 @@ export const ManagedStoragePlansModal: ModalComponent = () => {
         return
       }
       toast.error(t(managedStorageI18nKeys.toastMissingPortalUrl))
-    } catch (error) {
+    }
+    catch (error) {
       toast.error(error instanceof Error ? error.message : t(managedStorageI18nKeys.toastPortalFailure))
-    } finally {
+    }
+    finally {
       setActiveAction(null)
     }
   }
@@ -112,17 +122,19 @@ export const ManagedStoragePlansModal: ModalComponent = () => {
     <div className="flex h-full max-h-[85vh] flex-col">
       <DialogHeader>
         <DialogTitle className="text-lg font-semibold leading-none tracking-tight">
-          {t(managedStorageI18nKeys.title)}
+          {t(reason === 'quota-exceeded' ? managedStorageI18nKeys.quotaTitle : managedStorageI18nKeys.title)}
         </DialogTitle>
         <DialogDescription className="text-text-secondary text-sm">
-          {t(managedStorageI18nKeys.description)}
+          {t(
+            reason === 'quota-exceeded' ? managedStorageI18nKeys.quotaDescription : managedStorageI18nKeys.description,
+          )}
         </DialogDescription>
       </DialogHeader>
 
       <div className="mt-6 space-y-4">
         {plansQuery.isLoading ? (
           <div className="grid gap-5 md:grid-cols-2">
-            {Array.from({ length: 2 }, (_, index) => `skeleton-${index}`).map((key) => (
+            {Array.from({ length: 2 }, (_, index) => `skeleton-${index}`).map(key => (
               <div key={key} className="bg-background-tertiary h-64 animate-pulse rounded-lg" />
             ))}
           </div>
@@ -140,7 +152,7 @@ export const ManagedStoragePlansModal: ModalComponent = () => {
           </div>
         ) : (
           <div className="grid gap-5 md:grid-cols-2">
-            {plansQuery.data.availablePlans.map((plan) => (
+            {plansQuery.data.availablePlans.map(plan => (
               <PlanCard
                 key={plan.id}
                 plan={plan}
@@ -195,11 +207,11 @@ function PlanCard({
     }
   }, [locale])
 
-  const hasPrice =
-    plan.pricing &&
-    plan.pricing.monthlyPrice !== null &&
-    plan.pricing.monthlyPrice !== undefined &&
-    Number.isFinite(plan.pricing.monthlyPrice)
+  const hasPrice
+    = plan.pricing
+      && plan.pricing.monthlyPrice !== null
+      && plan.pricing.monthlyPrice !== undefined
+      && Number.isFinite(plan.pricing.monthlyPrice)
 
   const priceLabel = hasPrice
     ? t(managedStorageI18nKeys.priceLabel, {
@@ -214,11 +226,10 @@ function PlanCard({
       ? t(managedStorageI18nKeys.actionsSwitch)
       : t(managedStorageI18nKeys.actionsSubscribe)
 
-  const isPaidPlan = Boolean(plan.payment?.creemProductId)
   const showManage = isCurrent && canManage
   const primaryAction = showManage ? onPortal : onCheckout
   const primaryLabel = showManage ? t(managedStorageI18nKeys.actionsManage) : actionLabel
-  const shouldDisable = isProcessing || (isPaidPlan && !canCheckout) || (isCurrent && !showManage && isPaidPlan)
+  const shouldDisable = isProcessing || (!showManage && (isCurrent || !canCheckout))
 
   return (
     <div

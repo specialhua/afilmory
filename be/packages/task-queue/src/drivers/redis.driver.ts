@@ -33,8 +33,9 @@ export class RedisQueueDriver implements TaskQueueDriver {
 
   async ensureGroup(): Promise<void> {
     try {
-      await this.options.redis.xgroup('CREATE', this.streamKey, this.groupName, '$', 'MKSTREAM')
-    } catch (error) {
+      await this.options.redis.xgroup('CREATE', this.streamKey, this.groupName, '0', 'MKSTREAM')
+    }
+    catch (error) {
       if (!(error instanceof Error) || !error.message.includes('BUSYGROUP')) {
         throw error
       }
@@ -63,7 +64,10 @@ export class RedisQueueDriver implements TaskQueueDriver {
   async poll(options: PollOptions): Promise<DriverTask | null> {
     await this.ensureGroup()
     await this.releaseScheduled(Date.now())
-    await this.reclaimExpired()
+    const reclaimed = await this.reclaimExpired()
+    if (reclaimed) {
+      return reclaimed
+    }
 
     const blockMs = Math.max(0, options.timeoutMs)
     const entries = await this.options.redis.xreadgroup(
@@ -88,7 +92,11 @@ export class RedisQueueDriver implements TaskQueueDriver {
       return null
     }
 
-    const [id, fields] = messages[0]
+    return this.parseMessage(messages[0])
+  }
+
+  private parseMessage(message: [string, string[]]): DriverTask | null {
+    const [id, fields] = message
     const fieldIndex = fields.findIndex((value, index) => index % 2 === 0 && value === 'payload')
     const payload = fieldIndex !== -1 ? fields[fieldIndex + 1] : undefined
     if (!payload) {
@@ -138,7 +146,7 @@ export class RedisQueueDriver implements TaskQueueDriver {
     await pipeline.exec()
   }
 
-  private async reclaimExpired(): Promise<void> {
+  private async reclaimExpired(): Promise<DriverTask | null> {
     const result = await this.options.redis.xautoclaim(
       this.streamKey,
       this.groupName,
@@ -146,17 +154,13 @@ export class RedisQueueDriver implements TaskQueueDriver {
       this.visibilityTimeout,
       '0-0',
       'COUNT',
-      32,
+      1,
     )
 
     const messages = result[1] as Array<[string, string[]]> | undefined
-    if (!messages) {
-      return
+    if (!messages || messages.length === 0) {
+      return null
     }
-
-    for (const [id] of messages) {
-      await this.options.redis.xack(this.streamKey, this.groupName, id)
-      await this.options.redis.xdel(this.streamKey, id)
-    }
+    return this.parseMessage(messages[0])
   }
 }

@@ -1,0 +1,141 @@
+name: Mobile TestFlight
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['mobile-v*']
+
+concurrency:
+  group: mobile-testflight
+  cancel-in-progress: false
+
+jobs:
+  ios:
+    runs-on: macos-26
+    timeout-minutes: 90
+    env:
+      AFILMORY_APP_VARIANT: production
+      APPLE_TEAM_ID: KAMM5N88X3
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Install XcodeGen
+        run: brew list xcodegen > /dev/null 2>&1 || brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate --spec project.yml
+
+      - name: Resolve Swift packages
+        run: xcodebuild -resolvePackageDependencies -project Afilmory.xcodeproj -scheme Afilmory
+
+      - name: Import signing assets
+        env:
+          DIST_CERT_P12: ${{ secrets.IOS_DIST_CERT_P12 }}
+          DIST_CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
+          APP_PROFILE_BASE64: ${{ secrets.IOS_APPSTORE_PROFILE }}
+          SHARE_PROFILE_BASE64: ${{ secrets.IOS_SHARE_APPSTORE_PROFILE }}
+          WIDGETS_PROFILE_BASE64: ${{ secrets.IOS_WIDGETS_APPSTORE_PROFILE }}
+          NOTIFICATION_PROFILE_BASE64: ${{ secrets.IOS_NOTIFICATION_APPSTORE_PROFILE }}
+        run: bash scripts/import-ci-signing-assets.sh
+
+      - name: Configure manual signing
+        run: |
+          XCODEPROJ_GEM_HOME="$RUNNER_TEMP/xcodeproj-gems"
+          /usr/bin/gem install --no-document --install-dir "$XCODEPROJ_GEM_HOME" xcodeproj --version 1.27.0
+          GEM_HOME="$XCODEPROJ_GEM_HOME" GEM_PATH="$XCODEPROJ_GEM_HOME" \
+            /usr/bin/ruby scripts/configure-ci-signing.rb
+
+      - name: Archive
+        run: |
+          set -o pipefail
+          command -v xcbeautify > /dev/null || brew install xcbeautify
+          # The widget extension generates its Info.plist, so its CFBundleVersion comes
+          # from CURRENT_PROJECT_VERSION — it must match the app or ASC rejects the build.
+          xcodebuild -project Afilmory.xcodeproj \
+            -scheme Afilmory \
+            -configuration Release \
+            -destination generic/platform=iOS \
+            -archivePath "$RUNNER_TEMP/Afilmory.xcarchive" \
+            archive \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" \
+            | xcbeautify --renderer github-actions
+
+      - name: Verify native localization resources
+        run: |
+          APP_BUNDLE="$RUNNER_TEMP/Afilmory.xcarchive/Products/Applications/Afilmory.app"
+          SHARE_BUNDLE="$APP_BUNDLE/PlugIns/AfilmoryShare.appex"
+          # Xcode omits source-language Localizable.strings when every value is
+          # identical to the English source text. Dynamic EXIF keys still need
+          # an explicit English table.
+          for language in ja ko zh-Hans zh-Hant zh-HK; do
+            test -s "$APP_BUNDLE/$language.lproj/Localizable.strings"
+            test -s "$SHARE_BUNDLE/$language.lproj/Localizable.strings"
+          done
+          for language in en ja ko zh-Hans zh-Hant zh-HK; do
+            test -s "$APP_BUNDLE/$language.lproj/ExifValues.strings"
+          done
+
+      - name: Prepare App Store Connect authentication
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+        run: |
+          : "${ASC_KEY_ID:?ASC_KEY_ID is required}"
+          : "${ASC_API_KEY_P8:?ASC_API_KEY_P8 is required}"
+          printf '%s' "$ASC_API_KEY_P8" > "$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8"
+          echo "ASC_KEY_PATH=$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8" >> "$GITHUB_ENV"
+
+      - name: Upload to App Store Connect
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          cat > "$RUNNER_TEMP/exportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>signingCertificate</key><string>Apple Distribution</string>
+            <key>teamID</key><string>$APPLE_TEAM_ID</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>app.afilmory</key><string>$IOS_APP_PROFILE_NAME</string>
+              <key>app.afilmory.share</key><string>$IOS_SHARE_PROFILE_NAME</string>
+              <key>app.afilmory.widgets</key><string>$IOS_WIDGETS_PROFILE_NAME</string>
+              <key>app.afilmory.notification</key><string>$IOS_NOTIFICATION_PROFILE_NAME</string>
+            </dict>
+            <key>manageAppVersionAndBuildNumber</key><true/>
+          </dict>
+          </plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/Afilmory.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/exportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      - name: Clean up keychain
+        if: always()
+        run: |
+          security delete-keychain "$RUNNER_TEMP/ci.keychain-db" || true
+          rm -f "$RUNNER_TEMP/dist.p12" "$RUNNER_TEMP"/AuthKey_*.p8
+          for profile_uuid in "$IOS_APP_PROFILE_UUID" "$IOS_SHARE_PROFILE_UUID" "$IOS_WIDGETS_PROFILE_UUID" "$IOS_NOTIFICATION_PROFILE_UUID"; do
+            if [[ "$profile_uuid" =~ ^[0-9A-Fa-f-]{36}$ ]]; then
+              rm -f "$HOME/Library/MobileDevice/Provisioning Profiles/$profile_uuid.mobileprovision"
+              rm -f "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/$profile_uuid.mobileprovision"
+            fi
+          done

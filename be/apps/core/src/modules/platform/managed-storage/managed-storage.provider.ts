@@ -8,7 +8,7 @@ import type {
   StorageUploadOptions,
 } from '@afilmory/builder/storage/interfaces.js'
 
-import { joinSegments, normalizePath } from '../../content/photo/access/storage-access.utils'
+import { joinSegments, normalizePath } from '../../content/photo/storage/storage.utils'
 
 type PrefixedStorageObject = StorageObject & { key: string }
 

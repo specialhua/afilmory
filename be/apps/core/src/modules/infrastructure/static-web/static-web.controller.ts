@@ -22,7 +22,7 @@ export class StaticWebController extends StaticBaseController {
   }
 
   @Get('/')
-  @Get('/explory')
+  @Get('/map')
   @SkipTenantGuard()
   @AllowPlaceholderTenant()
   async getStaticWebIndex(@ContextParam() context: Context, @Query() query: StaticWebDto) {

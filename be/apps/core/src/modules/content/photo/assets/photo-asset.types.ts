@@ -1,4 +1,7 @@
+import type { Buffer } from 'node:buffer'
+
 import type { PhotoAssetManifest, photoAssets } from '@afilmory/db'
+import type { PhotoChange } from '@core/modules/content/manifest-sync/manifest-sync.types'
 
 export type PhotoAssetRecord = typeof photoAssets.$inferSelect
 
@@ -14,6 +17,7 @@ export interface PhotoAssetListItem {
   publicUrl: string | null
   size: number | null
   syncStatus: PhotoAssetRecord['syncStatus']
+  change?: PhotoChange
 }
 
 export interface PhotoAssetSummary {

@@ -1,0 +1,115 @@
+---
+import Base from '../../layouts/Base.astro'
+import LegalPage from '../../components/LegalPage.astro'
+---
+
+<Base
+  title="Privacy Policy · Afilmory"
+  description="Learn how Afilmory collects, uses, publishes, retains, and protects your personal data and photography content."
+>
+  <LegalPage
+    eyebrow="Privacy Policy"
+    title="Privacy Policy"
+    description="This policy explains how we collect and process personal data when you use Afilmory websites, mobile apps, public galleries, and related services."
+    updatedAt="August 29, 2026"
+    locale="en"
+    alternateHref="/privacy/"
+  >
+    <div class="notice">
+      Using Afilmory signifies that you have read and understood this policy. For self-hosted Afilmory instances, the instance operator acts as an independent data controller; their practices are not governed by this policy.
+    </div>
+
+    <section>
+      <h2>1. Information We Collect</h2>
+      <h3>Account & Identity Information</h3>
+      <p>When you create an account or sign in, we process your name, email address, internal user ID, authentication provider details, and session tokens required to maintain security.</p>
+
+      <h3>Content You Submit</h3>
+      <p>To provide gallery, Studio, comment, and interaction features, we process content you upload or create, including:</p>
+      <ul>
+        <li>Photos, videos, Live Photos, and generated thumbnails;</li>
+        <li>EXIF metadata, capture timestamps, camera and lens models, titles, tags, ratings, and site configurations;</li>
+        <li>Comments, replies, emoji reactions, public profile details, and subscription relationships.</li>
+      </ul>
+      <p>Photo metadata may contain precise GPS coordinates. Afilmory does not access your device's real-time location for map display; location data is processed solely when embedded in media files you choose to upload.</p>
+
+      <h3>Device, Notification & Operational Information</h3>
+      <p>When you enable gallery update notifications, we process Apple Push Notification service (APNs) device tokens, notification environments, locale, and subscription bindings. Servers may also log IP addresses, user agents, request timestamps, errors, and security events to operate and protect the service.</p>
+
+      <h3>Purchase Information</h3>
+      <p>Sponsorship in-app purchases are handled by Apple via StoreKit. Transactions are verified and completed on-device; Afilmory servers do not receive or store payment card details or full purchase histories. Apple manages billing records in accordance with its privacy standards.</p>
+    </section>
+
+    <section>
+      <h2>2. How We Use Information</h2>
+      <ul>
+        <li>Create and maintain accounts, Workspaces, authentication sessions, and security;</li>
+        <li>Upload, store, transcode, synchronize, index, and display your photography;</li>
+        <li>Provide public galleries, comments, reactions, subscriptions, and push notifications;</li>
+        <li>Process sponsorship transactions and mitigate fraud or abuse;</li>
+        <li>Troubleshoot technical issues, optimize performance, enforce terms, and fulfill legal duties.</li>
+      </ul>
+      <p><strong>We do not sell personal data, nor do we track users across third-party apps and websites for advertising.</strong></p>
+    </section>
+
+    <section>
+      <h2>3. Public Content & Visibility</h2>
+      <p>When you mark a gallery as public, photographs, metadata, profile details, and public comments within it can be accessed by anyone and indexed by search engines. Please review and remove sensitive metadata or private coordinates before publishing.</p>
+      <p>Private Workspaces, unpublished drafts, and administrative settings are not made public by using public gallery features.</p>
+    </section>
+
+    <section>
+      <h2>4. Information Sharing & Service Providers</h2>
+      <p>We share data strictly to the extent necessary with the following recipients:</p>
+      <ul>
+        <li>Apple: Sign in with Apple, StoreKit, APNs, and App Store distribution;</li>
+        <li>Authentication providers of your choice, such as GitHub or Google;</li>
+        <li>Hosting, database, object storage, CDN, email, and security infrastructure providers;</li>
+        <li>Regulatory, law enforcement, or judicial authorities upon lawful and valid request;</li>
+        <li>Successor entities in the event of restructuring, merger, or asset transfer assuming this policy's obligations.</li>
+      </ul>
+      <p>Third-party service providers processing data on our behalf are bound by contractual confidentiality and security commitments.</p>
+    </section>
+
+    <section>
+      <h2>5. Retention, Deletion & Export</h2>
+      <p>We retain data only as long as necessary to provide the service, resolve disputes, maintain security, or comply with legal requirements. Retention periods depend on data type, Workspace configuration, and backup rotation schedules.</p>
+      <p>You may request account deletion at any time via <strong>Profile → Delete Account</strong> in the app. Deletion removes accounts, Workspace ownership, third-party authentications, and hosted content, subject to limited records retained for fraud prevention or legal compliance. Backups are purged on standard rotation cycles.</p>
+      <p>Additionally, long-inactive free accounts may be subject to cleanup pursuant to Section 9.3 of the <a href="/en/terms/">Terms of Service</a>: deactivated first, then permanently deleted after 14 days. Signing in prior to permanent deletion cancels the scheduled cleanup. See the <a href="/en/account-cleanup/">Account Cleanup Policy</a> for exact thresholds.</p>
+      <p>To request access, correction, export, or deletion of personal data, you may reach out via our contact channels. Identity verification may be required.</p>
+    </section>
+
+    <section>
+      <h2>6. Data Security</h2>
+      <p>We employ transport layer encryption (TLS), access controls, least-privilege principles, and security monitoring to safeguard your data. While no internet service is completely immune to risks, we will notify affected users of any eligible security incidents in accordance with applicable laws.</p>
+    </section>
+
+    <section>
+      <h2>7. Cross-Border Transfers</h2>
+      <p>Afilmory and its service providers may process data outside your country of residence. We implement appropriate organizational, contractual, and technical safeguards to ensure cross-border data transfers comply with applicable privacy regulations.</p>
+    </section>
+
+    <section>
+      <h2>8. Children's Privacy</h2>
+      <p>Afilmory is not intended for children under the age of 13, and we do not knowingly collect personal information from minors. If you become aware that a child has provided us with personal information, please contact us for prompt removal.</p>
+    </section>
+
+    <section>
+      <h2>9. Your Rights & Choices</h2>
+      <p>Depending on your jurisdiction, you may hold rights to access, rectify, delete, restrict processing, port your data, or withdraw consent. You can manage account data, privacy visibility, and notification permissions directly inside the app, or submit requests to us.</p>
+    </section>
+
+    <section>
+      <h2>10. Policy Updates</h2>
+      <p>We may revise this Privacy Policy to reflect feature additions, operational adjustments, or legal obligations. Substantial changes will be communicated on this page or through the app, and the update date at the top of the page will be refreshed accordingly.</p>
+    </section>
+
+    <section>
+      <h2>11. Contact Us</h2>
+      <p>
+        Privacy requests and inquiries can be submitted via the <a href="https://github.com/Afilmory/afilmory/issues/new">Afilmory Support Channel</a>.
+        Please do not disclose passwords, access keys, government identity documents, or unreleased private photos in public issues. For sensitive inquiries, we will arrange private communication channels.
+      </p>
+    </section>
+  </LegalPage>
+</Base>

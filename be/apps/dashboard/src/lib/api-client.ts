@@ -10,6 +10,8 @@ export const coreApi = $fetch.create({
   credentials: 'include',
   onRequest({ options }) {
     options.headers = withLanguageHeader(options.headers)
+    options.headers.set('x-afilmory-surface', 'dashboard')
+    options.headers.set('x-request-id', crypto.randomUUID())
   },
   onResponseError({ response }) {
     if (response?.status !== 403) {

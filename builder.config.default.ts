@@ -35,7 +35,11 @@ export default defineBuilderConfig(() => ({
     processing: {
       defaultConcurrency: 10,
       enableLivePhotoDetection: true,
-      digestSuffixLength: 0,
+      digestSuffixLength: 8,
+      xmp: {
+        keywords: true,
+        regions: true,
+      },
     },
     observability: {
       showProgress: true,

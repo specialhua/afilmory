@@ -32,15 +32,66 @@ export interface ToneAnalysis {
 }
 
 // Video source sum type: Live Photo or Motion Photo
-export type VideoSource =
-  | { type: 'live-photo'; videoUrl: string; s3Key: string }
-  | { type: 'motion-photo'; offset: number; size?: number; presentationTimestamp?: number }
+export type VideoSource
+  = | { type: 'live-photo', videoUrl: string, s3Key: string }
+  | { type: 'motion-photo', offset: number, size?: number, presentationTimestamp?: number }
 
 export interface PhotoInfo {
   title: string
   dateTaken: string
   tags: string[]
   description: string
+}
+
+export interface PhotoRegionDimensions {
+  width: number
+  height: number
+  unit: string
+}
+
+export interface PhotoRegionArea {
+  x: number
+  y: number
+  width: number
+  height: number
+  unit: string
+}
+
+export interface PhotoRegion {
+  name: string
+  type?: string
+  area: PhotoRegionArea | null
+  appliedToDimensions: PhotoRegionDimensions | null
+}
+
+export interface ExiftoolXmpDimensions {
+  W?: number
+  H?: number
+  Unit?: string
+}
+
+export interface ExiftoolXmpArea {
+  X?: number
+  Y?: number
+  W?: number
+  H?: number
+  Unit?: string
+}
+
+export interface ExiftoolXmpRegion {
+  Name?: string
+  Type?: string
+  Area?: ExiftoolXmpArea
+}
+
+export interface ExiftoolXmpRegionInfo {
+  AppliedToDimensions?: ExiftoolXmpDimensions
+  RegionList?: ExiftoolXmpRegion[]
+}
+
+export interface PhotoXmpMetadata {
+  keywords: string[]
+  regions: PhotoRegion[]
 }
 
 export interface ImageMetadata {
@@ -64,6 +115,8 @@ export interface PhotoManifestItem extends PhotoInfo {
   size: number
   digest?: string
   exif: PickedExif | null
+  keywords: string[]
+  regions: PhotoRegion[]
   toneAnalysis: ToneAnalysis | null // 影调分析结果
   location: LocationInfo | null // 地理位置信息（反向地理编码）
   isHDR?: boolean
@@ -163,7 +216,7 @@ export interface PickedExif {
   GPSAltitude: Tags['GPSAltitude']
   GPSLatitude: Tags['GPSLatitude']
   GPSLongitude: Tags['GPSLongitude']
-  GPSAltitudeRef: Tags['GPSAltitudeRef']
+  GPSAltitudeRef: Tags['GPSAltitudeRef'] | 'Above Sea Level' | 'Below Sea Level'
   GPSLatitudeRef: Tags['GPSLatitudeRef']
   GPSLongitudeRef: Tags['GPSLongitudeRef']
 
@@ -189,50 +242,57 @@ export interface PickedExif {
   MicroVideoVersion?: Tags['MicroVideoVersion']
   MicroVideoOffset?: Tags['MicroVideoOffset']
   MicroVideoPresentationTimestampUs?: Tags['MicroVideoPresentationTimestampUs']
+
+  // XMP keyword / region fields returned by exiftool
+  Subject?: string[]
+  Keywords?: string[]
+  WeightedFlatSubject?: string[]
+  HierarchicalSubject?: string[]
+  RegionInfo?: ExiftoolXmpRegionInfo
 }
 
 export type FujiRecipe = {
   FilmMode:
-    | 'F0/Standard (Provia)'
-    | 'F1/Studio Portrait'
-    | 'F1a/Studio Portrait Enhanced Saturation'
-    | 'F1b/Studio Portrait Smooth Skin Tone (Astia)'
-    | 'F1c/Studio Portrait Increased Sharpness'
-    | 'F2/Fujichrome (Velvia)'
-    | 'F3/Studio Portrait Ex'
-    | 'F4/Velvia'
-    | 'Pro Neg. Std'
-    | 'Pro Neg. Hi'
-    | 'Classic Chrome'
-    | 'Eterna'
-    | 'Classic Negative'
-    | 'Bleach Bypass'
-    | 'Nostalgic Neg'
-    | 'Reala ACE'
+  | 'F0/Standard (Provia)'
+  | 'F1/Studio Portrait'
+  | 'F1a/Studio Portrait Enhanced Saturation'
+  | 'F1b/Studio Portrait Smooth Skin Tone (Astia)'
+  | 'F1c/Studio Portrait Increased Sharpness'
+  | 'F2/Fujichrome (Velvia)'
+  | 'F3/Studio Portrait Ex'
+  | 'F4/Velvia'
+  | 'Pro Neg. Std'
+  | 'Pro Neg. Hi'
+  | 'Classic Chrome'
+  | 'Eterna'
+  | 'Classic Negative'
+  | 'Bleach Bypass'
+  | 'Nostalgic Neg'
+  | 'Reala ACE'
   GrainEffectRoughness: 'Off' | 'Weak' | 'Strong'
   GrainEffectSize: 'Off' | 'Small' | 'Large'
   ColorChromeEffect: 'Off' | 'Weak' | 'Strong'
   ColorChromeFxBlue: 'Off' | 'Weak' | 'Strong'
   WhiteBalance:
-    | 'Auto'
-    | 'Auto (white priority)'
-    | 'Auto (ambiance priority)'
-    | 'Daylight'
-    | 'Cloudy'
-    | 'Daylight Fluorescent'
-    | 'Day White Fluorescent'
-    | 'White Fluorescent'
-    | 'Warm White Fluorescent'
-    | 'Living Room Warm White Fluorescent'
-    | 'Incandescent'
-    | 'Flash'
-    | 'Underwater'
-    | 'Custom'
-    | 'Custom2'
-    | 'Custom3'
-    | 'Custom4'
-    | 'Custom5'
-    | 'Kelvin'
+  | 'Auto'
+  | 'Auto (white priority)'
+  | 'Auto (ambiance priority)'
+  | 'Daylight'
+  | 'Cloudy'
+  | 'Daylight Fluorescent'
+  | 'Day White Fluorescent'
+  | 'White Fluorescent'
+  | 'Warm White Fluorescent'
+  | 'Living Room Warm White Fluorescent'
+  | 'Incandescent'
+  | 'Flash'
+  | 'Underwater'
+  | 'Custom'
+  | 'Custom2'
+  | 'Custom3'
+  | 'Custom4'
+  | 'Custom5'
+  | 'Kelvin'
   /**
    * White balance fine tune adjustment (e.g., "Red +0, Blue +0")
    */

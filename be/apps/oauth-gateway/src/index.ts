@@ -1,98 +1,9 @@
-import { decodeGatewayState } from '@afilmory/be-utils'
 import { serve } from '@hono/node-server'
-import { Hono } from 'hono'
 
+import { createOAuthGatewayApp } from './app'
 import { gatewayConfig } from './config'
-import { buildForwardLocation, resolveTargetHost, sanitizeTenantSlug } from './resolver'
 
-const app = new Hono()
-
-app.get('/healthz', (c) =>
-  c.json({
-    status: 'ok',
-    service: 'oauth-gateway',
-    timestamp: new Date().toISOString(),
-  }),
-)
-
-const callbackRouter = new Hono()
-
-callbackRouter.all('/:provider', (c) => {
-  const provider = c.req.param('provider')
-  const requestUrl = new URL(c.req.url)
-  const stateParam = requestUrl.searchParams.get('state')
-
-  if (!provider) {
-    console.warn('[oauth-gateway:callback] Missing provider param', {
-      path: c.req.path,
-      queryParams: Object.fromEntries(requestUrl.searchParams),
-    })
-    return c.json({ error: 'missing_provider', message: 'Provider param is required.' }, 400)
-  }
-
-  const decodedState =
-    gatewayConfig.stateSecret && stateParam
-      ? decodeGatewayState(stateParam, { secret: gatewayConfig.stateSecret })
-      : null
-
-  if (stateParam && gatewayConfig.stateSecret && !decodedState) {
-    console.error('[oauth-gateway:callback] Invalid or expired state', {
-      provider,
-      stateLength: stateParam.length,
-      statePrefix: `${stateParam.slice(0, 20)}...`,
-    })
-    return c.json({ error: 'invalid_state', message: 'OAuth state is invalid or expired.' }, 400)
-  }
-
-  if (decodedState?.innerState) {
-    requestUrl.searchParams.set('state', decodedState.innerState)
-    console.info('[oauth-gateway:callback] Replaced state with innerState', {
-      provider,
-      innerStateLength: decodedState.innerState.length,
-    })
-  }
-
-  const tenantSlug = sanitizeTenantSlug(decodedState?.tenantSlug ?? undefined) ?? decodedState?.tenantSlug ?? null
-
-  const targetHost = resolveTargetHost(gatewayConfig, {
-    tenantSlug,
-  })
-
-  if (!targetHost) {
-    console.error('[oauth-gateway:callback] Unable to resolve target host', {
-      provider,
-      tenantSlug,
-      baseDomain: gatewayConfig.baseDomain,
-    })
-    return c.json({ error: 'unresolvable_host', message: 'Unable to resolve target tenant host.' }, 400)
-  }
-
-  const location = buildForwardLocation({
-    config: gatewayConfig,
-    provider,
-    host: targetHost,
-    query: requestUrl.searchParams,
-  })
-
-  return c.redirect(location, 302)
-})
-
-app.route(gatewayConfig.callbackBasePath, callbackRouter)
-
-app.notFound((c) =>
-  c.json(
-    {
-      error: 'not_found',
-      path: c.req.path,
-    },
-    404,
-  ),
-)
-
-app.onError((err, c) => {
-  console.error('[oauth-gateway] Unhandled error', err)
-  return c.json({ error: 'internal_error', message: 'OAuth gateway encountered an unexpected error.' }, 500)
-})
+const app = createOAuthGatewayApp(gatewayConfig)
 
 serve(
   {
@@ -101,6 +12,7 @@ serve(
     port: gatewayConfig.port,
   },
   (info) => {
+    // eslint-disable-next-line no-console
     console.info(
       `[oauth-gateway] listening on http://${info.address}:${info.port} | forwarding to base domain ${gatewayConfig.baseDomain}`,
     )
