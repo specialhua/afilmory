@@ -35,7 +35,7 @@ oss-event-forwarder（函数计算）
 ## 前置条件
 
 - Node.js ≥ 20.19、pnpm 11、Perl（exiftool 需要）
-- `ossutil` 已配置好对站点 bucket 的写权限
+- `ossutil` 2.x，已配置好对站点 bucket 的写权限（`~/.ossutilconfig` 需包含 `region`）
 - `aliyun` CLI 已安装 fc 插件（`aliyun plugin install --names fc`），并配置了对应 profile
 - pm2
 - 项目根目录的 `.env`、`builder.config.ts`、`config.json` 已配置好（照片存储凭据、`PHOTO_PROXY_BASE_URL` 等）

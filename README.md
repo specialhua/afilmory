@@ -140,7 +140,7 @@ CDN：img.example.com                        轻量服务器：webhook（pm2）
 | Node.js    | 22（最低 20.19）             |
 | pnpm       | 11                           |
 | Perl       | 5（exiftool 需要）           |
-| ossutil    | 1.x（脚本使用 1.x 命令格式） |
+| ossutil    | 2.x（脚本使用 2.x 命令格式） |
 | 阿里云 CLI | 3.x，安装 `fc` 插件          |
 | pm2        | 任意近期版本                 |
 

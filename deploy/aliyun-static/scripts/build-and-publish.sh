@@ -70,17 +70,19 @@ main() {
     fi
   }
 
+  # ossutil 2.x：--content-type / --cache-control 直接在上传时写入
   upload_file() {
     local local_path="$1"
     local remote_path="$2"
-    ossutil cp "$local_path" "$remote_path" -f >/dev/null
+    shift 2
+    ossutil cp "$local_path" "$remote_path" -f --no-progress "$@" >/dev/null
     log "上传完成：$(basename "$local_path")"
   }
 
-  set_meta() {
+  set_props() {
     local remote_path="$1"
-    local meta="$2"
-    if ossutil set-meta "$remote_path" "$meta" --update >/dev/null 2>&1; then
+    shift
+    if ossutil set-props "$remote_path" "$@" --metadata-directive update -f >/dev/null 2>&1; then
       log "元数据已更新：$(basename "$remote_path")"
     else
       log "元数据更新失败：$remote_path"
@@ -90,6 +92,11 @@ main() {
   log "=========================================="
   log "开始自动构建 Afilmory（私有原图模式）"
   log "=========================================="
+
+  if ! ossutil version 2>/dev/null | grep -q '^2\.'; then
+    log "错误：需要 ossutil 2.x，当前：$(ossutil version 2>&1 | head -n 1)"
+    exit 1
+  fi
 
   cd "$PROJECT_DIR"
 
@@ -135,30 +142,36 @@ main() {
 
   for dir in assets vendor thumbnails; do
     if [ -d "$dist_dir/$dir" ]; then
-      run_step "发布 $dir 到 OSS" "sync-$dir.log" ossutil sync "$dist_dir/$dir/" "$site_bucket/$dir/" -f --delete
+      run_step "发布 $dir 到 OSS" "sync-$dir.log" ossutil sync "$dist_dir/$dir/" "$site_bucket/$dir/" -f --delete --no-progress
     fi
+  done
+
+  for wasm_file in "$dist_dir"/assets/*.wasm; do
+    set_props "$site_bucket/assets/$(basename "$wasm_file")" --content-type application/wasm
   done
 
   # 根目录文件全部上传（index.html、sw.js、favicon、og-image、sitemap 等），
-  # 不维护固定清单，避免构建新增文件时漏传。
+  # 不维护固定清单，避免构建新增文件时漏传。入口与 Service Worker 相关文件禁用缓存。
   log "上传根目录静态文件"
+  local no_cache='no-cache, no-store, must-revalidate'
+  local file name
   for file in "$dist_dir"/*; do
-    if [ -f "$file" ]; then
-      upload_file "$file" "$site_bucket/$(basename "$file")"
-    fi
-  done
-
-  log "设置关键文件元数据"
-  local no_cache='Cache-Control:no-cache, no-store, must-revalidate'
-  set_meta "$site_bucket/index.html" "Content-Type:text/html#$no_cache"
-  set_meta "$site_bucket/sw.js" "Content-Type:application/javascript#$no_cache"
-  set_meta "$site_bucket/registerSW.js" "Content-Type:application/javascript#$no_cache"
-  set_meta "$site_bucket/manifest.webmanifest" "Content-Type:application/manifest+json#$no_cache"
-  for workbox_file in "$dist_dir"/workbox-*.js; do
-    set_meta "$site_bucket/$(basename "$workbox_file")" "Content-Type:application/javascript#$no_cache"
-  done
-  for wasm_file in "$dist_dir"/assets/*.wasm; do
-    set_meta "$site_bucket/assets/$(basename "$wasm_file")" "Content-Type:application/wasm"
+    [ -f "$file" ] || continue
+    name="$(basename "$file")"
+    case "$name" in
+      index.html)
+        upload_file "$file" "$site_bucket/$name" --content-type text/html --cache-control "$no_cache"
+        ;;
+      sw.js | registerSW.js | workbox-*.js)
+        upload_file "$file" "$site_bucket/$name" --content-type application/javascript --cache-control "$no_cache"
+        ;;
+      manifest.webmanifest)
+        upload_file "$file" "$site_bucket/$name" --content-type application/manifest+json --cache-control "$no_cache"
+        ;;
+      *)
+        upload_file "$file" "$site_bucket/$name"
+        ;;
+    esac
   done
 
   if [ "$auto_deploy_fc" = "1" ]; then
