@@ -81,17 +81,28 @@ function getWindowedTimestamp(validSeconds, overlapSeconds) {
   return windowStart + windowSize + overlap
 }
 
-function buildStableRand(objectKey, timestamp) {
-  return crypto.createHash('md5').update(`${objectKey}:${timestamp}:${cdnAuthKey}`).digest('hex').slice(0, 16)
+function hmacHex(input) {
+  return crypto.createHmac('sha256', cdnAuthKey).update(input).digest('hex')
 }
 
-function createSignedCdnUrl(objectKey) {
+// uid 由客户端 IP 派生：不同访客拿到不同链接，CDN 日志里可按 uid 追溯泄露的链接；
+// 用 HMAC 而非明文，避免在 URL 里暴露 IP
+function buildClientUid(clientIp) {
+  return hmacHex(`ip:${clientIp}`).slice(0, 12)
+}
+
+// 同一访客、同一对象、同一时间窗口内 rand 保持不变，浏览器缓存仍可复用
+function buildStableRand(objectKey, timestamp, uid) {
+  return hmacHex(`${objectKey}:${timestamp}:${uid}`).slice(0, 16)
+}
+
+function createSignedCdnUrl(objectKey, clientIp) {
   const resourcePath = `/${objectKey.replace(/^\/+/, '')}`
   const encodedPath = encodeURI(resourcePath)
 
   const timestamp = getWindowedTimestamp(authValidSeconds, authOverlapSeconds)
-  const rand = buildStableRand(objectKey, timestamp)
-  const uid = '0'
+  const uid = buildClientUid(clientIp)
+  const rand = buildStableRand(objectKey, timestamp, uid)
   const hash = buildTypeAAuthKey(encodedPath, timestamp, rand, uid, cdnAuthKey)
 
   const authKey = `${timestamp}-${rand}-${uid}-${hash}`
@@ -104,6 +115,8 @@ export const handler = async (event, context) => {
   const req = parseEvent(event)
   const method = req?.requestContext?.http?.method || 'GET'
   const rawPath = req?.rawPath || '/'
+  // 只取网关记录的连接来源 IP，不信任可被伪造的 X-Forwarded-For
+  const clientIp = req?.requestContext?.http?.sourceIp || ''
 
   if (method === 'OPTIONS') {
     return {
@@ -153,7 +166,7 @@ export const handler = async (event, context) => {
   }
 
   try {
-    const signedUrl = createSignedCdnUrl(objectKey)
+    const signedUrl = createSignedCdnUrl(objectKey, clientIp)
 
     return {
       statusCode: 302,
