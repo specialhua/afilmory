@@ -1,6 +1,7 @@
 #!/bin/bash
-# 用阿里云 CLI 更新 photo-auth 函数代码。
-# 由 build-and-publish.sh 调用；单独使用时需要传入 ZIP_PATH。
+# 用阿里云 CLI 更新函数计算的函数代码。
+# 由 build-and-publish.sh 为 photo-auth 和 manifest-api 各调用一次；
+# 单独使用时需要传入 ZIP_PATH 与 FC_FUNCTION_NAME。
 
 set -euo pipefail
 export LANG=C.UTF-8
@@ -26,7 +27,7 @@ main() {
   local name
   for name in ZIP_PATH ALIYUN_REGION FC_FUNCTION_NAME; do
     if [ -z "${!name:-}" ]; then
-      log "错误：缺少环境变量 ${name}（ZIP_PATH 由构建脚本传入，其余在 deploy/aliyun-static/.env 中设置）"
+      log "错误：缺少环境变量 ${name}（ZIP_PATH 与 FC_FUNCTION_NAME 由构建脚本传入，其余在 deploy/aliyun-static/.env 中设置）"
       exit 1
     fi
   done

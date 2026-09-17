@@ -71,6 +71,7 @@
 - 📷 **理光 GR 系列适配**：识别镜头信息、影像控制、ND 滤镜和对焦模式
 - ⏱️ **快门速度显示**：1/8 秒及更快用分数，长曝光用秒，信息面板、RSS、分享图统一
 - 📱 **移动端信息面板改进**：弹出键盘时评论框不被遮挡、支持下拉关闭，修复 iOS Firefox 下的若干问题
+- 🔌 **站外引用相册**：可选的函数计算接口按官方后端的路由暴露只读 manifest，博客等站外应用无需官方后端即可选片和渲染
 - 🚫 **默认关闭遥测**：官方版本默认加载的 VibeLoft 统计脚本在本仓库默认关闭
 
 ## 与官方仓库的差异
@@ -185,6 +186,7 @@ afilmory/
 ├── apps/web/                 # 相册前端（Vite + React），构建产物发布到公开桶
 ├── packages/builder/         # 照片处理流水线：读取 OSS、EXIF、缩略图、manifest
 ├── fc/photo-auth/            # 函数计算：原图签名
+├── fc/manifest-api/          # 函数计算：manifest 只读接口（可选，供站外引用相册）
 ├── deploy/aliyun-static/
 │   ├── oss-event-forwarder/  # 函数计算：OSS 事件转发到 webhook
 │   ├── webhook/              # webhook 服务与构建状态页（pm2）

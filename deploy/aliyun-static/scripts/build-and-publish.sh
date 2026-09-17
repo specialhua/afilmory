@@ -47,8 +47,10 @@ main() {
   local build_log_dir="${BUILD_LOG_DIR:-/tmp/afilmory-build-logs}"
   local manifest_path="$PROJECT_DIR/apps/web/src/data/photos-manifest.json"
   local dist_dir="$PROJECT_DIR/apps/web/dist"
-  local fc_source_dir="$PROJECT_DIR/fc/photo-auth"
-  local deploy_fc_script="$SCRIPT_DIR/deploy-photo-auth.sh"
+  local fc_photo_auth_dir="$PROJECT_DIR/fc/photo-auth"
+  local fc_manifest_api_dir="$PROJECT_DIR/fc/manifest-api"
+  local deploy_fc_script="$SCRIPT_DIR/deploy-fc-function.sh"
+  local manifest_api_function="${FC_MANIFEST_API_FUNCTION_NAME:-}"
   mkdir -p "$build_log_dir"
 
   run_step() {
@@ -126,19 +128,33 @@ main() {
   fi
   log "已生成静态资源"
 
-  if [ ! -d "$fc_source_dir" ]; then
-    log "错误：找不到函数源码目录：$fc_source_dir"
-    exit 1
-  fi
-
   log "准备临时函数目录"
   FC_BUILD_DIR="$(mktemp -d "${TMPDIR:-/tmp}/afilmory-fc-build.XXXXXX")"
-  local fc_zip_path="$FC_BUILD_DIR/photo-auth.zip"
-  local fc_stage_dir="$FC_BUILD_DIR/stage"
-  mkdir -p "$fc_stage_dir"
-  cp -R "$fc_source_dir"/. "$fc_stage_dir"/
-  cp "$manifest_path" "$fc_stage_dir/manifest.photos.json"
-  (cd "$fc_stage_dir" && run_step "打包函数 ZIP" "build-fc-zip.log" zip -rq "$fc_zip_path" .)
+
+  # 两个函数都在冷启动时读取同目录下的 manifest.photos.json，
+  # 所以每次构建都要把最新 manifest 打进代码包重新上传
+  package_fc_function() {
+    local label="$1"
+    local source_dir="$2"
+
+    if [ ! -d "$source_dir" ]; then
+      log "错误：找不到函数源码目录：$source_dir"
+      exit 1
+    fi
+
+    local stage_dir="$FC_BUILD_DIR/stage-$label"
+    mkdir -p "$stage_dir"
+    cp -R "$source_dir"/. "$stage_dir"/
+    cp "$manifest_path" "$stage_dir/manifest.photos.json"
+    (cd "$stage_dir" && run_step "打包函数 ZIP $label" "build-fc-zip-$label.log" zip -rq "$FC_BUILD_DIR/$label.zip" .)
+  }
+
+  package_fc_function photo-auth "$fc_photo_auth_dir"
+  if [ -n "$manifest_api_function" ]; then
+    package_fc_function manifest-api "$fc_manifest_api_dir"
+  else
+    log "跳过打包 manifest-api：未设置 FC_MANIFEST_API_FUNCTION_NAME"
+  fi
 
   for dir in assets vendor thumbnails; do
     if [ -d "$dist_dir/$dir" ]; then
@@ -175,7 +191,13 @@ main() {
   done
 
   if [ "$auto_deploy_fc" = "1" ]; then
-    run_step "自动部署函数 photo-auth" "deploy-fc.log" env ZIP_PATH="$fc_zip_path" bash "$deploy_fc_script"
+    run_step "自动部署函数 photo-auth" "deploy-fc-photo-auth.log" \
+      env ZIP_PATH="$FC_BUILD_DIR/photo-auth.zip" FC_FUNCTION_NAME="${FC_FUNCTION_NAME:-}" bash "$deploy_fc_script"
+
+    if [ -n "$manifest_api_function" ]; then
+      run_step "自动部署函数 manifest-api" "deploy-fc-manifest-api.log" \
+        env ZIP_PATH="$FC_BUILD_DIR/manifest-api.zip" FC_FUNCTION_NAME="$manifest_api_function" bash "$deploy_fc_script"
+    fi
   else
     log "跳过自动部署：AUTO_DEPLOY_FC=$auto_deploy_fc"
   fi
