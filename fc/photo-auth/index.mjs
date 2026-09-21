@@ -3,15 +3,56 @@ import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 
-const allowOrigin = process.env.ALLOW_ORIGIN
+// 逗号分隔：除了相册主站，博客等站外应用引用原图时也要能通过预检。
+// 跨域头按请求来源逐个回显，不用 *，避免把带签名的地址对任意站点开放。
+const allowOrigins = (process.env.ALLOW_ORIGIN || '')
+  .split(',')
+  .map((item) => item.trim().replace(/\/+$/, ''))
+  .filter(Boolean)
 const cdnBaseUrl = process.env.CDN_MEDIA_BASE_URL
 const cdnAuthKey = process.env.CDN_AUTH_KEY
 const authValidSeconds = Number(process.env.CDN_AUTH_VALID_SECONDS || '1800')
 const authOverlapSeconds = Number(process.env.CDN_AUTH_OVERLAP_SECONDS || '900')
 
 // ALLOW_ORIGIN 不设默认值：漏配时直接报错，避免跨域来源悄悄落到别人的域名上
-if (!cdnBaseUrl || !cdnAuthKey || !allowOrigin) {
+if (!cdnBaseUrl || !cdnAuthKey || allowOrigins.length === 0) {
   throw new Error('CDN_MEDIA_BASE_URL, CDN_AUTH_KEY and ALLOW_ORIGIN are required')
+}
+
+function resolveAllowOrigin(origin) {
+  if (!origin) {
+    return null
+  }
+  const normalized = origin.trim().replace(/\/+$/, '')
+  return allowOrigins.includes(normalized) ? origin : null
+}
+
+function readOrigin(headers) {
+  if (!headers) {
+    return ''
+  }
+  for (const [key, value] of Object.entries(headers)) {
+    if (key.toLowerCase() === 'origin') {
+      return Array.isArray(value) ? value[0] : String(value ?? '')
+    }
+  }
+  return ''
+}
+
+function corsHeaders(allowOrigin) {
+  const headers = {
+    'Access-Control-Allow-Methods': 'GET,HEAD,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+    'Access-Control-Max-Age': '3600',
+    Vary: 'Origin',
+    'Cache-Control': 'no-store, no-cache, max-age=0, must-revalidate',
+    Pragma: 'no-cache',
+    Expires: '0',
+  }
+  if (allowOrigin) {
+    headers['Access-Control-Allow-Origin'] = allowOrigin
+  }
+  return headers
 }
 
 const manifestPath = path.join(process.cwd(), 'manifest.photos.json')
@@ -26,19 +67,13 @@ for (const item of manifest.data || []) {
   })
 }
 
-function jsonResponse(statusCode, body, extraHeaders = {}) {
+function jsonResponse(statusCode, body, allowOrigin, extraHeaders = {}) {
   return {
     statusCode,
     isBase64Encoded: false,
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
-      'Access-Control-Allow-Origin': allowOrigin,
-      'Access-Control-Allow-Methods': 'GET,HEAD,OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-      'Access-Control-Max-Age': '3600',
-      'Cache-Control': 'no-store, no-cache, max-age=0, must-revalidate',
-      Pragma: 'no-cache',
-      Expires: '0',
+      ...corsHeaders(allowOrigin),
       ...extraHeaders,
     },
     body: typeof body === 'string' ? body : JSON.stringify(body),
@@ -117,20 +152,13 @@ export const handler = async (event, context) => {
   const rawPath = req?.rawPath || '/'
   // 只取网关记录的连接来源 IP，不信任可被伪造的 X-Forwarded-For
   const clientIp = req?.requestContext?.http?.sourceIp || ''
+  const allowOrigin = resolveAllowOrigin(readOrigin(req?.headers))
 
   if (method === 'OPTIONS') {
     return {
       statusCode: 204,
       isBase64Encoded: false,
-      headers: {
-        'Access-Control-Allow-Origin': allowOrigin,
-        'Access-Control-Allow-Methods': 'GET,HEAD,OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-        'Access-Control-Max-Age': '3600',
-        'Cache-Control': 'no-store, no-cache, max-age=0, must-revalidate',
-        Pragma: 'no-cache',
-        Expires: '0',
-      },
+      headers: corsHeaders(allowOrigin),
       body: '',
     }
   }
@@ -138,20 +166,24 @@ export const handler = async (event, context) => {
   const route = parseRoute(rawPath)
 
   if (route.kind === 'health') {
-    return jsonResponse(200, {
-      ok: true,
-      function: context?.function?.name || 'afilmory-photo-auth',
-      authValidSeconds,
-    })
+    return jsonResponse(
+      200,
+      {
+        ok: true,
+        function: context?.function?.name || 'afilmory-photo-auth',
+        authValidSeconds,
+      },
+      allowOrigin,
+    )
   }
 
   if (route.kind === 'not-found') {
-    return jsonResponse(404, { message: 'Not Found' })
+    return jsonResponse(404, { message: 'Not Found' }, allowOrigin)
   }
 
   const photo = photoMap.get(route.photoId)
   if (!photo) {
-    return jsonResponse(404, { message: 'Photo Not Found' })
+    return jsonResponse(404, { message: 'Photo Not Found' }, allowOrigin)
   }
 
   let objectKey = null
@@ -162,7 +194,7 @@ export const handler = async (event, context) => {
   }
 
   if (!objectKey) {
-    return jsonResponse(404, { message: 'Resource Not Found' })
+    return jsonResponse(404, { message: 'Resource Not Found' }, allowOrigin)
   }
 
   try {
@@ -173,18 +205,12 @@ export const handler = async (event, context) => {
       isBase64Encoded: false,
       headers: {
         Location: signedUrl,
-        'Access-Control-Allow-Origin': allowOrigin,
-        'Access-Control-Allow-Methods': 'GET,HEAD,OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-        'Access-Control-Max-Age': '3600',
-        'Cache-Control': 'no-store, no-cache, max-age=0, must-revalidate',
-        Pragma: 'no-cache',
-        Expires: '0',
+        ...corsHeaders(allowOrigin),
       },
       body: '',
     }
   } catch (error) {
     console.error('Failed to sign CDN URL', error)
-    return jsonResponse(500, { message: 'Failed to sign url' })
+    return jsonResponse(500, { message: 'Failed to sign url' }, allowOrigin)
   }
 }

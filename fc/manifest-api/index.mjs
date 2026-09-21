@@ -148,6 +148,24 @@ function readQueryValue(req, name) {
   return new URLSearchParams(rawQuery).get(name) || ''
 }
 
+function buildQueryString(req) {
+  const params = req?.queryParameters
+  if (params && typeof params === 'object') {
+    const search = new URLSearchParams()
+    for (const [key, value] of Object.entries(params)) {
+      if (Array.isArray(value)) {
+        for (const item of value) {search.append(key, String(item))}
+      } else if (value !== undefined && value !== null) {
+        search.append(key, String(value))
+      }
+    }
+    const text = search.toString()
+    if (text) {return `?${text}`}
+  }
+  const raw = typeof req?.rawQueryString === 'string' ? req.rawQueryString : ''
+  return raw ? `?${raw.replace(/^\?/, '')}` : ''
+}
+
 function readBody(req) {
   const raw = req?.body
   if (typeof raw !== 'string' || raw === '') {
@@ -190,6 +208,12 @@ function parseRoute(rawPath) {
   const detail = routePath.match(/^\/photos\/([^/]+)$/)
   if (detail) {
     return { kind: 'photo-page', photoId: decodeURIComponent(detail[1]) }
+  }
+
+  // 「查看全部」和按标签筛选的链接同样是拼在 baseUrl 上的，跳回站点首页，
+  // 查询串原样带过去，标签筛选才不会丢
+  if (routePath === '/') {
+    return { kind: 'site-home' }
   }
 
   return { kind: 'not-found' }
@@ -376,6 +400,18 @@ export const handler = async (event, context) => {
       }
       return respond(200, photo)
     }
+
+    case 'site-home':
+      return {
+        statusCode: 302,
+        isBase64Encoded: false,
+        headers: {
+          Location: `${siteBaseUrl}/${buildQueryString(req)}`,
+          'Cache-Control': `public, max-age=${cacheSeconds}`,
+          ...baseHeaders(allowOrigin),
+        },
+        body: '',
+      }
 
     case 'photo-page':
       return {
