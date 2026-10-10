@@ -1,57 +1,111 @@
-# Mobile App Agent Guidelines
+# AGENTS.md
 
-## Agent Testing
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Use the **Local** application variant for Simulator-based Agent Testing unless the task explicitly
-requires validating production-only capabilities.
+Read `apps/mobile/AGENTS.md` (Simulator/Agent-Testing rules, memory guard) and `apps/mobile/RELEASE.md` (signing, TestFlight, StoreKit) before doing anything that runs or ships the app.
 
-| Property | Local Agent Testing value |
-| --- | --- |
-| App name | `Afilmory Local` |
-| Bundle identifier | `app.afilmory.local` |
-| URL scheme | `afilmory-local` |
-| Default API | `http://localhost:1841` |
-| Authentication | Local password account |
+## This is a pure native Swift app
 
-- Build it with `pnpm --filter @afilmory/mobile ios:local`.
-- Start the local Core service before testing authentication or API-backed flows. A connection
-  failure to port `1841` means the app selected the correct environment but the backend is not
-  running.
-- Confirm that the Simulator target is `Afilmory Local`; the production `Afilmory` app may be
-  installed at the same time and must not be used accidentally.
-- The Local variant carries only its default Keychain access group so native sessions survive an
-  app relaunch. Do not attempt Sign in with Apple in the Local variant. Push notifications, Share
-  Extension, widgets, Live Activities, and StoreKit sponsorship are also production-only.
-- Debug builds may temporarily change the API environment from Lab. Reset it to **Local** after a
-  custom-environment test so later Agent Testing starts from the variant default.
-- Treat `apps/mobile/Afilmory.xcodeproj` as generated output. Make persistent project changes in
-  `apps/mobile/project.yml`, then run `pnpm --filter @afilmory/mobile native:generate`.
-- The deployment target is iOS 18. APIs introduced after iOS 18 must be guarded with availability
-  checks and provide an iOS 18 fallback.
+The Expo / React Native app was deleted in `66fae030 feat(mobile): rewrite app in native Swift`. There is no Metro, no JS runtime, no Hermes, no CocoaPods, and no npm dependencies — `package.json` exists only to expose XcodeGen/xcodebuild through pnpm. Leftovers that mean nothing now: the Expo/Metro entries in `.gitignore`, and the empty untracked `src/` directories.
 
-## Verification
+The root `CLAUDE.md`'s "Mobile App (`apps/mobile`)" section still describes the Expo era (prebuild, Development Pod, `pod install`, `expo-glass-effect`, iOS 26 deployment target). **Ignore it in favor of this file** — only its "iOS only, forever", `axe` automation, and String Catalog points survived the rewrite.
 
-Before launching either application variant in Simulator, start the memory guard in a separate
-terminal and keep it alive for the complete runtime verification:
+## Commands
 
 ```bash
-pnpm --filter @afilmory/mobile native:memory-guard -- --limit-gib 30 --log /tmp/afilmory-memory-guard.log
+pnpm --filter @afilmory/mobile native:generate   # xcodegen generate --spec project.yml
+pnpm --filter @afilmory/mobile ios:local         # generate + build 'Afilmory Local' (Debug) for iPhone 17 Pro
+pnpm --filter @afilmory/mobile ios:production    # generate + build 'Afilmory' (Release)
+pnpm --filter @afilmory/mobile native:test       # generate + xcodebuild test (scheme 'Afilmory Local')
+pnpm dev:mobile                                  # alias for ios:local (root)
 ```
 
-The guard samples the Simulator app's physical memory footprint every 0.5 seconds. Reaching 30 GiB
-terminates the app and makes the verification fail. Start the guard before `simctl launch`, retain
-its log as verification evidence, and stop it only after the app has been terminated. CoreSimulator
-does not expose a per-app kernel hard limit, so this watchdog is mandatory for Agent Testing.
-
-Run the smallest relevant checks first:
+Single test class / method — append `-only-testing` to the raw xcodebuild invocation:
 
 ```bash
-pnpm --filter @afilmory/mobile native:generate
-pnpm --filter @afilmory/mobile native:test
+xcodebuild test -project Afilmory.xcodeproj -scheme 'Afilmory Local' \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+  -only-testing:AfilmoryTests/PhotoFilterEngineTests/testMatchesGoldenFilterCases
 ```
 
-For Local runtime changes, perform at least one Simulator build and verify that requests target
-`localhost:1841`.
+There is no lint/format/type-check step for Swift here — `native:test` and a Simulator build are the verification surface.
 
-Use `pnpm --filter @afilmory/mobile ios:production` only when the task explicitly requires running
-the production application or validating production-only integrations.
+## Project generation (XcodeGen, not Expo prebuild)
+
+`project.yml` is the source of truth. `Afilmory.xcodeproj` is generated output **but is committed** — regenerate it and commit the diff; never hand-edit it or add files through the Xcode UI.
+
+Sources are **filesystem-synchronized folders** (Xcode 16 buildable folders, `projectFormat: xcode16_0`): `Afilmory`, `Tests`, `targets/share`, `targets/widgets` are `type: syncedFolder` roots, so Xcode discovers files straight from disk — adding, deleting, or moving a `.swift` file needs **no** regeneration or Xcode UI action. Run `native:generate` only when `project.yml` itself changes (targets, settings, packages, plist properties).
+
+Dependencies: SwiftPM only — SDWebImage, pinned to an exact version in `project.yml`.
+
+## Two build variants from one source tree
+
+| | Local | Production |
+| --- | --- | --- |
+| Scheme / config | `Afilmory Local` / Debug | `Afilmory` / Release |
+| Bundle ID | `app.afilmory.local` | `app.afilmory` |
+| URL scheme | `afilmory-local` | `afilmory` |
+| Default API | `http://localhost:1841` | `https://api.afilmory.art` |
+| App Group | none | `group.app.afilmory` |
+
+The variant flows `project.yml` build settings → `Info.plist` (`AfilmoryAppVariant`, `AfilmoryURLScheme`, `AfilmoryAppGroupIdentifier`) → `AfilmoryBuildConfiguration`. That enum is the single gate for variant-conditional capabilities (`supportsAppleAuthentication`, `supportsPushNotifications`, `supportsShareExtension`, `supportsStoreKitSponsorship`, `allowsApiEnvironmentOverride`). **Add new capability gates there** rather than scattering `#if DEBUG` or bundle-ID checks. Local carries only its default Keychain access group for native session persistence, so Sign in with Apple, APNs, share-extension handoff, Live Activities, and StoreKit remain unavailable there by construction.
+
+## Source layout
+
+Everything app-side lives under a single `Afilmory/` root (the old `NativeApp` + `modules/photo-masonry/ios` split was historical and has been merged in), organized feature-first.
+
+- `Afilmory/App/` — entry + shell: `AppDelegate`, `SceneDelegate`, `ApplicationCoordinator`, `AfilmoryTabBarController`, `LoadingViewController`, `GalleryRouteRequest` (deep links).
+- `Afilmory/Features/` — one folder per feature: `Masonry/`, `Detail/`, `Viewer/`, `Comments/`, `Upload/`, `Map/`, `Filters/`, `Pages/` (Photos/Explore/Studio home controllers), `Studio/` (SwiftUI screens + `NativeStudioAPI`), `Authentication/`, `Billing/`, `Sharing/`, `Sheets/`.
+- `Afilmory/Core/` — non-UI infrastructure: `Networking/` (`AfilmoryAPI`, `APIEndpoint`, `APIError`), `Session/` (`AfilmorySessionStore`), `Data/`, `Persistence/`, `Push/`, `Models/`, plus `AfilmoryBuildConfiguration` and `ThumbHash` at its root.
+- `Afilmory/DesignSystem/` — `AdaptiveGlass`, `NativeControls`, `LiquidGlassSegmentedControl`, shared UIKit extensions, and `Transition/` (photo transition animators).
+- `Afilmory/Resources/` — String Catalogs, asset catalogs.
+- `Tests/` — the `AfilmoryTests` unit-test bundle (plus `Tests/Fixtures/`).
+- `targets/share/`, `targets/widgets/`, and `targets/notification/` — separate app-extension targets. They do **not** see app-target code; the share extension re-declares its own `group.app.afilmory` constant and its own String Catalog. The notification service compiles `Afilmory/Core/Push/GalleryPushImageAttachment.swift` into its own module.
+
+## Runtime architecture
+
+**Session drives the root view controller.** `SceneDelegate` → `ApplicationCoordinator.start()` observes `AfilmorySessionStore` and swaps the window root per `AfilmorySessionState`: `.loading` → `LoadingViewController`, `.signedIn` → `AfilmoryTabBarController` (Photos / Map / Explore / Studio), `.signedOut`/`.failed` → a visitor-only Explore nav stack. `replaceRoot` is type-compared, so re-renders of the same state are no-ops. Deep links parsed by `AfilmoryDeepLink` are buffered in `pendingDeepLink` and only applied once the root is no longer `LoadingViewController` — tab indices are hardcoded there (Explore `2`, Studio `3`), so reordering tabs means updating `applyPendingDeepLinkIfPossible`.
+
+**UIKit-first, SwiftUI at the leaves.** Scrolling, gestures, transitions, and the masonry grid are UIKit (`PhotoMasonryView` is a `UICollectionView` with a custom `MasonryLayout` and a pinch-driven column count). Settings-shaped screens are SwiftUI wrapped in `UIHostingController`. Don't rewrite a working UIKit surface in SwiftUI.
+
+**Singletons with observer tokens, not Combine.** `AfilmorySessionStore.shared`, `PhotoFeedStore.shared`, `UploadCenter.shared`, `ApiEnvironmentStore.shared`. Observation is a closure + cancellation token (`observe { }` → `AfilmorySessionObservationToken` / `PhotoFeedObservationToken`); feeds additionally use `@Observable`. Mutable shared state is guarded by an `NSLock` under `@unchecked Sendable`, with `@MainActor` reserved for anything touching UI or SwiftData's `mainContext`.
+
+## Networking: platform vs tenant base URLs
+
+`APIEndpoint.baseURL` is `.platform`, `.tenant`, or `.explicit`, resolved against the session snapshot in `AfilmoryAPI.resolveURL`. This is the most common source of wrong-host bugs:
+
+- **platform** — the account/auth service (`auth/session`, push registration, Studio APIs), from `ApiEnvironmentStore.platformAPIBaseURL()`.
+- **tenant** — the *active workspace's* gallery, at `<slug>.<baseDomain>/api`. It is only populated after `ApiEnvironmentStore.activateTenant(slug:)` runs, which `AfilmorySessionStore` does on every session resolve. A `.tenant` request made before a workspace is active throws `missingTenantBaseURL`.
+- Gallery slugs are regex-validated before being interpolated into a host.
+
+Auth is a **session cookie held in the Keychain** (`kSecAttrAccessibleAfterFirstUnlock`, deliberately — background upload retries recreate requests while the device is locked), attached manually per request; there is no `HTTPCookieStorage`. `401` anywhere triggers a full sign-out plus cache wipe. Retries are opt-in per endpoint via `APIEndpoint.retryPolicy` (transient GETs only: 408/429/5xx/transport).
+
+The API environment can be overridden at runtime **only in Debug builds** (`allowsApiEnvironmentOverride`), persisted to the Keychain. Per `AGENTS.md`, reset it to the variant default after custom-environment testing.
+
+## Caching (SwiftData)
+
+`PhotoCacheRepository` is the seam; `SwiftDataPhotoCacheRepository` is the live one and `InMemoryPhotoCacheRepository` backs tests. Reads are synchronous on `@MainActor` via `container.mainContext`; **all writes go through the `@ModelActor PhotoCacheMutator`** — don't mutate models from the main context.
+
+`PhotoFeedStore` keys feeds by `PhotoFeedKey` (`.manifest(slug)` / `.studioLibrary`). Manifest feeds are cached with an ETag and refetched conditionally: `304` → `touchFeed` only; a refresh failure with cache present logs and keeps the stale rows rather than surfacing `.failed`. Only `.manifest` feeds read from cache — Studio library is always live. Sign-out calls `wipeAll()`.
+
+## Localization
+
+String Catalogs only; there is no runtime locale loader and the iOS app does **not** consume the repo's `locales/` JSON.
+
+- `Afilmory/Resources/Localizable.xcstrings` — keys are the English source text, auto-extracted from `String(localized:)` / `Text(_:)` at build time.
+- `Afilmory/Resources/ExifValues.xcstrings` — dotted keys (`<prefix>.<slugified-value>`) resolved dynamically in `PhotoInfoFormatters.translatedExifValue` via `Bundle.main.localizedString(forKey:value:table:)`. **These are not auto-extracted** — add entries by hand, and note the slugging rules (lowercase, `&`→`and`, non-alphanumerics→`-`).
+- `targets/share/Localizable.xcstrings` — the share extension's own catalog.
+
+Shipping languages are declared in `project.yml` (`CFBundleLocalizations`): en, zh-Hans, zh-Hant, zh-HK, ja, ko.
+
+## iOS 18 target with iOS 26 opt-ins
+
+`IPHONEOS_DEPLOYMENT_TARGET` is **18.0** (Swift 6, `SWIFT_STRICT_CONCURRENCY: targeted`). Post-18 APIs need an availability guard *and* an iOS 18 fallback. Liquid Glass goes through `AdaptiveGlass`, which falls back to `UIBlurEffect`/`.filled()` — prefer it over inline `#available` checks for glass surfaces.
+
+Gotcha that still applies: `UIGlassEffect.isInteractive = true` swallows touches meant for buttons hosted in the effect view's `contentView` — keep it off for tappable glass.
+
+## Tests
+
+XCTest with `@testable import Afilmory`, in `Tests/` (its own synced folder, built into `AfilmoryTests` only). They are behavior/logic tests — decoding, state machines, cache repositories, geometry, formatters — not UI tests.
+
+`Tests/Fixtures/*.json` are **golden fixtures captured from the web TypeScript implementation**: the Swift EXIF/header/info formatters and filter engine must reproduce the web app's output byte-for-byte across all six languages. Treat a fixture mismatch as a port bug, not a fixture to update. `scripts/generate-native-fixtures.mjs` is the receiving half of that capture; its producer half lived in the deleted RN app, so the checked-in fixtures are currently the only source.

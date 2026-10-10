@@ -1,13 +1,12 @@
 import UIKit
 
-final class GalleriesController: UIViewController, UIScrollViewDelegate, UISearchControllerDelegate {
+final class GalleriesController: UIViewController, UIScrollViewDelegate {
   private let onRequestSignIn: () -> Void
-  private let sectionRail = ExploreSectionRailView()
+  private let headerView = ExploreHeaderView()
   private let pagerScrollView = ExplorePagerScrollView()
   private let directory: ExploreDirectoryController
   private let following: FollowingGalleriesController
   private let timeline: GalleryTimelineController
-  private lazy var searchController = makeSearchController()
   private var currentSegment: ExploreSegment = .explore
   private var previousPagerWidth: CGFloat = 0
   private var programmaticSegment: ExploreSegment?
@@ -15,11 +14,10 @@ final class GalleriesController: UIViewController, UIScrollViewDelegate, UISearc
   private var sessionObservation: AfilmorySessionObservationToken?
   private var lastGalleryRouteRequestID: String?
   private var isVisitorChromeVisible = false
-
-  private var showsVisitorToolbar: Bool {
-    guard #available(iOS 26.0, *) else { return false }
-    return isVisitorChromeVisible
-  }
+  private var isSectionRailVisible = false
+  private var isSearching = false
+  private var scrollEdgeInteraction: AnyObject?
+  private var headerBarItem: UIBarButtonItem?
 
   private lazy var signInItem: UIBarButtonItem = {
     let item = UIBarButtonItem(
@@ -42,6 +40,22 @@ final class GalleriesController: UIViewController, UIScrollViewDelegate, UISearc
     }
     return item
   }()
+
+  private lazy var searchItem: UIBarButtonItem = {
+    UIBarButtonItem(
+      image: UIImage(systemName: "magnifyingglass"),
+      primaryAction: UIAction { [weak self] _ in
+        guard let self else { return }
+        if isSearching {
+          endSearch(animated: true)
+        } else {
+          beginSearch()
+        }
+      }
+    )
+  }()
+
+  private var sectionRail: ExploreSectionRailView { headerView.sectionRail }
 
   private var orderedPages: [(segment: ExploreSegment, controller: UIViewController)] {
     [
@@ -110,19 +124,18 @@ final class GalleriesController: UIViewController, UIScrollViewDelegate, UISearc
     view.backgroundColor = .systemGroupedBackground
     navigationItem.largeTitleDisplayMode = .never
     navigationItem.backButtonTitle = String(localized: "Explore")
-    if #available(iOS 26.0, *) {
-      navigationItem.preferredSearchBarPlacement = .integrated
-      toolbarItems = [navigationItem.searchBarPlacementBarButtonItem]
-    } else {
-      navigationItem.preferredSearchBarPlacement = .stacked
-    }
-    navigationItem.searchController = searchController
+    searchItem.accessibilityLabel = String(localized: "Search")
+    searchItem.accessibilityIdentifier = "explore.search"
 
+    headerView.onSearchTextChange = { [weak self] text in
+      self?.directory.applySearchQuery(text)
+    }
     sectionRail.onSelect = { [weak self] segment in
       guard let self else { return }
       userHasChosen = true
       show(segment, animated: true)
     }
+    installScrollEdgeInteraction()
 
     pagerScrollView.translatesAutoresizingMaskIntoConstraints = false
     pagerScrollView.backgroundColor = .systemGroupedBackground
@@ -180,17 +193,13 @@ final class GalleriesController: UIViewController, UIScrollViewDelegate, UISearc
 
   override func viewWillAppear(_ animated: Bool) {
     super.viewWillAppear(animated)
-    navigationController?.setToolbarHidden(!showsVisitorToolbar, animated: animated)
     applyDefaultSegmentIfNeeded()
-  }
-
-  override func viewWillDisappear(_ animated: Bool) {
-    super.viewWillDisappear(animated)
-    navigationController?.setToolbarHidden(true, animated: animated)
+    updateScrollEdgeScrollView()
   }
 
   override func viewDidLayoutSubviews() {
     super.viewDidLayoutSubviews()
+    updateSearchBarWidth()
     let width = pagerScrollView.bounds.width
     guard width > 0, abs(width - previousPagerWidth) >= 0.5 else { return }
     previousPagerWidth = width
@@ -200,80 +209,142 @@ final class GalleriesController: UIViewController, UIScrollViewDelegate, UISearc
       animated: false
     )
     sectionRail.setSelected(currentSegment)
+    updateScrollEdgeScrollView()
   }
 
   private func handleSession(_ state: AfilmorySessionState) {
     switch state {
     case .signedOut:
       userHasChosen = false
-      setSignInBarVisible(true)
-      setSectionRailVisible(false)
+      isVisitorChromeVisible = true
+      isSectionRailVisible = false
+      pagerScrollView.isScrollEnabled = false
+      if isSearching {
+        endSearch(animated: false)
+      } else {
+        applyHeaderChrome()
+      }
       show(.explore, animated: false)
     case .loading, .failed:
       userHasChosen = false
-      setSignInBarVisible(false)
-      setSectionRailVisible(false)
+      isVisitorChromeVisible = false
+      isSectionRailVisible = false
+      pagerScrollView.isScrollEnabled = false
+      if isSearching {
+        endSearch(animated: false)
+      } else {
+        applyHeaderChrome()
+      }
       show(.explore, animated: false)
     case .signedIn:
-      setSignInBarVisible(false)
-      setSectionRailVisible(true)
+      isVisitorChromeVisible = false
+      isSectionRailVisible = true
+      pagerScrollView.isScrollEnabled = true
+      applyHeaderChrome()
       applyDefaultSegmentIfNeeded()
     }
   }
 
-  private func setSignInBarVisible(_ isVisible: Bool) {
-    isVisitorChromeVisible = isVisible
-    navigationItem.rightBarButtonItem = isVisible ? signInItem : nil
-    if #available(iOS 26.0, *) {
-      navigationItem.preferredSearchBarPlacement = isVisible ? .integrated : .integratedButton
-    }
-    navigationController?.setToolbarHidden(!showsVisitorToolbar, animated: false)
-  }
-
-  private func setSectionRailVisible(_ isVisible: Bool) {
-    pagerScrollView.isScrollEnabled = isVisible
-    if isVisible {
-      if navigationItem.leftBarButtonItem?.customView !== sectionRail {
-        let item = UIBarButtonItem(customView: sectionRail)
-        if #available(iOS 26.0, *) {
-          item.hidesSharedBackground = true
-        }
-        navigationItem.leftBarButtonItem = item
-      }
+  private func applyHeaderChrome() {
+    updateSearchBarWidth()
+    if isSearching || isSectionRailVisible {
+      installHeaderBarItem(force: true)
       navigationItem.title = nil
     } else if #available(iOS 26.0, *) {
       navigationItem.leftBarButtonItem = visitorTitleItem
+      headerBarItem = nil
       navigationItem.title = nil
     } else {
       navigationItem.leftBarButtonItem = nil
+      headerBarItem = nil
       navigationItem.title = String(localized: "Explore")
+    }
+
+    searchItem.image = UIImage(systemName: isSearching ? "xmark" : "magnifyingglass")
+    searchItem.accessibilityLabel = isSearching
+      ? String(localized: "Close")
+      : String(localized: "Search")
+    if isVisitorChromeVisible, !isSearching {
+      navigationItem.rightBarButtonItems = [signInItem, searchItem]
+    } else {
+      navigationItem.rightBarButtonItem = searchItem
     }
   }
 
-  private func makeSearchController() -> UISearchController {
-    let controller = UISearchController(searchResultsController: nil)
-    controller.obscuresBackgroundDuringPresentation = false
-    controller.hidesNavigationBarDuringPresentation = false
-    controller.searchResultsUpdater = directory
-    controller.delegate = self
-    controller.searchBar.placeholder = String(localized: "Search galleries")
-    controller.searchBar.autocapitalizationType = .none
-    controller.searchBar.autocorrectionType = .no
-    controller.searchBar.accessibilityIdentifier = "explore.discover.search"
-    return controller
+  private func installHeaderBarItem(force: Bool) {
+    if !force, let headerBarItem, headerBarItem.customView === headerView {
+      return
+    }
+    let item = UIBarButtonItem(customView: headerView)
+    if #available(iOS 26.0, *) {
+      item.hidesSharedBackground = true
+    }
+    headerBarItem = item
+    navigationItem.leftBarButtonItem = item
+  }
+
+  private func beginSearch() {
+    userHasChosen = true
+    if currentSegment != .explore {
+      show(.explore, animated: true)
+    }
+    isSearching = true
+    updateSearchBarWidth()
+    headerView.setSearching(true, animated: true)
+    applyHeaderChrome()
+  }
+
+  private func endSearch(animated: Bool) {
+    guard isSearching else {
+      directory.clearSearchQuery()
+      return
+    }
+    isSearching = false
+    headerView.setSearching(false, animated: animated)
+    directory.clearSearchQuery()
+    applyHeaderChrome()
+  }
+
+  private func updateSearchBarWidth() {
+    let barWidth = navigationController?.navigationBar.bounds.width ?? view.bounds.width
+    guard barWidth > 0 else { return }
+    let trailing: CGFloat = isVisitorChromeVisible ? 160 : 88
+    headerView.setAvailableSearchWidth(barWidth - trailing - 16)
+  }
+
+  private func installScrollEdgeInteraction() {
+    guard #available(iOS 26.0, *) else { return }
+    let interaction = UIScrollEdgeElementContainerInteraction()
+    interaction.edge = .top
+    headerView.addInteraction(interaction)
+    scrollEdgeInteraction = interaction
+    updateScrollEdgeScrollView()
+  }
+
+  private func updateScrollEdgeScrollView() {
+    guard #available(iOS 26.0, *) else { return }
+    guard let interaction = scrollEdgeInteraction as? UIScrollEdgeElementContainerInteraction else {
+      return
+    }
+    let scrollView = exploreScrollView(for: currentSegment)
+    scrollView.topEdgeEffect.style = .soft
+    interaction.scrollView = scrollView
+  }
+
+  private func exploreScrollView(for segment: ExploreSegment) -> UIScrollView {
+    switch segment {
+    case .timeline:
+      timeline.exploreScrollView
+    case .following:
+      following.exploreScrollView
+    case .explore:
+      directory.exploreScrollView
+    }
   }
 
   private func resetSearchIfLeavingDiscover(for segment: ExploreSegment) {
-    guard segment != .explore, searchController.isActive || searchController.searchBar.text?.isEmpty == false else { return }
-    searchController.isActive = false
-    searchController.searchBar.text = nil
-    directory.clearSearchQuery()
-  }
-
-  func willPresentSearchController(_ searchController: UISearchController) {
-    guard currentSegment != .explore else { return }
-    userHasChosen = true
-    show(.explore, animated: true)
+    guard segment != .explore, isSearching else { return }
+    endSearch(animated: true)
   }
 
   private func requestSignIn() {
@@ -340,6 +411,7 @@ final class GalleriesController: UIViewController, UIScrollViewDelegate, UISearc
       sectionRail.setSelected(segment)
       resetSearchIfLeavingDiscover(for: segment)
       programmaticSegment = nil
+      updateScrollEdgeScrollView()
     }
 
     guard changed else { return }
@@ -363,7 +435,7 @@ final class GalleriesController: UIViewController, UIScrollViewDelegate, UISearc
     programmaticSegment = nil
     userHasChosen = true
     sectionRail.beginInteractiveTransition()
-    searchController.searchBar.resignFirstResponder()
+    headerView.resignSearchFirstResponder()
   }
 
   func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -397,6 +469,7 @@ final class GalleriesController: UIViewController, UIScrollViewDelegate, UISearc
     programmaticSegment = nil
     sectionRail.setSelected(resolved)
     resetSearchIfLeavingDiscover(for: resolved)
+    updateScrollEdgeScrollView()
     if changed {
       activate(resolved)
     }

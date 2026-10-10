@@ -1,3 +1,4 @@
+import type { AppleGainMapSource } from '@afilmory/webgl-viewer'
 import { LoadingState } from '@afilmory/webgl-viewer'
 import type { TFunction } from 'i18next'
 import { startTransition, useCallback, useEffect, useRef, useState } from 'react'
@@ -16,6 +17,7 @@ import { SHOW_SCALE_INDICATOR_DURATION } from './types'
 export const useProgressiveImageState = (): [
   ProgressiveImageState,
   {
+    setGainMap: (gainMap: AppleGainMapSource | undefined) => void
     setBlobSrc: (src: string | null) => void
     setHighResLoaded: (loaded: boolean) => void
     setError: (error: boolean) => void
@@ -26,6 +28,7 @@ export const useProgressiveImageState = (): [
     setIsLivePhotoPlaying: (playing: boolean) => void
   },
 ] => {
+  const [gainMap, setGainMap] = useState<AppleGainMapSource>()
   const [blobSrc, setBlobSrc] = useState<string | null>(null)
   const [highResLoaded, setHighResLoaded] = useState(false)
   const [error, setError] = useState(false)
@@ -37,6 +40,7 @@ export const useProgressiveImageState = (): [
 
   return [
     {
+      gainMap,
       blobSrc,
       highResLoaded,
       error,
@@ -47,6 +51,7 @@ export const useProgressiveImageState = (): [
       isLivePhotoPlaying,
     },
     {
+      setGainMap,
       setBlobSrc,
       setHighResLoaded,
       setError,
@@ -72,6 +77,7 @@ export const useImageLoader = (
   setHighResLoaded?: (loaded: boolean) => void,
   setError?: (error: boolean) => void,
   setIsHighResImageRendered?: (rendered: boolean) => void,
+  setGainMap?: (gainMap: AppleGainMapSource | undefined) => void,
 ) => {
   const { t } = useTranslation()
   const imageLoaderManagerRef = useRef<ImageLoaderManager | null>(null)
@@ -85,7 +91,9 @@ export const useImageLoader = (
     const imageLoaderManager = new ImageLoaderManager()
     imageLoaderManagerRef.current = imageLoaderManager
 
+    let disposed = false
     function cleanup() {
+      setGainMap?.(undefined)
       setHighResLoaded?.(false)
       setBlobSrc?.(null)
       setError?.(false)
@@ -106,11 +114,18 @@ export const useImageLoader = (
           },
         })
 
+        if (disposed) {
+          return
+        }
+        setGainMap?.(result.gainMap)
         setBlobSrc?.(result.blobSrc)
         onBlobSrcChange?.(result.blobSrc)
         setHighResLoaded?.(true)
       }
       catch (loadError) {
+        if (disposed) {
+          return
+        }
         console.error('Failed to load image:', loadError)
         setError?.(true)
 
@@ -127,6 +142,7 @@ export const useImageLoader = (
     loadImage()
 
     return () => {
+      disposed = true
       imageLoaderManager.cleanup()
     }
   }, [
@@ -140,6 +156,7 @@ export const useImageLoader = (
     loadingIndicatorRef,
     t,
     setBlobSrc,
+    setGainMap,
     setHighResLoaded,
     setError,
     setIsHighResImageRendered,
@@ -196,19 +213,32 @@ export const useLivePhotoControls = (
 ) => {
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null)
 
-  const handleLongPressStart = useCallback(() => {
-    if (!isMobileDevice) {
-      return
-    }
-    const playVideo = () => livePhotoRef.current?.play()
-    if (!isLivePhoto || !livePhotoRef.current?.getIsVideoLoaded() || isLivePhotoPlaying) {
-      return
-    }
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current)
-    }
-    longPressTimerRef.current = setTimeout(playVideo, 200)
-  }, [isLivePhoto, isLivePhotoPlaying, livePhotoRef])
+  const handleLongPressStart = useCallback(
+    (event?: React.SyntheticEvent) => {
+      if (!isMobileDevice) {
+        return
+      }
+      // Multi-touch is a pinch-zoom, not a long press: cancel the timer and stop any playback
+      if (((event as React.TouchEvent | undefined)?.touches?.length ?? 0) > 1) {
+        if (longPressTimerRef.current) {
+          clearTimeout(longPressTimerRef.current)
+        }
+        if (isLivePhotoPlaying) {
+          livePhotoRef.current?.stop()
+        }
+        return
+      }
+      const playVideo = () => livePhotoRef.current?.play()
+      if (!isLivePhoto || !livePhotoRef.current?.getIsVideoLoaded() || isLivePhotoPlaying) {
+        return
+      }
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current)
+      }
+      longPressTimerRef.current = setTimeout(playVideo, 200)
+    },
+    [isLivePhoto, isLivePhotoPlaying, livePhotoRef],
+  )
 
   const handleLongPressEnd = useCallback(() => {
     if (!isMobileDevice) {

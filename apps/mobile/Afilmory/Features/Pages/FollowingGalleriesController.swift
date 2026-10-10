@@ -21,6 +21,8 @@ final class FollowingGalleriesController: UIViewController, UICollectionViewData
     super.init(nibName: nil, bundle: nil)
   }
 
+  var exploreScrollView: UIScrollView { collectionView }
+
   @available(*, unavailable)
   required init?(coder: NSCoder) {
     fatalError("init(coder:) is not supported")

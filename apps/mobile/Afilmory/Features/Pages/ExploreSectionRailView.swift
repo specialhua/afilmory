@@ -8,7 +8,7 @@ final class ExploreSectionRailView: UIView {
   private let driver: LiquidGlassSegmentLiftDriver
   private var selectionPosition = CGFloat(ExploreSegment.explore.rawValue)
 
-  private static let railHeight: CGFloat = 44
+  static let railHeight: CGFloat = 44
   private static let segmentPadding: CGFloat = 18
 
   override init(frame: CGRect) {

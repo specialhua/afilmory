@@ -110,7 +110,7 @@ These are binary. There is no case where the surrounding code justifies them.
   is wrong, not the number.
 - **No fourth blur step.** `backdrop-blur-xl` / `-3xl` / `-lg` in the tree are known deviations.
 - **No new `lucide-react` import.** Use `i-mingcute-*`.
-- **No comments and no JSDoc** in the component you write (repo-wide rule in `CLAUDE.md`).
+- **No comments and no JSDoc** in the component you write (repo-wide rule in `AGENTS.md`).
 
 ## Do not copy these — known deviations
 

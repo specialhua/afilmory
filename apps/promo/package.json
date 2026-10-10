@@ -1,0 +1,25 @@
+{
+  "name": "@afilmory/promo",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "record": "tsx record/record.ts",
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts Promo out/promo.mp4",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.529",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "remotion": "4.0.529"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "@types/react": "catalog:",
+    "playwright": "1.63.0",
+    "tsx": "^4.22.4",
+    "typescript": "catalog:"
+  }
+}

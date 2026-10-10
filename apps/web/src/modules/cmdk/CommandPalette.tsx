@@ -325,7 +325,7 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
         id: 'clear-filters',
         type: 'action',
         title: t('action.search.clear'),
-        subtitle: 'Clear all active filters',
+        subtitle: t('action.clear.filters'),
         icon: 'i-mingcute-close-line',
         action: () => {
           setGallerySetting(prev => ({
@@ -500,7 +500,7 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
                   className="border-border bg-fill-quaternary text-text-secondary hover:bg-fill-secondary hover:text-text inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition-all duration-200"
                 >
                   <i className="i-mingcute-refresh-1-line text-sm" />
-                  Reset
+                  {t('action.reset')}
                 </button>
                 <button
                   type="button"
@@ -508,7 +508,7 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
                   className="border-border bg-fill-quaternary text-text-secondary hover:bg-fill-secondary hover:text-text inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition-all duration-200"
                 >
                   <i className="i-mingcute-close-line text-sm" />
-                  Close
+                  {t('action.close')}
                 </button>
               </div>
 
@@ -600,20 +600,18 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
                       <kbd className="border-accent/15 bg-fill-tertiary text-text-secondary rounded-sm border px-1.5 py-0.5 font-mono text-[10px]">
                         ↑↓
                       </kbd>
-                      Navigate
+                      {t('action.navigate')}
                     </span>
                     <span className="flex items-center gap-1">
                       <kbd className="border-accent/15 bg-fill-tertiary text-text-secondary rounded-sm border px-1.5 py-0.5 font-mono text-[10px]">
                         ↵
                       </kbd>
-                      Select
+                      {t('action.select')}
                     </span>
                   </div>
                   {filteredCommands.length > 0 && (
                     <span>
-                      {filteredCommands.length}
-                      {' '}
-                      results
+                      {t('action.results', { count: filteredCommands.length })}
                     </span>
                   )}
                 </div>

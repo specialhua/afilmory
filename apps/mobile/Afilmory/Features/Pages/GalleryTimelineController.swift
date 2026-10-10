@@ -16,6 +16,8 @@ final class GalleryTimelineController: UIViewController, UITableViewDataSource, 
     super.init(nibName: nil, bundle: nil)
   }
 
+  var exploreScrollView: UIScrollView { tableView }
+
   @available(*, unavailable)
   required init?(coder: NSCoder) {
     fatalError("init(coder:) is not supported")

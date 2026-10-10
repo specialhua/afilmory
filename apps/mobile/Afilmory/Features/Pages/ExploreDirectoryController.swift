@@ -94,8 +94,14 @@ final class ExploreDirectoryController: UIViewController {
     fatalError("init(coder:) is not supported")
   }
 
+  var exploreScrollView: UIScrollView { collectionView }
+
   func clearSearchQuery() {
-    updateSearchQuery(nil)
+    applySearchQuery(nil)
+  }
+
+  func applySearchQuery(_ text: String?) {
+    updateSearchQuery(text)
   }
 
   func reloadSubscriptionState() {
@@ -690,12 +696,6 @@ extension ExploreDirectoryController: UICollectionViewDataSource, UICollectionVi
     guard galleries.indices.contains(indexPath.item) else { return }
     let gallery = galleries[indexPath.item]
     onOpenGallery(GalleryHeaderModel(featured: gallery), nil)
-  }
-}
-
-extension ExploreDirectoryController: UISearchResultsUpdating {
-  func updateSearchResults(for searchController: UISearchController) {
-    updateSearchQuery(searchController.searchBar.text)
   }
 }
 
