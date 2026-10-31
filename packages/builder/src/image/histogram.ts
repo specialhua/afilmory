@@ -1,9 +1,9 @@
 import type { HistogramData, ToneAnalysis, ToneType } from '@afilmory/typing'
-import type sharp from 'sharp'
+import type { Sharp } from 'sharp'
 
 import { getGlobalLoggers } from '../photo'
 
-async function calculateHistogram(sharpInstance: sharp.Sharp): Promise<HistogramData | null> {
+async function calculateHistogram(sharpInstance: Sharp): Promise<HistogramData | null> {
   const log = getGlobalLoggers().image
 
   try {
@@ -54,8 +54,7 @@ async function calculateHistogram(sharpInstance: sharp.Sharp): Promise<Histogram
     log?.success(`直方图计算完成 (${duration}ms)`)
 
     return histogram
-  }
-  catch (error) {
+  } catch (error) {
     log?.error('计算直方图失败：', error)
     return null
   }
@@ -100,14 +99,11 @@ function analyzeTone(histogram: HistogramData): ToneAnalysis {
 
     if (brightness < 30 && shadowRatio > 0.6) {
       toneType = 'low-key'
-    }
-    else if (brightness > 70 && highlightRatio > 0.6) {
+    } else if (brightness > 70 && highlightRatio > 0.6) {
       toneType = 'high-key'
-    }
-    else if (contrast > 60 && shadowRatio > 0.3 && highlightRatio > 0.3) {
+    } else if (contrast > 60 && shadowRatio > 0.3 && highlightRatio > 0.3) {
       toneType = 'high-contrast'
-    }
-    else {
+    } else {
       toneType = 'normal'
     }
 
@@ -122,8 +118,7 @@ function analyzeTone(histogram: HistogramData): ToneAnalysis {
     log?.success(`影调分析完成：${toneType} (亮度：${brightness}, 对比度：${contrast})`)
 
     return result
-  }
-  catch (error) {
+  } catch (error) {
     log?.error('分析影调失败：', error)
 
     return {
@@ -136,7 +131,7 @@ function analyzeTone(histogram: HistogramData): ToneAnalysis {
   }
 }
 
-export async function calculateHistogramAndAnalyzeTone(sharpInstance: sharp.Sharp): Promise<ToneAnalysis | null> {
+export async function calculateHistogramAndAnalyzeTone(sharpInstance: Sharp): Promise<ToneAnalysis | null> {
   const histogram = await calculateHistogram(sharpInstance)
   if (!histogram) {
     return null

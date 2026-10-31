@@ -1,19 +1,21 @@
+import type { Buffer } from 'node:buffer'
 import crypto from 'node:crypto'
 import path from 'node:path'
 
 import type { PhotoManifestItem, ProcessPhotoResult } from '@afilmory/typing'
 import { compressUint8Array } from '@afilmory/utils'
+import type { Sharp } from 'sharp'
 import sharp from 'sharp'
 
 import { env } from '../../../../env.js'
 import type { BuilderOptions } from '../builder/builder.js'
+import { extractXmpMetadataFromExif } from '../image/exif.js'
 import {
   convertBmpToJpegSharpInstance,
   getImageMetadataWithSharp,
   isBitmap,
   preprocessImageBuffer,
 } from '../image/processor.js'
-import { extractXmpMetadataFromExif } from '../image/exif.js'
 import type { PluginRunState } from '../plugins/manager.js'
 import { THUMBNAIL_PLUGIN_DATA_KEY } from '../plugins/thumbnail-storage/shared.js'
 import type { S3ObjectLike } from '../types/s3.js'
@@ -34,7 +36,7 @@ const EMPTY_XMP_METADATA = {
 }
 
 export interface ProcessedImageData {
-  sharpInstance: sharp.Sharp
+  sharpInstance: Sharp
   imageBuffer: Buffer
   metadata: { width: number; height: number }
 }
@@ -168,11 +170,15 @@ export async function executePhotoProcessingPipeline(
   try {
     // 1. 预处理图片
     const imageData = await preprocessImage(photoKey)
-    if (!imageData) return null
+    if (!imageData) {
+      return null
+    }
 
     // 2. 处理图片并创建 Sharp 实例
     const processedData = await processImageWithSharp(imageData.processedBuffer, photoKey)
-    if (!processedData) return null
+    if (!processedData) {
+      return null
+    }
 
     const { sharpInstance, imageBuffer, metadata } = processedData
     const contentDigest = crypto.createHash('sha256').update(imageBuffer).digest('hex')
@@ -189,25 +195,22 @@ export async function executePhotoProcessingPipeline(
 
     // 4. 处理 EXIF 数据
     const exifData = await processExifData(imageBuffer, imageData.rawBuffer, photoKey, existingItem, options)
-    const exiftoolXmpMetadata = options.xmpKeywordsEnabled || options.xmpRegionsEnabled
-      ? extractXmpMetadataFromExif(exifData)
-      : EMPTY_XMP_METADATA
-    const xmpKeywords = options.xmpKeywordsEnabled
-      ? exiftoolXmpMetadata.keywords
-      : []
-    const xmpRegions = options.xmpRegionsEnabled
-      ? exiftoolXmpMetadata.regions
-      : []
+    const exiftoolXmpMetadata =
+      options.xmpKeywordsEnabled || options.xmpRegionsEnabled
+        ? extractXmpMetadataFromExif(exifData)
+        : EMPTY_XMP_METADATA
+    const xmpKeywords = options.xmpKeywordsEnabled ? exiftoolXmpMetadata.keywords : []
+    const xmpRegions = options.xmpRegionsEnabled ? exiftoolXmpMetadata.regions : []
 
     // 5. 检测 HDR GainMap（Ultra HDR 图片）
     const hasGainMap = detectGainMap({
-      exifData: exifData as Record<string, unknown> | null,
+      exifData: exifData as unknown as Record<string, unknown> | null,
     })
 
     // 6. 检测 Motion Photo（从图片中提取嵌入视频的元数据）
     const motionPhotoMetadata = detectMotionPhoto({
       rawImageBuffer: imageData.rawBuffer,
-      exifData: exifData as Record<string, unknown> | null,
+      exifData: exifData as unknown as Record<string, unknown> | null,
     })
 
     // 7. 处理 Live Photo（独立的视频文件）
@@ -264,17 +267,17 @@ export async function executePhotoProcessingPipeline(
       video:
         motionPhotoMetadata?.isMotionPhoto && motionPhotoMetadata.motionPhotoOffset !== undefined
           ? {
-            type: 'motion-photo',
-            offset: motionPhotoMetadata.motionPhotoOffset,
-            size: motionPhotoMetadata.motionPhotoVideoSize,
-            presentationTimestamp: motionPhotoMetadata.presentationTimestampUs,
-          }
+              type: 'motion-photo',
+              offset: motionPhotoMetadata.motionPhotoOffset,
+              size: motionPhotoMetadata.motionPhotoVideoSize,
+              presentationTimestamp: motionPhotoMetadata.presentationTimestampUs,
+            }
           : livePhotoResult.isLivePhoto
             ? {
-              type: 'live-photo',
-              videoUrl: livePhotoVideoUrl ?? '',
-              s3Key: livePhotoResult.livePhotoVideoS3Key!,
-            }
+                type: 'live-photo',
+                videoUrl: livePhotoVideoUrl ?? '',
+                s3Key: livePhotoResult.livePhotoVideoS3Key!,
+              }
             : undefined,
       // HDR 相关字段
       isHDR:

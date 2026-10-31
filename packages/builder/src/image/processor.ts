@@ -1,15 +1,17 @@
+import { Buffer } from 'node:buffer'
 import path from 'node:path'
 
 import type { ImageMetadata } from '@afilmory/typing'
 import * as bmp from '@vingle/bmp-js'
 import heicConvert from 'heic-convert'
+import type { Sharp } from 'sharp'
 import sharp from 'sharp'
 
 import { HEIC_FORMATS } from '../constants/index.js'
 import { getGlobalLoggers } from '../photo/logger-adapter.js'
 
 // 获取图片元数据（复用 Sharp 实例）
-export async function getImageMetadataWithSharp(sharpInstance: sharp.Sharp): Promise<ImageMetadata | null> {
+export async function getImageMetadataWithSharp(sharpInstance: Sharp): Promise<ImageMetadata | null> {
   const log = getGlobalLoggers().image
 
   try {
@@ -83,7 +85,7 @@ export async function preprocessImageBuffer(buffer: Buffer, key: string): Promis
 }
 
 // BMP 格式
-const BUF_BMP = Buffer.from([0x42, 0x4d])
+const BUF_BMP = Buffer.from([0x42, 0x4D])
 
 export function isBitmap(buf: Buffer): boolean {
   if (buf.length < 2) {
@@ -97,7 +99,7 @@ export function isBitmap(buf: Buffer): boolean {
  * @param bmpBuffer Buffer
  * @returns Sharp 实例
  */
-export async function convertBmpToJpegSharpInstance(bmpBuffer: Buffer): Promise<sharp.Sharp> {
+export async function convertBmpToJpegSharpInstance(bmpBuffer: Buffer): Promise<Sharp> {
   const log = getGlobalLoggers().image
 
   try {

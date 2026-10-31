@@ -9,6 +9,7 @@ import Map from 'react-map-gl/maplibre'
 
 import { siteConfig } from '~/config'
 import { getMapStyle } from '~/lib/map/style'
+import { mapLibreWorkerUrl } from '~/lib/map/worker'
 import { calculateMapBounds } from '~/lib/map-utils'
 import type { PhotoMarker } from '~/types/map'
 
@@ -81,7 +82,7 @@ export const Maplibre = ({
   const handleMarkerClose = useCallback(() => {
     if (selectedMarkerId && onMarkerClick) {
       // Find the currently selected marker and call onMarkerClick to deselect it
-      const selectedMarker = markers.find(marker => marker.id === selectedMarkerId)
+      const selectedMarker = markers.find((marker) => marker.id === selectedMarkerId)
       if (selectedMarker) {
         onMarkerClick(selectedMarker)
       }
@@ -174,14 +175,12 @@ export const Maplibre = ({
             maxZoom: 15, // 最大缩放级别限制，避免过度放大
           },
         )
-      }
-      catch (error) {
+      } catch (error) {
         console.warn('使用 fitBounds 失败，使用备用方案:', error)
         // 备用方案：手动计算视图状态
         fallbackToViewState(bounds)
       }
-    }
-    else {
+    } else {
       // mapRef 不可用时的备用方案
       fallbackToViewState(bounds)
     }
@@ -230,6 +229,7 @@ export const Maplibre = ({
         {...viewState}
         style={{ width: '100%', height: '100%' }}
         mapStyle={getMapStyle()}
+        workerUrl={mapLibreWorkerUrl}
         projection={projection}
         attributionControl={false}
         interactiveLayerIds={geoJsonData ? ['data'] : undefined}
@@ -270,8 +270,7 @@ export const Maplibre = ({
                 onClusterClick={onClusterClick}
               />
             )
-          }
-          else {
+          } else {
             // Render individual marker
             const { marker } = clusterPoint.properties
             if (!marker) {

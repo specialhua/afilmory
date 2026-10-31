@@ -35,11 +35,13 @@ oss-event-forwarder（函数计算）
 
 ## 前置条件
 
-- Node.js ≥ 20.19、pnpm 11、Perl（exiftool 需要）
+- Node.js ≥ 22.22.0、pnpm 12.3.2（与根目录 `packageManager` 一致）、Perl（exiftool 需要）
 - `ossutil` 2.x，已配置好对站点 bucket 的写权限（`~/.ossutilconfig` 需包含 `region`）
 - `aliyun` CLI 已安装 fc 插件（`aliyun plugin install --names fc`），并配置了对应 profile
 - pm2
 - 项目根目录的 `.env`、`builder.config.ts`、`config.json` 已配置好（照片存储凭据、`PHOTO_PROXY_BASE_URL` 等）
+
+升级项目依赖前，先在远程构建服务器运行 `node --version` 和 `pnpm --version` 确认版本；本机开发验证不代表远程服务器已经满足构建要求。拉取更新后，在项目根目录运行 `pnpm install --frozen-lockfile` 安装锁定依赖，再使用原有发布流程。
 
 ## 配置
 

@@ -136,14 +136,14 @@ CDN：img.example.com                        轻量服务器：webhook（pm2）
 
 实际运行环境：Debian 12、[1Panel](https://1panel.cn)（OpenResty + Waline 应用）。
 
-| 软件       | 版本                         |
-| ---------- | ---------------------------- |
-| Node.js    | 22（最低 20.19）             |
-| pnpm       | 11                           |
-| Perl       | 5（exiftool 需要）           |
-| ossutil    | 2.x（脚本使用 2.x 命令格式） |
-| 阿里云 CLI | 3.x，安装 `fc` 插件          |
-| pm2        | 任意近期版本                 |
+| 软件       | 版本                             |
+| ---------- | -------------------------------- |
+| Node.js    | ≥ 22.22.0（构建要求）            |
+| pnpm       | 12.3.2（与 packageManager 一致） |
+| Perl       | 5（exiftool 需要）               |
+| ossutil    | 2.x（脚本使用 2.x 命令格式）     |
+| 阿里云 CLI | 3.x，安装 `fc` 插件              |
+| pm2        | 任意近期版本                     |
 
 ## 费用参考
 
