@@ -155,7 +155,7 @@ a { color: var(--secondary); }
 .hints span { margin-right: .875rem; }
 .pre { white-space: pre-wrap; word-break: break-all; }
 .banner { margin: .25rem 0 1rem; line-height: 1.2; color: var(--primary); }
-.sep { margin: .5rem 0; color: var(--t3); }
+.sep { margin: .5rem 0; color: var(--t3); white-space: nowrap; overflow: hidden; }
 .row { display: flex; gap: 1rem; }
 .row > :first-child { flex: 0 0 auto; }
 .help-row .cmd { display: inline-block; min-width: 8ch; }
@@ -455,10 +455,8 @@ a { color: var(--secondary); }
       return h('div', '',
         h('pre', 'banner', banner),
         h('div', '', '欢迎来到 Afilmory 构建状态终端。照片上传到 OSS 后，这里负责防抖、构建并发布站点。'),
-        h('div', 'sep', '----'),
-        h('div', '', '常用：', cmdLink('status'), ' 最近构建 · ', cmdLink('logs'), ' 构建日志 · ', cmdLink('json'), ' 状态 JSON'),
-        h('div', 'sep', '----'),
-        h('div', '', '输入 `', cmdLink('help'), '` 查看全部命令。'),
+        h('div', 'sep', '-'.repeat(48)),
+        h('div', '', '常用：', cmdLink('status'), ' 最近构建 · ', cmdLink('logs'), ' 构建日志 · ', cmdLink('json'), ' 状态 JSON · ', cmdLink('help'), ' 全部命令'),
       )
     },
 
