@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<!--
+  Afilmory webhook 状态终端。
+  界面移植自 terminal-bio（MIT License）：
+    Copyright (c) 2024 Sat Naing
+    Copyright (c) 2026 Thanatos
+    https://github.com/ThanatosXingYu/terminal-bio
+  原项目是 React + styled-components，这里改写为无依赖的原生 JS，样式与主题保持一致。
+-->
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1D2A35">
+<title>Afilmory Webhook</title>
+<link rel="preconnect" href="https://registry.npmmirror.com" crossorigin>
+<link rel="stylesheet" href="https://registry.npmmirror.com/@fontsource/ibm-plex-mono/5.2.7/files/latin-500.css">
+<link rel="stylesheet" href="https://registry.npmmirror.com/@fontsource/ibm-plex-mono/5.2.7/files/latin-700.css">
+<style>
+/* ===== 主题（与 terminal-bio themes.ts 一致，另加 danger） ===== */
+:root, [data-theme="dark"] {
+  --body: #1D2A35; --scroll: #19252E; --scroll-hover: #162028;
+  --primary: #05CE91; --secondary: #FF9D00; --danger: #FF6B6B;
+  --t1: #cbd5e1; --t2: #B2BDCC; --t3: #64748b;
+  --title: rgba(255,255,255,.04); --border: rgba(255,255,255,.08); --divider: rgba(255,255,255,.06);
+  --shadow: 0 18px 60px rgba(0,0,0,.55), 0 2px 10px rgba(0,0,0,.35);
+}
+[data-theme="light"] {
+  --body: #EFF3F3; --scroll: #C1C1C1; --scroll-hover: #AAAAAA;
+  --primary: #027474; --secondary: #C27400; --danger: #DC2626;
+  --t1: #334155; --t2: #475569; --t3: #64748b;
+  --title: rgba(0,0,0,.03); --border: rgba(0,0,0,.12); --divider: rgba(0,0,0,.08);
+  --shadow: 0 18px 55px rgba(15,23,42,.18), 0 2px 10px rgba(15,23,42,.10);
+}
+[data-theme="blue-matrix"] {
+  --body: #101116; --scroll: #424242; --scroll-hover: #616161;
+  --primary: #00ff9c; --secondary: #60fdff; --danger: #ff5f87;
+  --t1: #ffffff; --t2: #c7c7c7; --t3: #76ff9f;
+  --title: rgba(255,255,255,.03); --border: rgba(255,255,255,.08); --divider: rgba(255,255,255,.06);
+  --shadow: 0 20px 80px rgba(0,0,0,.65), 0 2px 10px rgba(0,0,0,.40);
+}
+[data-theme="espresso"] {
+  --body: #323232; --scroll: #5b5b5b; --scroll-hover: #393939;
+  --primary: #E1E48B; --secondary: #A5C260; --danger: #F17C6E;
+  --t1: #F7F7F7; --t2: #EEEEEE; --t3: #8a8a8a;
+  --title: rgba(255,255,255,.04); --border: rgba(255,255,255,.10); --divider: rgba(255,255,255,.07);
+  --shadow: 0 18px 65px rgba(0,0,0,.60), 0 2px 10px rgba(0,0,0,.40);
+}
+[data-theme="green-goblin"] {
+  --body: #000000; --scroll: #2E2E2E; --scroll-hover: #414141;
+  --primary: #E5E500; --secondary: #04A500; --danger: #E50101;
+  --t1: #01FF00; --t2: #04A5B2; --t3: #4f7f4f;
+  --title: rgba(255,255,255,.05); --border: rgba(255,255,255,.12); --divider: rgba(255,255,255,.08);
+  --shadow: 0 22px 90px rgba(0,0,0,.80), 0 2px 10px rgba(0,0,0,.50);
+}
+[data-theme="ubuntu"] {
+  --body: #2D0922; --scroll: #F47845; --scroll-hover: #E65F31;
+  --primary: #80D932; --secondary: #F47845; --danger: #FF6B6B;
+  --t1: #FFFFFF; --t2: #E1E9CC; --t3: #CDCDCD;
+  --title: rgba(255,255,255,.05); --border: rgba(255,255,255,.12); --divider: rgba(255,255,255,.09);
+  --shadow: 0 18px 70px rgba(0,0,0,.65), 0 2px 10px rgba(0,0,0,.40);
+}
+
+/* ===== GlobalStyle ===== */
+*, ::before, ::after { box-sizing: border-box; border: 0 solid currentColor; }
+html, body { margin: 0; height: 100%; }
+pre, p { margin: 0; }
+body {
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, 'PingFang SC', 'Microsoft YaHei', monospace;
+  font-weight: 500; font-size: 15px; line-height: 1.5;
+  background: var(--body); color: var(--t1);
+  -webkit-text-size-adjust: 100%;
+}
+::-webkit-scrollbar { width: 15px; height: 15px; }
+::-webkit-scrollbar-track { background: var(--body); }
+::-webkit-scrollbar-thumb { background: var(--scroll); }
+::-webkit-scrollbar-thumb:hover { background: var(--scroll-hover); }
+input[type=text] {
+  font: inherit; padding: 0; margin: 0; border: 0;
+  background: var(--body); color: var(--t1); caret-color: var(--primary);
+}
+input[type=text]:focus-visible { outline: none; }
+a { color: var(--secondary); }
+
+/* ===== Terminal.styled ===== */
+.page {
+  min-height: 100vh; min-height: 100dvh; padding: 2rem;
+  display: flex; align-items: center; justify-content: center;
+}
+.window {
+  width: 80vw; height: 80vh; height: 80dvh; max-width: 1400px;
+  display: flex; flex-direction: column; overflow: hidden;
+  border-radius: 14px; background: var(--body);
+  border: 1px solid var(--border); box-shadow: var(--shadow);
+}
+.titlebar {
+  height: 44px; flex-shrink: 0; padding: 0 .875rem;
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  background: var(--title); border-bottom: 1px solid var(--divider);
+  user-select: none; -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+}
+.controls { justify-self: start; display: flex; gap: .5rem; }
+.light {
+  width: 12px; height: 12px; flex: 0 0 12px; border-radius: 999px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.18);
+  display: grid; place-items: center; font: 700 9px/1 -apple-system, sans-serif; color: transparent;
+}
+.light.close { background: #FF5F57; } .light.minimize { background: #FEBC2E; } .light.zoom { background: #28C840; }
+.controls:hover .light { color: rgba(0,0,0,.55); }
+.wtitle {
+  justify-self: center; max-width: 100%; padding: 0 .5rem; overflow: hidden;
+  color: var(--t2); font-size: .75rem; line-height: 1; opacity: .9;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ===== 固定提示区（不随输出滚动） ===== */
+.motd {
+  flex-shrink: 0; padding: .875rem 1.25rem .75rem;
+  border-bottom: 1px dashed var(--divider);
+}
+.motd-head { color: var(--t3); font-size: .8125rem; margin-bottom: .375rem; }
+.motd-head b { color: var(--primary); font-weight: 700; }
+.motd-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  column-gap: 1.5rem; row-gap: .125rem;
+}
+.motd-item { display: flex; gap: .75rem; min-width: 0; white-space: nowrap; }
+.motd-item .k { color: var(--secondary); flex: 0 0 5.5em; }
+.motd-item .v { overflow: hidden; text-overflow: ellipsis; }
+.dot { display: inline-block; width: .55em; height: .55em; border-radius: 99px; margin-right: .5em; vertical-align: .08em; background: var(--t3); }
+.dot.idle { background: var(--primary); }
+.dot.building { background: var(--secondary); animation: pulse 1.2s ease-in-out infinite; }
+.dot.offline { background: var(--danger); }
+@keyframes pulse { 50% { opacity: .25; } }
+
+.wrapper {
+  flex: 1; min-height: 0; padding: 1rem 1.25rem 1.25rem;
+  display: flex; flex-direction: column;
+  overflow-y: auto; scrollbar-gutter: stable;
+}
+.entry { margin-bottom: .25rem; }
+.out { margin-top: .25rem; margin-bottom: .75rem; overflow-wrap: anywhere; }
+.out:empty { display: none; }
+.user { color: var(--secondary); } .host { color: var(--primary); }
+.prompt { display: inline-block; margin-right: .75rem; }
+.cmd { color: var(--primary); }
+.muted { color: var(--t3); } .t2 { color: var(--t2); }
+.ok { color: var(--primary); } .warn { color: var(--secondary); } .err { color: var(--danger); }
+.clickable { cursor: pointer; } .clickable:hover { text-decoration: underline; }
+.form { display: flex; }
+.form input { flex-grow: 1; min-width: 0; }
+.form.hidden { display: none; }
+.hints { margin-bottom: .25rem; }
+.hints span { margin-right: .875rem; }
+.pre { white-space: pre-wrap; word-break: break-all; }
+.banner { margin: .25rem 0 1rem; line-height: 1.2; color: var(--primary); }
+.sep { margin: .5rem 0; color: var(--t3); }
+.row { display: flex; gap: 1rem; }
+.row > :first-child { flex: 0 0 auto; }
+.help-row .cmd { display: inline-block; min-width: 8ch; }
+.keys { margin-top: 1rem; font-size: .875rem; color: var(--t2); white-space: pre; }
+.json-key { color: var(--secondary); } .json-str { color: var(--primary); } .json-lit { color: var(--danger); } .json-num { color: var(--t2); }
+
+@media (max-width: 768px) {
+  body { font-size: 14px; }
+  .page { padding: 0; align-items: stretch; justify-content: flex-start; }
+  .window { width: 100%; height: 100vh; height: 100dvh; max-width: none; border-radius: 0; border: none; box-shadow: none; }
+  .titlebar { height: calc(44px + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top); }
+  .motd { padding: .75rem 1rem .625rem; }
+  .motd-head { font-size: .75rem; }
+  .motd-grid { grid-template-columns: 1fr 1fr; column-gap: 1rem; font-size: .8125rem; }
+  .motd-item { gap: .5rem; }
+  .motd-item .k { flex: 0 0 4.5em; }
+  .rel { display: none; }
+  .wrapper { padding: .875rem 1rem calc(1rem + env(safe-area-inset-bottom)); }
+}
+@media (max-width: 550px) {
+  .banner { display: none; }
+  .help-row { display: block; }
+  .keys { display: none; }
+  .row { gap: .625rem; }
+}
+</style>
+</head>
+<body>
+<main class="page">
+  <section class="window" aria-label="Terminal window">
+    <header class="titlebar">
+      <div class="controls" aria-hidden="true">
+        <span class="light close">×</span><span class="light minimize">−</span><span class="light zoom">+</span>
+      </div>
+      <div class="wtitle" id="wtitle">afilmory-webhook</div>
+      <div aria-hidden="true"></div>
+    </header>
+
+    <div class="motd" aria-live="polite">
+      <div class="motd-head"><b>Afilmory Webhook</b> · <span id="m-updated">连接中…</span></div>
+      <div class="motd-grid">
+        <div class="motd-item"><span class="k">状态</span><span class="v" id="m-state"><i class="dot"></i>-</span></div>
+        <div class="motd-item"><span class="k">运行时间</span><span class="v" id="m-uptime">-</span></div>
+        <div class="motd-item"><span class="k">照片总数</span><span class="v" id="m-photos">-</span></div>
+        <div class="motd-item"><span class="k">上次构建</span><span class="v" id="m-last">-</span></div>
+        <div class="motd-item"><span class="k">数据更新</span><span class="v" id="m-manifest">-</span></div>
+        <div class="motd-item"><span class="k">防抖延迟</span><span class="v" id="m-delay">-</span></div>
+      </div>
+    </div>
+
+    <div class="wrapper" id="wrapper">
+      <div id="entries"></div>
+      <div class="hints" id="hints"></div>
+      <form class="form" id="form" autocomplete="off">
+        <label for="input" class="prompt" id="form-prompt"></label>
+        <input type="text" id="input" title="terminal-input" spellcheck="false" autocapitalize="off" autocomplete="off" autofocus>
+      </form>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  // 以 /webhook（无尾随斜杠）访问时，相对路径会解析到上一级，要带上最后一段
+  const BASE = window.location.pathname.endsWith('/') ? '' : `${window.location.pathname.split('/').pop()}/`
+  const HOST = window.location.hostname || 'localhost'
+  const SHORT_HOST = HOST.split('.')[0]
+  const THEMES = ['dark', 'light', 'blue-matrix', 'espresso', 'green-goblin', 'ubuntu']
+  const THEME_KEY = 'afilmory-webhook-theme'
+  const STATUS_REFRESH_MS = 10000
+  const FOLLOW_REFRESH_MS = 3000
+
+  const COMMANDS = [
+    { cmd: 'help', desc: '查看可用命令' },
+    { cmd: 'status', desc: '最近构建记录' },
+    { cmd: 'logs', desc: '构建日志：logs [行数|all]，logs -f 持续跟踪' },
+    { cmd: 'json', desc: '状态 JSON' },
+    { cmd: 'health', desc: '健康检查' },
+    { cmd: 'open', desc: '在新标签页打开原始接口：open status|logs|health' },
+    { cmd: 'themes', desc: '切换主题：themes set <名称>' },
+    { cmd: 'history', desc: '本次会话的命令历史' },
+    { cmd: 'clear', desc: '清屏' },
+    { cmd: 'welcome', desc: '欢迎信息' },
+  ]
+  const SUBCOMMANDS = {
+    logs: [['-f', 'all', '50', '100']],
+    open: [['status', 'logs', 'health']],
+    themes: [['set'], THEMES],
+  }
+  const STATUS_TEXT = { success: '成功', failed: '失败', building: '构建中' }
+  const STATUS_CLASS = { success: 'ok', failed: 'err', building: 'warn' }
+
+  const $ = id => document.getElementById(id)
+  const wrapper = $('wrapper')
+  const entries = $('entries')
+  const hintsEl = $('hints')
+  const form = $('form')
+  const input = $('input')
+
+  let cmdHistory = [] // 最新的在前
+  let pointer = -1
+  let follow = null
+
+  // ---------------------------------------------------------------- helpers
+  function h(tag, className, ...children) {
+    const el = document.createElement(tag)
+    if (className) el.className = className
+    for (const child of children) {
+      if (child == null || child === false) continue
+      el.append(child instanceof Node ? child : String(child))
+    }
+    return el
+  }
+
+  function storage(action, value) {
+    try {
+      if (action === 'get') return window.localStorage.getItem(THEME_KEY)
+      window.localStorage.setItem(THEME_KEY, value)
+    } catch {}
+    return null
+  }
+
+  function fmtTime(iso, withSeconds = false) {
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return iso
+    const pad = n => String(n).padStart(2, '0')
+    return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}${withSeconds ? `:${pad(d.getSeconds())}` : ''}`
+  }
+
+  function relative(iso) {
+    const diff = (Date.now() - new Date(iso).getTime()) / 1000
+    if (!Number.isFinite(diff)) return ''
+    if (diff < 60) return '刚刚'
+    if (diff < 3600) return `${Math.floor(diff / 60)} 分钟前`
+    if (diff < 86400) return `${Math.floor(diff / 3600)} 小时前`
+    return `${Math.floor(diff / 86400)} 天前`
+  }
+
+  function promptNode() {
+    return h('span', 'prompt', h('span', 'user', 'visitor'), '@', h('span', 'host', SHORT_HOST), ':~$')
+  }
+
+  function scrollToBottom() {
+    wrapper.scrollTop = wrapper.scrollHeight
+  }
+
+  async function getJson(path) {
+    const res = await fetch(BASE + path, { cache: 'no-store' })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return res.json()
+  }
+
+  async function getText(path) {
+    const res = await fetch(BASE + path, { cache: 'no-store' })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return res.text()
+  }
+
+  // ---------------------------------------------------------------- theme
+  function applyTheme(name) {
+    document.documentElement.dataset.theme = name
+    const meta = document.querySelector('meta[name="theme-color"]')
+    if (meta) meta.setAttribute('content', getComputedStyle(document.body).getPropertyValue('--body').trim())
+  }
+
+  const savedTheme = storage('get')
+  const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches
+  applyTheme(THEMES.includes(savedTheme) ? savedTheme : (prefersLight ? 'light' : 'dark'))
+
+  // ---------------------------------------------------------------- 固定提示区
+  let lastStatus = null
+
+  function renderMotd(status) {
+    const state = $('m-state')
+    state.replaceChildren()
+    if (!status) {
+      state.append(h('i', 'dot offline'), h('span', 'err', '无法连接'))
+      $('m-updated').textContent = `连接失败 · ${fmtTime(new Date().toISOString(), true)}`
+      return
+    }
+    const building = status.isBuilding
+    state.append(
+      h('i', `dot ${building ? 'building' : 'idle'}`),
+      h('span', building ? 'warn' : 'ok', building ? '构建中' : '空闲'),
+    )
+    if (status.pendingBuild) state.append(h('span', 'muted', '（有待构建）'))
+    $('m-uptime').textContent = status.uptimeFormatted
+    $('m-delay').textContent = `${status.buildDelay} 秒`
+
+    const photos = $('m-photos')
+    photos.replaceChildren()
+    if (status.photos) {
+      photos.append(h('span', 'ok', status.photos.total.toLocaleString('zh-CN')), ' 张')
+    } else {
+      photos.append(h('span', 'muted', '未找到 manifest'))
+    }
+
+    const manifest = $('m-manifest')
+    manifest.replaceChildren()
+    if (status.photos?.updatedAt) {
+      manifest.append(fmtTime(status.photos.updatedAt), h('span', 'muted rel', ` · ${relative(status.photos.updatedAt)}`))
+    } else {
+      manifest.append(h('span', 'muted', '-'))
+    }
+
+    const last = $('m-last')
+    last.replaceChildren()
+    const item = status.lastBuild
+    if (item) {
+      last.append(h('span', STATUS_CLASS[item.status] || '', STATUS_TEXT[item.status] || item.status), ` · ${fmtTime(item.timestamp)}`)
+    } else {
+      last.append(h('span', 'muted', '暂无（重启后清空）'))
+    }
+
+    $('m-updated').replaceChildren(`更新于 ${fmtTime(new Date().toISOString(), true)}`, h('span', 'rel', ` · 每 ${STATUS_REFRESH_MS / 1000} 秒刷新`))
+  }
+
+  async function refreshStatus() {
+    try {
+      lastStatus = await getJson('status')
+      renderMotd(lastStatus)
+    } catch {
+      renderMotd(null)
+    }
+    return lastStatus
+  }
+
+  // ---------------------------------------------------------------- 输出渲染
+  function logLine(line) {
+    const match = line.match(/^\[([^\]]+)\] (.*)$/)
+    if (!match) return h('div', 'muted', line)
+    const [, time, message] = match
+    let cls = 't2'
+    if (/失败|错误|拒绝|无法/.test(message)) cls = 'err'
+    else if (/完成|成功/.test(message)) cls = 'ok'
+    else if (/开始|收到|照片事件|防抖/.test(message)) cls = 'warn'
+    return h('div', 'row', h('span', 'muted', fmtTime(time, true)), h('span', cls, message))
+  }
+
+  function renderLogs(text, limit) {
+    const lines = text.split('\n').filter(Boolean)
+    const shown = limit ? lines.slice(-limit) : lines
+    const box = h('div', '')
+    if (lines.length === 0 || text.trim() === '暂无日志') {
+      box.append(h('div', 'muted', '暂无日志'))
+      return box
+    }
+    if (shown.length < lines.length) {
+      box.append(h('div', 'muted', `… 省略 ${lines.length - shown.length} 行，logs all 查看全部`))
+    }
+    for (const line of shown) box.append(logLine(line))
+    return box
+  }
+
+  function renderJson(value) {
+    const text = JSON.stringify(value, null, 2)
+    const pre = h('pre', 'pre')
+    const pattern = /("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false|null)\b|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g
+    let index = 0
+    for (const m of text.matchAll(pattern)) {
+      pre.append(text.slice(index, m.index))
+      if (m[1]) {
+        pre.append(h('span', m[2] ? 'json-key' : 'json-str', m[1]))
+        if (m[2]) pre.append(m[2])
+      } else if (m[3]) {
+        pre.append(h('span', 'json-lit', m[3]))
+      } else {
+        pre.append(h('span', 'json-num', m[4]))
+      }
+      index = m.index + m[0].length
+    }
+    pre.append(text.slice(index))
+    return pre
+  }
+
+  function cmdLink(cmd) {
+    const el = h('span', 'cmd clickable', cmd)
+    el.setAttribute('role', 'button')
+    el.tabIndex = -1
+    el.addEventListener('click', (event) => {
+      event.stopPropagation()
+      if (!follow) execute(cmd)
+    })
+    return el
+  }
+
+  // ---------------------------------------------------------------- 命令
+  const handlers = {
+    welcome() {
+      const banner = [
+        '   _     __  _  _',
+        '  /_\\   / _|(_)| | _ __   ___   _ _  _  _',
+        ' / _ \\ |  _|| || || \'  \\ / _ \\ | \'_|| || |',
+        '/_/ \\_\\|_|  |_||_||_|_|_|\\___/ |_|   \\_, |',
+        '                                     |__/',
+      ].join('\n')
+      return h('div', '',
+        h('pre', 'banner', banner),
+        h('div', '', '欢迎来到 Afilmory 构建状态终端。照片上传到 OSS 后，这里负责防抖、构建并发布站点。'),
+        h('div', 'sep', '----'),
+        h('div', '', '常用：', cmdLink('status'), ' 最近构建 · ', cmdLink('logs'), ' 构建日志 · ', cmdLink('json'), ' 状态 JSON'),
+        h('div', 'sep', '----'),
+        h('div', '', '输入 `', cmdLink('help'), '` 查看全部命令。'),
+      )
+    },
+
+    help() {
+      const box = h('div', '')
+      for (const { cmd, desc } of COMMANDS) {
+        box.append(h('div', 'help-row', cmdLink(cmd), h('span', 't2', ` - ${desc}`)))
+      }
+      box.append(h('div', 'keys',
+        h('div', '', 'Tab / Ctrl + i   => 自动补全命令'),
+        h('div', '', '↑ / ↓            => 上一条 / 下一条命令'),
+        h('div', '', 'Ctrl + l         => 清屏'),
+        h('div', '', 'Ctrl + c         => 取消输入 / 退出 logs -f'),
+      ))
+      return box
+    },
+
+    async status() {
+      const status = await refreshStatus()
+      if (!status) throw new Error('无法获取状态')
+      const box = h('div', '')
+      const items = status.buildHistory || []
+      if (items.length === 0) {
+        box.append(h('div', 'muted', '暂无构建记录（webhook 重启后清空）'))
+        return box
+      }
+      for (const item of items) {
+        box.append(h('div', 'row',
+          h('span', 'muted', fmtTime(item.timestamp)),
+          h('span', STATUS_CLASS[item.status] || '', (STATUS_TEXT[item.status] || item.status).padEnd(3, '\u3000')),
+          h('span', 't2', item.message),
+        ))
+      }
+      return box
+    },
+
+    async logs(args) {
+      if (args[0] === '-f') {
+        if (args.length > 1) return usage('logs [行数|all] | logs -f')
+        return startFollow()
+      }
+      if (args.length > 1) return usage('logs [行数|all] | logs -f')
+      let limit = 30
+      if (args[0] === 'all') limit = 0
+      else if (args[0] !== undefined) {
+        limit = Number.parseInt(args[0], 10)
+        if (!Number.isInteger(limit) || limit <= 0) return usage('logs [行数|all] | logs -f')
+      }
+      return renderLogs(await getText('logs'), limit)
+    },
+
+    async json(args) {
+      if (args.length) return usage('json')
+      const status = await getJson('status')
+      lastStatus = status
+      renderMotd(status)
+      return renderJson(status)
+    },
+
+    async health(args) {
+      if (args.length) return usage('health')
+      const started = performance.now()
+      const result = await getJson('health')
+      const ms = Math.round(performance.now() - started)
+      return h('div', '', h('span', result.status === 'ok' ? 'ok' : 'err', result.status === 'ok' ? '● ok' : `● ${result.status}`), h('span', 'muted', `  ${ms} ms`))
+    },
+
+    open(args) {
+      const target = args[0]
+      if (args.length !== 1 || !['status', 'logs', 'health'].includes(target)) return usage('open status|logs|health')
+      window.open(BASE + target, '_blank', 'noopener')
+      return h('div', 't2', `已在新标签页打开 /${target}`)
+    },
+
+    themes(args) {
+      if (args.length === 0) {
+        const current = document.documentElement.dataset.theme
+        return h('div', '',
+          h('div', '', ...THEMES.flatMap(name => [h('span', name === current ? 'ok' : 't2', name), '  '])),
+          h('div', 'muted', '用法：themes set <名称>'),
+        )
+      }
+      if (args[0] !== 'set' || args.length !== 2 || !THEMES.includes(args[1])) return usage('themes set <名称>')
+      applyTheme(args[1])
+      storage('set', args[1])
+      return null
+    },
+
+    history() {
+      const box = h('div', '')
+      for (const cmd of [...cmdHistory].reverse()) box.append(h('div', '', cmd))
+      return box
+    },
+
+    clear(args) {
+      if (args.length) return usage('clear')
+      entries.replaceChildren()
+      return undefined
+    },
+  }
+
+  function usage(text) {
+    return h('div', 't2', `用法：${text}`)
+  }
+
+  // ---------------------------------------------------------------- logs -f
+  function startFollow() {
+    const box = h('div', '')
+    const body = h('div', '')
+    const quit = h('span', 'clickable warn', '[退出]')
+    quit.addEventListener('click', (event) => {
+      event.stopPropagation()
+      stopFollow(true)
+    })
+    box.append(body, h('div', 'muted', `每 ${FOLLOW_REFRESH_MS / 1000} 秒刷新，按 Ctrl+C 或 q `, quit))
+
+    const tick = async () => {
+      try {
+        body.replaceChildren(renderLogs(await getText('logs'), 30))
+      } catch (error) {
+        body.replaceChildren(h('div', 'err', `获取日志失败：${error.message}`))
+      }
+      scrollToBottom()
+    }
+    follow = { timer: setInterval(tick, FOLLOW_REFRESH_MS), hintEl: box.lastChild }
+    form.classList.add('hidden')
+    tick()
+    return box
+  }
+
+  function stopFollow(byUser) {
+    if (!follow) return
+    clearInterval(follow.timer)
+    follow.hintEl.replaceChildren(h('span', 'muted', byUser ? '^C 已停止跟踪' : '已停止跟踪'))
+    follow = null
+    form.classList.remove('hidden')
+    input.focus()
+    scrollToBottom()
+  }
+
+  // ---------------------------------------------------------------- 执行
+  async function execute(raw, { record = true } = {}) {
+    const trimmed = raw.trim()
+    if (record && trimmed) {
+      cmdHistory.unshift(trimmed)
+    }
+    pointer = -1
+    hintsEl.replaceChildren()
+
+    const out = h('div', 'out')
+    const entry = h('div', 'entry', h('div', '', promptNode(), h('span', '', raw)), out)
+    entries.append(entry)
+
+    if (!trimmed) {
+      scrollToBottom()
+      return
+    }
+
+    const [name, ...args] = trimmed.split(/\s+/)
+    const handler = Object.hasOwn(handlers, name) ? handlers[name] : null
+    if (!handler) {
+      out.append(h('div', '', `command not found: ${trimmed}`))
+      scrollToBottom()
+      return
+    }
+    if (['welcome', 'help', 'status', 'history'].includes(name) && args.length) {
+      out.append(usage(name))
+      scrollToBottom()
+      return
+    }
+
+    out.append(h('span', 'muted', '…'))
+    try {
+      const result = await handler(args)
+      if (result === undefined && name === 'clear') return
+      out.replaceChildren()
+      if (result) out.append(result)
+    } catch (error) {
+      out.replaceChildren(h('div', 'err', `错误：${error.message || error}`))
+    }
+    scrollToBottom()
+  }
+
+  // ---------------------------------------------------------------- Tab 补全
+  function commonPrefix(words) {
+    let prefix = words[0] || ''
+    for (const word of words) {
+      while (!word.startsWith(prefix)) prefix = prefix.slice(0, -1)
+    }
+    return prefix
+  }
+
+  function complete() {
+    const value = input.value
+    const parts = value.replace(/^\s+/, '').split(/\s+/)
+    let candidates
+    if (parts.length === 1) {
+      candidates = COMMANDS.map(c => c.cmd)
+    } else {
+      const levels = SUBCOMMANDS[parts[0]] || []
+      const level = parts.length - 2
+      candidates = levels[level] || []
+      if (parts[0] === 'themes' && level === 1 && parts[1] !== 'set') candidates = []
+    }
+    const current = parts[parts.length - 1]
+    const matches = candidates.filter(c => c.startsWith(current))
+    if (matches.length === 0) return
+
+    if (matches.length === 1) {
+      parts[parts.length - 1] = matches[0]
+      const levels = SUBCOMMANDS[parts[0]] || []
+      const hasMore = levels.length > parts.length - 1
+      input.value = parts.join(' ') + (hasMore ? ' ' : '')
+      hintsEl.replaceChildren()
+      return
+    }
+    parts[parts.length - 1] = commonPrefix(matches)
+    input.value = parts.join(' ')
+    hintsEl.replaceChildren(...matches.map(m => h('span', '', m)))
+    scrollToBottom()
+  }
+
+  // ---------------------------------------------------------------- 事件
+  $('form-prompt').append(promptNode())
+  $('wtitle').textContent = `afilmory@${HOST}`
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault()
+    const value = input.value
+    input.value = ''
+    execute(value)
+  })
+
+  input.addEventListener('input', () => hintsEl.replaceChildren())
+
+  input.addEventListener('keydown', (event) => {
+    const key = event.key.toLowerCase()
+    if (event.key === 'Tab' || (event.ctrlKey && key === 'i')) {
+      event.preventDefault()
+      complete()
+      return
+    }
+    if (event.ctrlKey && key === 'l') {
+      event.preventDefault()
+      entries.replaceChildren()
+      hintsEl.replaceChildren()
+      return
+    }
+    if (event.ctrlKey && key === 'c') {
+      event.preventDefault()
+      entries.append(h('div', 'entry', h('div', '', promptNode(), h('span', '', `${input.value}^C`))))
+      input.value = ''
+      pointer = -1
+      hintsEl.replaceChildren()
+      scrollToBottom()
+      return
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      if (pointer + 1 >= cmdHistory.length) return
+      pointer += 1
+      input.value = cmdHistory[pointer]
+      requestAnimationFrame(() => input.setSelectionRange(input.value.length, input.value.length))
+      return
+    }
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      if (pointer < 0) return
+      pointer -= 1
+      input.value = pointer < 0 ? '' : cmdHistory[pointer]
+    }
+  })
+
+  document.addEventListener('keydown', (event) => {
+    if (!follow) return
+    const key = event.key.toLowerCase()
+    const hasSelection = !window.getSelection().isCollapsed
+    if ((event.ctrlKey && key === 'c' && !hasSelection) || key === 'q' || key === 'escape') {
+      event.preventDefault()
+      stopFollow(true)
+    }
+  })
+
+  // 点击终端任意位置聚焦输入框；正在选中文字时不抢焦点
+  document.addEventListener('click', (event) => {
+    if (follow || event.target.closest('a')) return
+    if (!window.getSelection().isCollapsed) return
+    input.focus({ preventScroll: true })
+  })
+
+  // ---------------------------------------------------------------- 启动
+  // 首次状态由下面的 status 命令顺带拉取
+  setInterval(refreshStatus, STATUS_REFRESH_MS)
+  execute('welcome', { record: false })
+  execute('status', { record: false })
+})()
+</script>
+</body>
+</html>

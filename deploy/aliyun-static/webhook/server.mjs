@@ -12,7 +12,11 @@ import { fileURLToPath } from 'node:url'
 
 const WEBHOOK_DIR = path.dirname(fileURLToPath(import.meta.url))
 const DEPLOY_DIR = path.resolve(WEBHOOK_DIR, '..')
+const PROJECT_DIR = path.resolve(DEPLOY_DIR, '..', '..')
 const ENV_FILE = path.join(DEPLOY_DIR, '.env')
+const PAGE_FILE = path.join(WEBHOOK_DIR, 'page.html')
+// 与 scripts/build-and-publish.sh 中的 manifest_path 保持一致
+const MANIFEST_FILE = path.join(PROJECT_DIR, 'apps', 'web', 'src', 'data', 'photos-manifest.json')
 
 if (fs.existsSync(ENV_FILE)) {
   process.loadEnvFile(ENV_FILE)
@@ -419,6 +423,32 @@ async function handleOss(req, res) {
   })
 }
 
+let photoStatsCache = { mtimeMs: -1, stats: null }
+
+/**
+ * 最新一次构建生成的 manifest 里的照片数。按修改时间缓存，只在文件变化后重新解析；
+ * 构建写到一半解析失败时沿用上一次的结果。
+ */
+function readPhotoStats() {
+  try {
+    const { mtimeMs, mtime } = fs.statSync(MANIFEST_FILE)
+    if (mtimeMs !== photoStatsCache.mtimeMs) {
+      const manifest = JSON.parse(fs.readFileSync(MANIFEST_FILE, 'utf8'))
+      photoStatsCache = {
+        mtimeMs,
+        stats: {
+          total: Array.isArray(manifest.data) ? manifest.data.length : 0,
+          updatedAt: mtime.toISOString(),
+        },
+      }
+    }
+  }
+  catch {
+    // manifest 尚未生成或正在写入
+  }
+  return photoStatsCache.stats
+}
+
 function statusPayload() {
   return {
     status: 'ok',
@@ -427,6 +457,8 @@ function statusPayload() {
     uptime: Math.floor(process.uptime()),
     uptimeFormatted: formatUptime(process.uptime()),
     buildDelay: CONFIG.buildDelayMs / 1000,
+    photos: readPhotoStats(),
+    lastBuild: buildHistory[0] ?? null,
     buildHistory: buildHistory.slice(0, 5),
   }
 }
@@ -542,105 +574,9 @@ function readPublicLogs() {
   return lines.length > 0 ? lines.join('\n') : '暂无日志'
 }
 
-/**
- * 页面链接用相对路径。以 /webhook（无尾随斜杠）访问时，相对路径会解析到站点根目录，
- * 所以这种情况下要带上最后一段作为前缀。
- */
-function renderPage(pathname) {
-  const linkBase = pathname.endsWith('/') ? '' : `${pathname.split('/').pop()}/`
-
-  return `<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="robots" content="noindex">
-<title>Afilmory 构建状态</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f4f4f5;color:#18181b;padding:24px 16px}
-main{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
-section{background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.08);min-width:0}
-h1{font-size:22px;margin-bottom:12px}h2{font-size:16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:baseline}
-h2 small{font-size:12px;font-weight:400;color:#71717a}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
-.grid div{background:#f4f4f5;border-radius:8px;padding:12px}.grid small{color:#71717a;display:block;margin-bottom:4px}
-ul{list-style:none;display:flex;flex-direction:column;gap:8px}
-li{display:flex;gap:12px;align-items:center;background:#f4f4f5;border-radius:8px;padding:10px 12px;border-left:4px solid #a1a1aa;font-size:14px}
-li span:nth-child(2){flex:1}li.success{border-color:#16a34a}li.failed{border-color:#dc2626}li.building{border-color:#ca8a04}li.empty{justify-content:center;color:#a1a1aa}
-pre{background:#18181b;color:#e4e4e7;border-radius:8px;padding:12px;font-size:12px;line-height:1.6;max-height:480px;overflow:auto;white-space:pre-wrap;word-break:break-all}
-a{color:#2563eb;margin-right:16px;font-size:14px}
-</style>
-</head>
-<body>
-<main>
-<section>
-<h1>Afilmory 构建状态</h1>
-<div class="grid">
-<div><small>状态</small><strong id="state">-</strong></div>
-<div><small>运行时间</small><strong id="uptime">-</strong></div>
-<div><small>防抖延迟</small><strong>${CONFIG.buildDelayMs / 1000} 秒</strong></div>
-</div>
-</section>
-<section><h2>最近构建<small>webhook 重启后清空</small></h2><ul id="history"><li class="empty">加载中</li></ul></section>
-<section><h2>日志<small id="updated">每 10 秒刷新</small></h2><pre id="logs">加载中</pre></section>
-<section><a href="${linkBase}status" target="_blank">状态 JSON</a><a href="${linkBase}logs" target="_blank">纯文本日志</a><a href="${linkBase}health" target="_blank">健康检查</a></section>
-</main>
-<script>
-const base = ${JSON.stringify(linkBase)}
-const statusText = { success: '成功', failed: '失败', building: '构建中' }
-
-function renderHistory(items) {
-  const list = document.getElementById('history')
-  list.replaceChildren()
-  if (items.length === 0) {
-    const li = document.createElement('li')
-    li.className = 'empty'
-    li.textContent = '暂无构建记录'
-    list.append(li)
-    return
-  }
-  for (const item of items) {
-    const li = document.createElement('li')
-    li.className = item.status
-    const time = document.createElement('span')
-    time.textContent = new Date(item.timestamp).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-    const message = document.createElement('span')
-    message.textContent = item.message
-    const badge = document.createElement('b')
-    badge.textContent = statusText[item.status] || item.status
-    li.append(time, message, badge)
-    list.append(li)
-  }
-}
-
-async function refresh() {
-  try {
-    const [status, logs] = await Promise.all([
-      fetch(base + 'status').then(res => res.json()),
-      fetch(base + 'logs').then(res => res.text()),
-    ])
-    document.getElementById('state').textContent = (status.isBuilding ? '构建中' : '空闲') + (status.pendingBuild ? '（有待构建）' : '')
-    document.getElementById('uptime').textContent = status.uptimeFormatted
-    renderHistory(status.buildHistory)
-    const pre = document.getElementById('logs')
-    const atBottom = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 8
-    pre.textContent = logs
-    if (atBottom) {
-      pre.scrollTop = pre.scrollHeight
-    }
-    document.getElementById('updated').textContent = '更新于 ' + new Date().toLocaleTimeString('zh-CN')
-  } catch {}
-}
-
-refresh().then(() => {
-  const pre = document.getElementById('logs')
-  pre.scrollTop = pre.scrollHeight
-})
-setInterval(refresh, 10000)
-</script>
-</body>
-</html>`
+function readPage() {
+  // 每次请求读取，改页面后不必重启 webhook
+  return fs.readFileSync(PAGE_FILE, 'utf8')
 }
 
 async function handleRequest(req, res) {
@@ -658,7 +594,7 @@ async function handleRequest(req, res) {
       case '/logs':
         return send(res, 200, readPublicLogs(), 'text/plain; charset=utf-8')
       case '/':
-        return send(res, 200, renderPage(url.pathname), 'text/html; charset=utf-8')
+        return send(res, 200, readPage(), 'text/html; charset=utf-8')
     }
   }
 

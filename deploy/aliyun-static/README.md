@@ -99,8 +99,8 @@ webhook 也能解析 Base64 与 MNS 的 XML / JSON 包装格式，无法解析�
 
 | 方法 | 路径              | 鉴权 | 说明                           |
 | ---- | ----------------- | ---- | ------------------------------ |
-| GET  | `/webhook/`       | 公开 | 构建状态页，自动刷新状态和日志 |
-| GET  | `/webhook/status` | 公开 | 状态 JSON                      |
+| GET  | `/webhook/`       | 公开 | macOS 终端风格状态页（`webhook/page.html`），顶部固定显示状态、运行时间、照片总数；输入 `help` 查看命令 |
+| GET  | `/webhook/status` | 公开 | 状态 JSON，含 `photos.total`（最新 manifest 照片数）与 `lastBuild` |
 | GET  | `/webhook/logs`   | 公开 | 最近 100 行公开日志            |
 | GET  | `/webhook/health` | 公开 | 健康检查                       |
 | POST | `/webhook/oss`    | 需要 | OSS 事件通知                   |
