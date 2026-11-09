@@ -34,6 +34,7 @@ const CONFIG = {
   buildDelayMs: Number(process.env.WEBHOOK_BUILD_DELAY_SECONDS || 30) * 1000,
   buildScript: path.join(DEPLOY_DIR, 'scripts', 'build-and-publish.sh'),
   logFile: process.env.WEBHOOK_LOG_FILE || path.join(WEBHOOK_DIR, 'webhook.log'),
+  historyFile: process.env.WEBHOOK_HISTORY_FILE || path.join(WEBHOOK_DIR, 'build-history.json'),
   photoPrefix: normalizePrefix(process.env.WEBHOOK_PHOTO_PREFIX ?? 'photos/'),
   allowedBuckets: parseCsv(process.env.WEBHOOK_ALLOWED_BUCKETS),
   maxHistory: 10,
@@ -103,12 +104,50 @@ function log(message) {
   fs.appendFileSync(CONFIG.logFile, `${line}\n`, 'utf8')
 }
 
+function saveBuildHistory() {
+  // 先写临时文件再改名，避免进程中途退出留下半截 JSON
+  const tmp = `${CONFIG.historyFile}.tmp`
+  try {
+    fs.writeFileSync(tmp, `${JSON.stringify(buildHistory, null, 2)}\n`, 'utf8')
+    fs.renameSync(tmp, CONFIG.historyFile)
+  }
+  catch (error) {
+    process.stdout.write(`[${new Date().toISOString()}] 构建记录写入失败：${error.message}\n`)
+  }
+}
+
 function addBuildHistory(status, message) {
   buildHistory.unshift({ timestamp: new Date().toISOString(), status, message })
   if (buildHistory.length > CONFIG.maxHistory) {
     buildHistory = buildHistory.slice(0, CONFIG.maxHistory)
   }
+  saveBuildHistory()
 }
+
+/**
+ * 启动时读回构建记录。最新一条仍是「构建中」说明上次构建时 webhook 被重启了，
+ * 构建子进程随之结束，补记一条中断，免得状态一直停在构建中。
+ */
+function loadBuildHistory() {
+  let saved
+  try {
+    saved = JSON.parse(fs.readFileSync(CONFIG.historyFile, 'utf8'))
+  }
+  catch {
+    return
+  }
+  if (!Array.isArray(saved)) {
+    return
+  }
+  buildHistory = saved
+    .filter(item => item && typeof item.timestamp === 'string' && typeof item.status === 'string' && typeof item.message === 'string')
+    .slice(0, CONFIG.maxHistory)
+  if (buildHistory[0]?.status === 'building') {
+    addBuildHistory('failed', '构建被中断（webhook 重启）')
+  }
+}
+
+loadBuildHistory()
 
 function formatUptime(seconds) {
   const days = Math.floor(seconds / 86400)

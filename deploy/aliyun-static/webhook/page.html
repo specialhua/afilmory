@@ -158,6 +158,9 @@ a { color: var(--secondary); }
 .sep { margin: .5rem 0; color: var(--t3); white-space: nowrap; overflow: hidden; }
 .row { display: flex; gap: 1rem; }
 .row > :first-child { flex: 0 0 auto; }
+/* 构建记录用网格，各行的时间、结果、说明列宽一致，说明换行也不会错位 */
+.history { display: grid; grid-template-columns: max-content max-content minmax(0, 1fr); column-gap: 1rem; }
+.short { display: none; }
 .help-row .cmd { display: inline-block; min-width: 8ch; }
 .keys { margin-top: 1rem; font-size: .875rem; color: var(--t2); white-space: pre; }
 .json-key { color: var(--secondary); } .json-str { color: var(--primary); } .json-lit { color: var(--danger); } .json-num { color: var(--t2); }
@@ -172,7 +175,8 @@ a { color: var(--secondary); }
   .motd-grid { grid-template-columns: 1fr 1fr; column-gap: 1rem; font-size: .8125rem; }
   .motd-item { gap: .5rem; }
   .motd-item .k { flex: 0 0 4.5em; }
-  .rel { display: none; }
+  .rel, .full { display: none; }
+  .short { display: inline; }
   .wrapper { padding: .875rem 1rem calc(1rem + env(safe-area-inset-bottom)); }
 }
 @media (max-width: 550px) {
@@ -180,6 +184,7 @@ a { color: var(--secondary); }
   .help-row { display: block; }
   .keys { display: none; }
   .row { gap: .625rem; }
+  .history { column-gap: .625rem; }
 }
 </style>
 </head>
@@ -365,9 +370,16 @@ a { color: var(--secondary); }
     last.replaceChildren()
     const item = status.lastBuild
     if (item) {
-      last.append(h('span', STATUS_CLASS[item.status] || '', STATUS_TEXT[item.status] || item.status), ` · ${fmtTime(item.timestamp)}`)
+      // 手机上半栏放不下完整日期，当天只显示时分，否则只显示月日
+      const full = fmtTime(item.timestamp)
+      const sameDay = new Date(item.timestamp).toDateString() === new Date().toDateString()
+      last.append(
+        h('span', STATUS_CLASS[item.status] || '', STATUS_TEXT[item.status] || item.status),
+        h('span', 'full', ` · ${full}`),
+        h('span', 'short', ` ${sameDay ? full.slice(6) : full.slice(0, 5)}`),
+      )
     } else {
-      last.append(h('span', 'muted', '暂无（重启后清空）'))
+      last.append(h('span', 'muted', '暂无'))
     }
 
     $('m-updated').replaceChildren(`更新于 ${fmtTime(new Date().toISOString(), true)}`, h('span', 'rel', ` · 每 ${STATUS_REFRESH_MS / 1000} 秒刷新`))
@@ -477,18 +489,17 @@ a { color: var(--secondary); }
     async status() {
       const status = await refreshStatus()
       if (!status) throw new Error('无法获取状态')
-      const box = h('div', '')
       const items = status.buildHistory || []
       if (items.length === 0) {
-        box.append(h('div', 'muted', '暂无构建记录（webhook 重启后清空）'))
-        return box
+        return h('div', 'muted', '暂无构建记录')
       }
+      const box = h('div', 'history')
       for (const item of items) {
-        box.append(h('div', 'row',
+        box.append(
           h('span', 'muted', fmtTime(item.timestamp)),
-          h('span', STATUS_CLASS[item.status] || '', (STATUS_TEXT[item.status] || item.status).padEnd(3, '\u3000')),
+          h('span', STATUS_CLASS[item.status] || '', STATUS_TEXT[item.status] || item.status),
           h('span', 't2', item.message),
-        ))
+        )
       }
       return box
     },
