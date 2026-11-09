@@ -4,10 +4,13 @@ import UIKit
 import UserNotifications
 
 @MainActor
-final class ApplicationCoordinator: NSObject, UNUserNotificationCenterDelegate {
+final class ApplicationCoordinator: NSObject, UNUserNotificationCenterDelegate, AppNavigating {
   private let window: UIWindow
   private var sessionObservation: AfilmorySessionObservationToken?
   private var pendingDeepLink: AfilmoryDeepLink?
+  #if DEBUG
+    private var pendingCatalogEntryID = FixtureMode.catalogEntryID
+  #endif
 
   init(window: UIWindow) {
     self.window = window
@@ -15,7 +18,8 @@ final class ApplicationCoordinator: NSObject, UNUserNotificationCenterDelegate {
   }
 
   func start() {
-    window.backgroundColor = .black
+    AppNavigator.shared.host = self
+    window.backgroundColor = AFColor.ground
     window.rootViewController = LoadingViewController()
     window.makeKeyAndVisible()
     sessionObservation = AfilmorySessionStore.shared.observe { [weak self] state in
@@ -35,7 +39,12 @@ final class ApplicationCoordinator: NSObject, UNUserNotificationCenterDelegate {
   func open(url: URL) -> Bool {
     guard let route = AfilmoryDeepLink.parse(url) else { return false }
     pendingDeepLink = route
-    applyPendingDeepLinkIfPossible(for: AfilmorySessionStore.shared.current().state)
+    let state = AfilmorySessionStore.shared.current().state
+    switch DeepLinkGate.decide(root: window.rootViewController, presented: window.rootViewController?.presentedViewController) {
+    case .apply: applyPendingDeepLinkIfPossible(for: state)
+    case .reroute: render(state)
+    case .hold: break
+    }
     return true
   }
 
@@ -66,154 +75,130 @@ final class ApplicationCoordinator: NSObject, UNUserNotificationCenterDelegate {
   }
 
   private func render(_ state: AfilmorySessionState) {
+    let flags = OnboardingFlags.shared
+    flags.note(state.rootPresentation)
     let next: UIViewController
-    switch state.rootPresentation {
+    let route = LaunchRoute.resolve(state.rootPresentation, flags: flags, hasPendingDeepLink: pendingDeepLink != nil)
+    switch route {
     case .loading:
       next = LoadingViewController()
-    case .authenticatedTabs:
+    case .tabs:
       next = makeAuthenticatedTabs()
-    case .workspaceSetup:
+    case .setup:
       next = WorkspaceSetupViewController(
         mode: state.session?.workspaceSetupMode ?? .create
       )
+    case .intro:
+      next = IntroController(mode: .firstLaunch) { [weak self] in
+        self?.render(AfilmorySessionStore.shared.current().state)
+      }
     case .visitor:
       next = makeVisitorController()
     }
     replaceRoot(with: next)
-    applyPendingDeepLinkIfPossible(for: state)
+    if route == .tabs(postSetup: true) {
+      presentPostSetupIfNeeded()
+    } else {
+      applyPendingDeepLinkIfPossible(for: state)
+    }
+    #if DEBUG
+      if FixtureMode.isOn {
+        applyCatalogEntryIfNeeded(for: state)
+        return
+      }
+    #endif
     presentTestFlightAppStorePromptIfNeeded(for: state)
   }
 
+  #if DEBUG
+    private func applyCatalogEntryIfNeeded(for state: AfilmorySessionState) {
+      guard let id = pendingCatalogEntryID, state.rootPresentation != .loading else { return }
+      pendingCatalogEntryID = nil
+      guard let entry = UICatalog.entry(id) else {
+        NSLog("[UICatalog] Unknown entry %@", id)
+        return
+      }
+      DispatchQueue.main.async { [weak self] in
+        guard let root = self?.window.rootViewController else { return }
+        UICatalog.open(entry, over: root)
+      }
+    }
+  #endif
+
   private func makeVisitorController() -> UIViewController {
-    let galleries = GalleriesController { [weak self] in
+    let viewing = ViewingController(isVisitor: true) { [weak self] in
       self?.presentSignIn()
     }
-    return UINavigationController(rootViewController: galleries)
+    return Self.chromelessNavigation(root: viewing)
   }
 
   private func makeAuthenticatedTabs() -> UIViewController {
-    let tabs = AfilmoryTabBarController()
-
-    let photos = PhotosHomeController(
-      onRequestSignIn: { [weak self] in self?.presentSignIn() },
-      onRequestSignOut: { AfilmorySessionStore.shared.clearSession() },
-      onRequestAccountSettings: { [weak self] in self?.presentAccountSettings(startsDeletion: false) },
-      onRequestAccountDeletion: { [weak self] in self?.presentAccountSettings(startsDeletion: true) },
-      onRequestStudioLibrary: { [weak self] in self?.openStudio(route: .library) }
+    let requestSignIn: () -> Void = { [weak self] in self?.presentSignIn() }
+    let exhibition = Self.chromelessNavigation(
+      root: ExhibitionController(source: .own, onRequestSignIn: requestSignIn)
     )
-    photos.tabBarItem = UITabBarItem(
-      title: String(localized: "Photos"),
-      image: UIImage(systemName: "photo.on.rectangle"),
-      selectedImage: UIImage(systemName: "photo.fill.on.rectangle.fill")
+    let viewing = Self.chromelessNavigation(
+      root: ViewingController(isVisitor: false, onRequestSignIn: requestSignIn)
     )
-
-    let map = PhotoMapController { [weak self] in
-      self?.presentSignIn()
-    }
-    map.tabBarItem = UITabBarItem(
-      title: String(localized: "Map"),
-      image: UIImage(systemName: "map"),
-      selectedImage: UIImage(systemName: "map.fill")
+    let darkroom = Self.chromelessNavigation(
+      root: DarkroomController(onRequestSignIn: requestSignIn)
     )
-
-    let galleries = GalleriesController { [weak self] in
-      self?.presentSignIn()
-    }
-    let explore = UINavigationController(rootViewController: galleries)
-    explore.tabBarItem = UITabBarItem(
-      title: String(localized: "Explore"),
-      image: UIImage(systemName: "safari"),
-      selectedImage: UIImage(systemName: "safari.fill")
-    )
-
-    let studio = makeStudioNavigationController()
-    studio.tabBarItem = UITabBarItem(
-      title: String(localized: "Studio"),
-      image: UIImage(systemName: "rectangle.3.group"),
-      selectedImage: UIImage(systemName: "rectangle.3.group.fill")
-    )
-
-    tabs.viewControllers = [photos, map, explore, studio]
+    let tabs = AfilmoryTabBarController(controllers: [exhibition, viewing, darkroom])
     #if DEBUG
-      tabs.onRequestDeveloperLab = { [weak self, weak studio] in
-        guard let self, let studio else { return }
-        self.presentDeveloperLab(on: studio)
+      tabs.onRequestDeveloperLab = { [weak self, weak darkroom] in
+        guard let self, let darkroom else { return }
+        self.presentDeveloperLab(on: darkroom)
       }
     #endif
     return tabs
   }
 
-  private func makeStudioNavigationController() -> UINavigationController {
-    let navigationController = UINavigationController()
-    let home = StudioHomeController(
-      onRequestSignIn: { [weak self] in self?.presentSignIn() },
-      onRequestSignOut: { AfilmorySessionStore.shared.clearSession() },
-      onNavigate: { [weak self, weak navigationController] route in
-        guard let self, let navigationController else { return }
-        navigationController.pushViewController(self.makeStudioRoute(route), animated: true)
-      },
-      onWorkspaceChanged: { _ in
-        AfilmorySessionStore.shared.refreshSession()
-      }
-    )
-    navigationController.setViewControllers([home], animated: false)
-    return navigationController
+  private static func chromelessNavigation(root: UIViewController) -> UINavigationController {
+    AFNavigationController(rootViewController: root)
   }
 
-  private func makeStudioRoute(_ route: StudioHomeRoute) -> UIViewController {
-    if route == .library {
-      return StudioLibraryController { [weak self] in
-        self?.presentSignIn()
-      }
-    }
-    let controller: UIViewController = switch route {
-    case .analytics:
-      UIHostingController(rootView: StudioAnalyticsView())
-    case .comments:
-      UIHostingController(rootView: StudioCommentsView())
-    case .operations:
-      UIHostingController(rootView: StudioOperationsView())
-    case .site:
-      UIHostingController(rootView: StudioSiteView())
-    case .domain:
-      UIHostingController(rootView: StudioDomainView())
-    case .library:
-      preconditionFailure("The library route is handled above.")
-    }
-    controller.title = route.title
-    return controller
+  func presentSignIn() {
+    guard let presenter = topViewController(), !(presenter is SignInPageController) else { return }
+    presenter.present(SignInPageController(), animated: true)
   }
 
-  private func presentSignIn() {
+  private func presentPostSetupIfNeeded() {
+    DispatchQueue.main.async { [weak self] in
+      guard let self else { return }
+      guard let tabs, tabs.presentedViewController == nil, OnboardingFlags.shared.onboardingPending else {
+        applyPendingDeepLinkIfPossible(for: AfilmorySessionStore.shared.current().state)
+        return
+      }
+      let postSetup = PostSetupController { [weak self, weak tabs] _ in
+        tabs?.select(.exhibition, animated: false)
+        tabs?.dismiss(animated: true) {
+          guard let self else { return }
+          self.applyPendingDeepLinkIfPossible(for: AfilmorySessionStore.shared.current().state)
+        }
+      }
+      tabs.present(postSetup, animated: true)
+    }
+  }
+
+  func presentIntro() {
     guard let presenter = topViewController() else { return }
-    let presentsAsForm = presenter.traitCollection.userInterfaceIdiom == .pad
-    let controller = UIHostingController(
-      rootView: SignInView(showsCloseButton: presentsAsForm)
-    )
-
-    if presentsAsForm {
-      let availableSize = presenter.view.bounds.inset(by: presenter.view.safeAreaInsets).size
-      controller.modalPresentationStyle = .formSheet
-      controller.preferredContentSize = CGSize(
-        width: min(430, max(360, availableSize.width - 80)),
-        height: min(780, max(640, availableSize.height - 120))
-      )
-    } else {
-      controller.modalPresentationStyle = .pageSheet
+    let intro = IntroController(mode: .replay) { [weak presenter] in
+      presenter?.dismiss(animated: true)
     }
-    controller.sheetPresentationController?.prefersGrabberVisible = false
-
-    presenter.present(controller, animated: true)
+    presenter.present(intro, animated: true)
   }
 
-  private func presentAccountSettings(startsDeletion: Bool) {
-    presentSheet(
-      AccountSettingsView(
-        session: AfilmorySessionStore.shared.current().state.session,
-        startsDeletion: startsDeletion
-      )
-    )
+  func presentAccountSettings(startsDeletion: Bool) {
+    switch AccountRoute(startsDeletion: startsDeletion) {
+    case .deletion:
+      let session = AfilmorySessionStore.shared.current().state.session
+      topViewController()?.present(AccountDeletionController(session: session), animated: true)
+    case .sheet:
+      openDarkroom(route: nil)
+      (navigation(for: .darkroom)?.viewControllers.first as? DarkroomController)?.presentAccountSheet()
+    }
   }
+
 
   private func applyPendingDeepLinkIfPossible(for state: AfilmorySessionState) {
     guard state.shouldApplyPendingDeepLink, let route = pendingDeepLink else {
@@ -221,62 +206,51 @@ final class ApplicationCoordinator: NSObject, UNUserNotificationCenterDelegate {
     }
     pendingDeepLink = nil
 
-    switch route {
-    case .root:
-      if let tabs = window.rootViewController as? AfilmoryTabBarController {
-        tabs.selectTab(at: 0)
-      } else {
-        (window.rootViewController as? UINavigationController)?.popToRootViewController(animated: false)
+    guard let tabs else {
+      let navigation = window.rootViewController as? UINavigationController
+      switch route {
+      case .explore(let galleryRoute):
+        navigation?.popToRootViewController(animated: false)
+        if let galleryRoute {
+          (navigation?.viewControllers.first as? ViewingController)?.openGallery(galleryRoute)
+        }
+      case .developerLab:
+        #if DEBUG
+          if let navigation { presentDeveloperLab(on: navigation) }
+        #endif
+      default:
+        navigation?.popToRootViewController(animated: false)
       }
-    case .photos:
-      (window.rootViewController as? AfilmoryTabBarController)?.selectTab(at: 0)
+      return
+    }
+
+    let tab = DeepLinkTabRouting.tab(for: route)
+    switch route {
+    case .root, .photos:
+      switchToTab(tab, animated: false)
+      navigation(for: .exhibition)?.popToRootViewController(animated: false)
     case .map:
-      (window.rootViewController as? AfilmoryTabBarController)?.selectTab(at: 1)
+      openOwnExhibition(level: .infinity, focusingPhotoID: nil)
     case .explore(let galleryRoute):
-      guard let navigation = exploreNavigationController() else { return }
-      navigation.popToRootViewController(animated: false)
-      if let galleryRoute,
-         let galleries = navigation.viewControllers.first as? GalleriesController
-      {
-        galleries.openGallery(galleryRoute)
+      switchToTab(tab, animated: false)
+      navigation(for: .viewing)?.popToRootViewController(animated: false)
+      if let galleryRoute {
+        openGallery(galleryRoute, level: .day)
       }
     case .studio(let studioRoute):
-      openStudio(route: studioRoute)
+      openDarkroom(route: studioRoute)
     case .developerLab:
       #if DEBUG
-        if let navigation = window.rootViewController as? UINavigationController {
+        switchToTab(tab, animated: false)
+        if let navigation = navigation(for: .darkroom) {
           presentDeveloperLab(on: navigation)
-          return
         }
-        guard let tabs = window.rootViewController as? AfilmoryTabBarController,
-              let navigation = tabs.viewControllers?[safe: 3] as? UINavigationController
-        else { return }
-        tabs.selectTab(at: 3)
-        presentDeveloperLab(on: navigation)
       #endif
     }
   }
 
-  private func openStudio(route: StudioHomeRoute?) {
-    guard let tabs = window.rootViewController as? AfilmoryTabBarController,
-          let navigation = tabs.viewControllers?[safe: 3] as? UINavigationController
-    else { return }
-    tabs.selectTab(at: 3)
-    navigation.popToRootViewController(animated: false)
-    if let route {
-      navigation.pushViewController(makeStudioRoute(route), animated: true)
-    }
-  }
-
-  private func exploreNavigationController() -> UINavigationController? {
-    if let navigation = window.rootViewController as? UINavigationController {
-      return navigation
-    }
-    guard let tabs = window.rootViewController as? AfilmoryTabBarController,
-          let navigation = tabs.viewControllers?[safe: 2] as? UINavigationController
-    else { return nil }
-    tabs.selectTab(at: 2)
-    return navigation
+  private func navigation(for tab: AppTab) -> UINavigationController? {
+    tabs?.viewControllers?[safe: tab.rawValue] as? UINavigationController
   }
 
   #if DEBUG
@@ -295,13 +269,6 @@ final class ApplicationCoordinator: NSObject, UNUserNotificationCenterDelegate {
   private func presentTestFlightAppStorePromptIfNeeded(for state: AfilmorySessionState) {
     guard state.shouldPresentTestFlightPrompt, let root = window.rootViewController else { return }
     TestFlightAppStorePrompt.shared.present(from: root)
-  }
-
-  private func presentSheet<Content: View>(_ content: Content) {
-    let controller = UIHostingController(rootView: content)
-    controller.modalPresentationStyle = .pageSheet
-    controller.sheetPresentationController?.prefersGrabberVisible = true
-    topViewController()?.present(controller, animated: true)
   }
 
   private func topViewController() -> UIViewController? {
@@ -332,7 +299,64 @@ final class ApplicationCoordinator: NSObject, UNUserNotificationCenterDelegate {
     {
       return
     }
-    window.rootViewController = controller
+    guard window.rootViewController is IntroController else {
+      window.rootViewController = controller
+      return
+    }
+    UIView.transition(with: window, duration: AFMotion.reduceMotion ? 0.2 : 0.35, options: .transitionCrossDissolve) {
+      self.window.rootViewController = controller
+    }
+  }
+}
+
+extension ApplicationCoordinator {
+  var tabs: AfilmoryTabBarController? {
+    window.rootViewController as? AfilmoryTabBarController
+  }
+
+  func switchToTab(_ tab: AppTab, animated: Bool) {
+    tabs?.select(tab, animated: animated)
+  }
+
+  func openGallery(_ route: GalleryRouteRequest, level: ContactSheetLevel) {
+    if let tabs {
+      tabs.select(.viewing, animated: false)
+      guard let navigation = navigation(for: .viewing),
+            let viewing = navigation.viewControllers.first as? ViewingController
+      else { return }
+      navigation.popToRootViewController(animated: false)
+      viewing.openGallery(route, level: level)
+      return
+    }
+    guard let navigation = window.rootViewController as? UINavigationController,
+          let viewing = navigation.viewControllers.first as? ViewingController
+    else { return }
+    viewing.openGallery(route, level: level)
+  }
+
+  func openOwnExhibition(level: ContactSheetLevel, focusingPhotoID: String?) {
+    guard let tabs else { return }
+    tabs.select(.exhibition, animated: false)
+    guard let navigation = navigation(for: .exhibition) else { return }
+    navigation.popToRootViewController(animated: false)
+    (navigation.viewControllers.first as? ExhibitionController)?.show(level: level, focusingPhotoID: focusingPhotoID)
+  }
+
+  func openDarkroom(route: StudioHomeRoute?) {
+    guard let tabs else { return }
+    tabs.select(.darkroom, animated: false)
+    guard let navigation = navigation(for: .darkroom) else { return }
+    navigation.popToRootViewController(animated: false)
+    (navigation.viewControllers.first as? DarkroomController)?.open(route: route)
+  }
+
+  func presentSubscription(focus: QuotaWallReason?) {
+    guard let presenter = topViewController(), !(presenter is SubscriptionPageController) else { return }
+    presenter.present(SubscriptionPageController(focus: focus), animated: true)
+  }
+
+  func signOut() {
+    AfilmorySessionStore.shared.clearSession()
   }
 }
 
@@ -342,7 +366,7 @@ private extension Collection {
   }
 }
 
-private extension StudioHomeRoute {
+extension StudioHomeRoute {
   var title: String {
     switch self {
     case .analytics: String(localized: "Analytics")

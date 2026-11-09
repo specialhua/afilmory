@@ -41,7 +41,8 @@ async function downloadAndProcessThumbnail(thumbnailUrl: string, size = 150) {
     // 如果是 URL，需要下载（这里先返回 null，后面可以添加网络下载功能）
     console.warn(`Cannot download thumbnail from URL: ${thumbnailUrl}`)
     return null
-  } catch (error) {
+  }
+  catch (error) {
     console.warn(`Failed to process thumbnail: ${thumbnailUrl}`, error)
     return null
   }
@@ -116,7 +117,8 @@ async function createPhotoWithEffects(imageBuffer: Buffer, size: number, rotatio
       .rotate(rotation, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
       .png()
       .toBuffer()
-  } catch (error) {
+  }
+  catch (error) {
     console.warn('Failed to create photo with effects:', error)
     // 如果特效失败，返回简单的边框版本（适配黑色主题）
     return await sharp(imageBuffer)
@@ -277,7 +279,8 @@ export async function generateOGImage(options: OGImageOptions) {
 
       // 合成最终图像
       finalImage = canvas.composite(composite)
-    } else {
+    }
+    else {
       // 不包含照片的简单版本 - 黑色主题，使用 SVG 路径绘制字体
       const simpleWrappedTitle = wrapSVGText(title, width - 120, {
         fontSize: 72,
@@ -350,7 +353,8 @@ export async function generateOGImage(options: OGImageOptions) {
 
     console.info(`✅ OG image generated: ${fullOutputPath}`)
     return fullOutputPath
-  } catch (error) {
+  }
+  catch (error) {
     console.error('❌ Error generating OG image:', error)
     throw error
   }

@@ -38,7 +38,8 @@ export async function getImageMetadataWithSharp(sharpInstance: Sharp): Promise<I
       height,
       format: metadata.format,
     }
-  } catch (error) {
+  }
+  catch (error) {
     log.error('获取图片元数据失败：', error)
     return null
   }
@@ -63,7 +64,8 @@ export async function convertHeicToJpeg(heicBuffer: Buffer): Promise<Buffer> {
     log.success(`HEIC/HEIF 转换完成 (${outputSizeKB}KB, ${duration}ms)`)
 
     return Buffer.from(jpegBuffer)
-  } catch (error) {
+  }
+  catch (error) {
     log.error('HEIC/HEIF 转换失败：', error)
     throw error
   }
@@ -128,7 +130,8 @@ export async function convertBmpToJpegSharpInstance(bmpBuffer: Buffer): Promise<
     log.success(`BMP 转换完成 (${duration}ms)`)
 
     return sharpInstance
-  } catch (error) {
+  }
+  catch (error) {
     log.error('BMP 转换失败：', error)
     throw error
   }

@@ -38,7 +38,7 @@ const EMPTY_XMP_METADATA = {
 export interface ProcessedImageData {
   sharpInstance: Sharp
   imageBuffer: Buffer
-  metadata: { width: number; height: number }
+  metadata: { width: number, height: number }
 }
 
 export interface PhotoProcessingContext {
@@ -56,7 +56,7 @@ export interface PhotoProcessingContext {
  */
 export async function preprocessImage(
   photoKey: string,
-): Promise<{ rawBuffer: Buffer; processedBuffer: Buffer } | null> {
+): Promise<{ rawBuffer: Buffer, processedBuffer: Buffer } | null> {
   const loggers = getGlobalLoggers()
   const { storageManager, prefetchedBuffers } = getPhotoExecutionContext()
 
@@ -72,7 +72,8 @@ export async function preprocessImage(
     let imageBuffer: Buffer
     try {
       imageBuffer = await preprocessImageBuffer(rawImageBuffer, photoKey)
-    } catch (error) {
+    }
+    catch (error) {
       loggers.image.error(`预处理图片失败：${photoKey}`, error)
       return null
     }
@@ -81,7 +82,8 @@ export async function preprocessImage(
       rawBuffer: rawImageBuffer,
       processedBuffer: imageBuffer,
     }
-  } catch (error) {
+  }
+  catch (error) {
     loggers.image.error(`图片预处理失败：${photoKey}`, error)
     return null
   }
@@ -108,7 +110,8 @@ export async function processImageWithSharp(imageBuffer: Buffer, photoKey: strin
         sharpInstance = await convertBmpToJpegSharpInstance(imageBuffer)
         // Update the image buffer to reflect the new JPEG data from the Sharp instance.
         processedBuffer = await sharpInstance.toBuffer()
-      } catch (error) {
+      }
+      catch (error) {
         loggers.image.error(`转换 BMP 失败：${photoKey}`, error)
         return null
       }
@@ -126,7 +129,8 @@ export async function processImageWithSharp(imageBuffer: Buffer, photoKey: strin
       imageBuffer: processedBuffer,
       metadata,
     }
-  } catch (error) {
+  }
+  catch (error) {
     loggers.image.error(`Sharp 处理失败：${photoKey}`, error)
     return null
   }
@@ -281,14 +285,15 @@ export async function executePhotoProcessingPipeline(
             : undefined,
       // HDR 相关字段
       isHDR:
-        exifData?.MPImageType === 'Gain Map Image' ||
-        exifData?.UniformResourceName === 'urn:iso:std:iso:ts:21496:-1' ||
-        hasGainMap,
+        exifData?.MPImageType === 'Gain Map Image'
+        || exifData?.UniformResourceName === 'urn:iso:std:iso:ts:21496:-1'
+        || hasGainMap,
     }
 
     loggers.image.success(`✅ 处理完成：${photoKey}`)
     return photoItem
-  } catch (error) {
+  }
+  catch (error) {
     loggers.image.error(`❌ 处理管道失败：${photoKey}`, error)
     return null
   }
@@ -318,7 +323,7 @@ function mergeUniqueTags(...groups: string[][]): string[] {
  */
 export async function processPhotoWithPipeline(
   context: PhotoProcessingContext,
-  runtime: { runState: PluginRunState; builderOptions: BuilderOptions },
+  runtime: { runState: PluginRunState, builderOptions: BuilderOptions },
 ): Promise<{
   item: PhotoManifestItem | null
   type: 'new' | 'processed' | 'skipped' | 'failed'
@@ -357,7 +362,8 @@ export async function processPhotoWithPipeline(
   const isNewPhoto = !existingItem
   if (isNewPhoto) {
     loggers.image.info(`🆕 新照片：${photoKey}`)
-  } else {
+  }
+  else {
     loggers.image.info(`🔄 更新照片 (${reason})：${photoKey}`)
   }
 
@@ -369,7 +375,8 @@ export async function processPhotoWithPipeline(
     if (!processedItem) {
       resultType = 'failed'
     }
-  } catch (error) {
+  }
+  catch (error) {
     await builder.emitPluginEvent(runtime.runState, 'photoProcessError', {
       options: runtime.builderOptions,
       context,

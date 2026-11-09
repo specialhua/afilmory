@@ -37,10 +37,10 @@ export async function processThumbnailAndBlurhash(
 
   // 检查是否可以复用现有数据
   if (
-    !options.isForceMode &&
-    !options.isForceThumbnails &&
-    existingItem?.thumbHash &&
-    (await thumbnailExists(photoId))
+    !options.isForceMode
+    && !options.isForceThumbnails
+    && existingItem?.thumbHash
+    && (await thumbnailExists(photoId))
   ) {
     try {
       const thumbnailPath = path.join(workdir, 'public/thumbnails', `${photoId}.jpg`)
@@ -55,7 +55,8 @@ export async function processThumbnailAndBlurhash(
         thumbnailBuffer,
         thumbHash: decompressUint8Array(existingItem.thumbHash),
       }
-    } catch (error) {
+    }
+    catch (error) {
       loggers.thumbnail.warn(`读取现有缩略图失败，重新生成：${photoId}`, error)
       // 继续执行生成逻辑
     }

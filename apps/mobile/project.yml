@@ -3,7 +3,7 @@ name: Afilmory
 options:
   projectFormat: xcode16_0
   deploymentTarget:
-    iOS: "18.0"
+    iOS: "26.0"
   developmentLanguage: en
   groupSortPosition: top
   minimumXcodeGenVersion: 2.45.4
@@ -25,7 +25,7 @@ settings:
     CLANG_ENABLE_MODULES: YES
     DEVELOPMENT_TEAM: KAMM5N88X3
     GENERATE_INFOPLIST_FILE: NO
-    IPHONEOS_DEPLOYMENT_TARGET: "18.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "26.0"
     LOCALIZATION_PREFERS_STRING_CATALOGS: YES
     SWIFT_STRICT_CONCURRENCY: targeted
     SWIFT_VERSION: "6.0"
@@ -35,7 +35,7 @@ targets:
   Afilmory:
     type: application
     platform: iOS
-    deploymentTarget: "18.0"
+    deploymentTarget: "26.0"
     sources:
       - path: Afilmory
         type: syncedFolder
@@ -63,6 +63,14 @@ targets:
         AfilmoryAppVariant: "$(AFILMORY_APP_VARIANT)"
         AfilmoryURLScheme: "$(AFILMORY_URL_SCHEME)"
         CFBundleAllowMixedLocalizations: true
+        UIAppFonts:
+          - TeXGyreSchola-Regular.otf
+          - TeXGyreSchola-Italic.otf
+          - SourceHanSerifSC-SemiBold-Subset.otf
+          - SourceHanSerifTC-SemiBold-Subset.otf
+          - SourceHanSerifHK-SemiBold-Subset.otf
+          - SourceHanSerifJP-SemiBold-Subset.otf
+          - SourceHanSerifKR-SemiBold-Subset.otf
         CFBundleDisplayName: "$(AFILMORY_DISPLAY_NAME)"
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
@@ -115,7 +123,7 @@ targets:
       base:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         CURRENT_PROJECT_VERSION: 1
-        MARKETING_VERSION: "1.5.1"
+        MARKETING_VERSION: "2.0.0"
         PRODUCT_MODULE_NAME: Afilmory
         SUPPORTS_MACCATALYST: NO
       configs:
@@ -130,6 +138,7 @@ targets:
           PRODUCT_BUNDLE_IDENTIFIER: app.afilmory.local
           PRODUCT_NAME: Afilmory
         Release:
+          EXCLUDED_SOURCE_FILE_NAMES: "*/Fixtures/*"
           AFILMORY_API_ENVIRONMENT: production
           AFILMORY_APP_GROUP_IDENTIFIER: group.app.afilmory
           AFILMORY_APP_VARIANT: production
@@ -140,10 +149,35 @@ targets:
           PRODUCT_BUNDLE_IDENTIFIER: app.afilmory
           PRODUCT_NAME: Afilmory
 
+    preBuildScripts:
+      - name: Check generated assets
+        basedOnDependencyAnalysis: false
+        script: |
+          missing=""
+          for font in TeXGyreSchola-Regular TeXGyreSchola-Italic SourceHanSerifSC-SemiBold-Subset SourceHanSerifTC-SemiBold-Subset SourceHanSerifHK-SemiBold-Subset SourceHanSerifJP-SemiBold-Subset SourceHanSerifKR-SemiBold-Subset; do
+            [ -f "$SRCROOT/Afilmory/Resources/Fonts/$font.otf" ] || missing="$missing $font.otf"
+          done
+          if [ "$CONFIGURATION" = "Debug" ] && [ -z "$(ls "$SRCROOT/Afilmory/Fixtures/Media" 2>/dev/null | head -1)" ]; then
+            missing="$missing Fixtures/Media"
+          fi
+          if [ -n "$missing" ]; then
+            echo "error: Generated assets are missing:$missing. Run apps/mobile/scripts/prepare-assets.sh (fonts only: scripts/subset-fonts.sh)."
+            exit 1
+          fi
+    postBuildScripts:
+      - name: Strip fixture resources
+        basedOnDependencyAnalysis: false
+        script: |
+          # EXCLUDED_SOURCE_FILE_NAMES drops Fixtures sources but synced-folder resources are still copied.
+          [ "$CONFIGURATION" = "Debug" ] && exit 0
+          find "$SRCROOT/Afilmory/Fixtures" -type f ! -name '*.swift' -exec basename {} \; | sort -u | while IFS= read -r name; do
+            rm -f "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/$name"
+          done
+
   AfilmoryShare:
     type: app-extension
     platform: iOS
-    deploymentTarget: "18.0"
+    deploymentTarget: "26.0"
     sources:
       - path: targets/share
         type: syncedFolder
@@ -163,7 +197,7 @@ targets:
     settings:
       base:
         CURRENT_PROJECT_VERSION: 1
-        MARKETING_VERSION: "1.5.1"
+        MARKETING_VERSION: "2.0.0"
         PRODUCT_MODULE_NAME: AfilmoryShare
         PRODUCT_NAME: AfilmoryShare
         SKIP_INSTALL: YES
@@ -178,7 +212,7 @@ targets:
   AfilmoryWidgets:
     type: app-extension
     platform: iOS
-    deploymentTarget: "18.0"
+    deploymentTarget: "26.0"
     sources:
       - path: targets/widgets
         type: syncedFolder
@@ -196,7 +230,7 @@ targets:
       base:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: $accent
         CURRENT_PROJECT_VERSION: 1
-        MARKETING_VERSION: "1.5.1"
+        MARKETING_VERSION: "2.0.0"
         PRODUCT_MODULE_NAME: AfilmoryWidgets
         PRODUCT_NAME: AfilmoryWidgets
         SKIP_INSTALL: YES
@@ -210,7 +244,7 @@ targets:
   AfilmoryNotification:
     type: app-extension
     platform: iOS
-    deploymentTarget: "18.0"
+    deploymentTarget: "26.0"
     sources:
       - path: targets/notification
         type: syncedFolder
@@ -232,7 +266,7 @@ targets:
     settings:
       base:
         CURRENT_PROJECT_VERSION: 1
-        MARKETING_VERSION: "1.5.1"
+        MARKETING_VERSION: "2.0.0"
         PRODUCT_MODULE_NAME: AfilmoryNotification
         PRODUCT_NAME: AfilmoryNotification
         SKIP_INSTALL: YES
@@ -246,7 +280,7 @@ targets:
   AfilmoryTests:
     type: bundle.unit-test
     platform: iOS
-    deploymentTarget: "18.0"
+    deploymentTarget: "26.0"
     sources:
       - path: Tests
         type: syncedFolder

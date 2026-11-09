@@ -17,20 +17,12 @@ struct AfilmoryButton<Label: View>: View {
   }
 
   var body: some View {
-    if #available(iOS 26.0, *) {
-      if prominent {
-        Button(action: action, label: label)
-          .buttonStyle(.glassProminent)
-      } else {
-        Button(action: action, label: label)
-          .buttonStyle(.glass)
-      }
-    } else if prominent {
+    if prominent {
       Button(action: action, label: label)
-        .buttonStyle(.borderedProminent)
+        .buttonStyle(.glassProminent)
     } else {
       Button(action: action, label: label)
-        .buttonStyle(.bordered)
+        .buttonStyle(.glass)
     }
   }
 }
@@ -39,6 +31,7 @@ struct NativeAppleAuthorizationButton: UIViewRepresentable {
   @Environment(\.isEnabled) private var isEnabled
 
   let type: ASAuthorizationAppleIDButton.ButtonType
+  var cornerRadius: CGFloat = 14
   let action: () -> Void
 
   func makeCoordinator() -> Coordinator {
@@ -47,7 +40,7 @@ struct NativeAppleAuthorizationButton: UIViewRepresentable {
 
   func makeUIView(context: Context) -> ASAuthorizationAppleIDButton {
     let button = ASAuthorizationAppleIDButton(authorizationButtonType: type, authorizationButtonStyle: .white)
-    button.cornerRadius = 14
+    button.cornerRadius = cornerRadius
     button.isEnabled = isEnabled
     button.addTarget(context.coordinator, action: #selector(Coordinator.invoke), for: .touchUpInside)
     return button
@@ -68,16 +61,6 @@ struct NativeAppleAuthorizationButton: UIViewRepresentable {
     @objc func invoke() {
       action()
     }
-  }
-}
-
-struct AfilmoryBrandIcon: View {
-  var body: some View {
-    Image("AfilmoryLogo")
-      .resizable()
-      .scaledToFit()
-      .clipShape(.rect(cornerRadius: 8, style: .continuous))
-      .accessibilityHidden(true)
   }
 }
 
